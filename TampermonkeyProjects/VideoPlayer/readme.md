@@ -45,6 +45,6 @@ JJJ
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
 
 ![HTML5 Logo](https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png)
