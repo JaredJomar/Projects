@@ -35,3 +35,7 @@ This project is a collection of JavaScript scripts that I use with the Tampermon
 - Auto Claim Channel Points
 - Enables theater mode 
 - Auto Claim Prime Rewards
+
+## License
+
+This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
