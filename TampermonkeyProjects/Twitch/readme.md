@@ -1,4 +1,4 @@
-# Twitch Enhancements UserScript
+# Twitch Enhancements
 
 This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, and claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/).
 

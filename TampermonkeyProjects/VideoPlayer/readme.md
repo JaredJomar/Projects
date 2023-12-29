@@ -1,4 +1,4 @@
-# HTML5 Video Player Speed Control UserScript
+# HTML5 Video Player Speed Control 
 
 Enhance your HTML5 video watching experience by controlling the playback speed with keyboard shortcuts.
 
