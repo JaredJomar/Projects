@@ -10,97 +10,99 @@
 // @grant        none
 // ==/UserScript==
 
-(function () {
+(function() {
     'use strict';
 
+    const PLAYER_SELECTOR = '.video-player';
+    const THEATER_MODE_BUTTON_SELECTOR = 'button[aria-label="Theatre Mode (alt+t)"]';
+    const CLOSE_MENU_BUTTON_SELECTOR = 'button[aria-label="Close Menu"]';
+    const CLOSE_MODAL_BUTTON_SELECTOR = 'button[aria-label="Close modal"]';
+    const THEATER_MODE_CLASS = 'theatre-mode';
     const MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+    const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
+    let claiming = false;
 
-    const TWITCH = {
-        PLAYER_SELECTOR: '.video-player',
-        THEATER_MODE_BUTTON_SELECTOR: 'button[aria-label="Theatre Mode (alt+t)"]',
-        CLOSE_MENU_BUTTON_SELECTOR: 'button[aria-label="Close Menu"]',
-        CLOSE_MODAL_BUTTON_SELECTOR: 'button[aria-label="Close modal"]',
-        THEATER_MODE_CLASS: 'theatre-mode',
-        GLOBAL_MENU_SELECTOR: 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm',
-    };
+function clickButton(buttonSelector) {
+    const observer = new MutationObserver((mutationsList, observer) => {
+        for(let mutation of mutationsList) {
+            if(mutation.addedNodes.length) {
+                const button = document.querySelector(buttonSelector);
+                if (button) {
+                    button.click();
+                    observer.disconnect();
+                    return;
+                }
+            }
+        }
+    });
 
-    const AUTO_CLAIMER = {
-        CLAIMABLE_BONUS_SELECTOR: '.claimable-bonus__icon',
-        claiming: false,
-    };
+    observer.observe(document, { childList: true, subtree: true });
+}
 
-    function clickButton(buttonSelector) {
-        const observer = new MutationObserver((mutationsList, observer) => {
+function enableTheaterMode() {
+    const player = document.querySelector(PLAYER_SELECTOR);
+    if (player) {
+        if (!player.classList.contains(THEATER_MODE_CLASS)) {
+            clickButton(THEATER_MODE_BUTTON_SELECTOR);
+        }
+    } else {
+        console.error('Player not found');
+    }
+}
+
+function hideGlobalMenu() {
+    const GLOBAL_MENU_SELECTOR = 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm';
+    const globalMenu = document.querySelector(GLOBAL_MENU_SELECTOR);
+    if (globalMenu) {
+        globalMenu.style.display = 'none';
+    } else {
+        console.error('Global menu not found');
+    }
+}
+
+function autoClaimBonus() {
+    if (MutationObserver) {
+        console.log('Auto claimer is enabled.');
+
+        // Create a new MutationObserver instance
+        let observer = new MutationObserver(mutationsList => {
             for (let mutation of mutationsList) {
-                if (mutation.addedNodes.length) {
-                    const button = document.querySelector(buttonSelector);
-                    if (button) {
-                        button.click();
-                        observer.disconnect();
-                        return;
+                if (mutation.type === 'childList') {
+                    // Check if there is a claimable bonus available
+                    let bonus = document.querySelector(CLAIMABLE_BONUS_SELECTOR);
+                    if (bonus && !claiming) {
+                        // Click on the bonus to claim it
+                        bonus.click();
+                        let date = new Date();
+                        claiming = true;
+                        setTimeout(() => {
+                            console.log('Claimed at ' + date.toLocaleString());
+                            claiming = false;
+                        }, Math.random() * 1000 + 2000);
                     }
                 }
             }
         });
 
-        observer.observe(document, { childList: true, subtree: true });
+        // Observe changes in the document body and its subtree
+        observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+        console.log('MutationObserver is not supported in this browser.');
     }
+}
 
-    function enableTheaterMode() {
-        const player = document.querySelector(TWITCH.PLAYER_SELECTOR);
-        if (player && !player.classList.contains(TWITCH.THEATER_MODE_CLASS)) {
-            clickButton(TWITCH.THEATER_MODE_BUTTON_SELECTOR);
-        } else {
-            console.error('Player not found or already in theater mode');
-        }
+function claimPrimeReward() {
+    const element = document.querySelector('span[data-a-target="tw-button-text"] p[data-a-target="buy-box_call-to-action-text"][title="Get in-game content"]');
+    if (element) {
+        element.click();
     }
+}
 
-    function hideGlobalMenu() {
-        const globalMenu = document.querySelector(TWITCH.GLOBAL_MENU_SELECTOR);
-        if (globalMenu) {
-            globalMenu.style.display = 'none';
-        } else {
-            console.error('Global menu not found');
-        }
-    }
-
-    function autoClaimBonus() {
-        if (MutationObserver) {
-            console.log('Auto claimer is enabled.');
-
-            const observer = new MutationObserver(mutationsList => {
-                for (let mutation of mutationsList) {
-                    if (mutation.type === 'childList') {
-                        let bonus = document.querySelector(AUTO_CLAIMER.CLAIMABLE_BONUS_SELECTOR);
-                        if (bonus && !AUTO_CLAIMER.claiming) {
-                            bonus.click();
-                            let date = new Date();
-                            AUTO_CLAIMER.claiming = true;
-                            setTimeout(() => {
-                                console.log('Claimed at ' + date.toLocaleString());
-                                AUTO_CLAIMER.claiming = false;
-                            }, Math.random() * 1000 + 2000);
-                        }
-                    }
-                }
-            });
-
-            observer.observe(document.body, { childList: true, subtree: true });
-        } else {
-            console.log('MutationObserver is not supported in this browser.');
-        }
-    }
-    function claimPrimeRewards() {
-        const element = document.querySelector('span[data-a-target="tw-button-text"] p[data-a-target="buy-box_call-to-action-text"][title="Get in-game content"]');
-        if (element) {
-            element.click();
-        }
-
-    setTimeout(enableTheaterMode, 1000);
-    setTimeout(() => clickButton(TWITCH.CLOSE_MENU_BUTTON_SELECTOR), 1000);
-    setTimeout(() => clickButton(TWITCH.CLOSE_MODAL_BUTTON_SELECTOR), 1000);
-    setTimeout(hideGlobalMenu, 1000);
-    setTimeout(autoClaimBonus, 1000);
-    setTimeout(claimPrimeRewards, 100);
-    }
-})();
+setTimeout(enableTheaterMode, 1000);
+setTimeout(autoClaimBonus, 1000);
+setTimeout(claimPrimeReward, 1000);
+setTimeout(() => clickButton(CLOSE_MENU_BUTTON_SELECTOR), 1000);
+setTimeout(() => clickButton(CLOSE_MODAL_BUTTON_SELECTOR), 1000);
+setTimeout(hideGlobalMenu, 1000);
+}
+)();
