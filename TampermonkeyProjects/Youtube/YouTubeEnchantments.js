@@ -35,6 +35,12 @@
         setInterval(wait, GM_config.get('CHECK_FREQUENCY'), DEBUG);
     }
 
+    function clearAutoLikedVideoIds() {
+        autoLikedVideoIds.clear();
+    }
+
+    window.addEventListener('popstate', clearAutoLikedVideoIds);
+    
     function getVideoId() {
         const watchFlexyElem = document.querySelector('#page-manager > ytd-watch-flexy');
         if (watchFlexyElem && watchFlexyElem.hasAttribute('video-id')) {
