@@ -5,7 +5,6 @@
 // @description  Control the playback speed of HTML5 video players with keyboard shortcuts.
 // @author       JJJ
 // @match        *://*/*
-// @exclude      https://www.youtube.com/shorts/*
 // @icon         https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png
 // @grant        none
 // ==/UserScript==
