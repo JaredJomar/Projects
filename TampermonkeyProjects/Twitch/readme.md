@@ -1,4 +1,4 @@
-# Twitch Enhancements UserScript
+# Twitch Enhancements
 
 This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, and claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/).
 
@@ -40,6 +40,6 @@ If you encounter any issues or have suggestions for improvements, feel free to o
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
 
 ![Twitch Icon](https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0)
