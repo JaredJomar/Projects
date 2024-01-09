@@ -1,0 +1,2 @@
+Created Readme for NoteApp and Video Download
+Fix Comments and make them modular
