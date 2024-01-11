@@ -157,9 +157,10 @@ class MainWindow(QMainWindow):
         folder_layout.addWidget(self.download_folder_input)
         
         self.browse_button = QPushButton("Browse")
-        self.browse_button.clicked.connect(self.browse_folder)
+        self.browse_button.clicked.connect(self.browse_download_folder)
         self.browse_button.setStyleSheet("QPushButton { background-color: #06283D; color: white; font-weight: bold; }")
         folder_layout.addWidget(self.browse_button)
+        
         
         layout.addLayout(folder_layout)
 
@@ -245,6 +246,12 @@ class MainWindow(QMainWindow):
             with open(file, 'r') as f:
                 urls = f.read().splitlines()
                 self.url_input.setText('\n'.join(urls))
+    
+    def browse_download_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        if folder:
+            self.download_folder_input.setText(folder)
+            self.save_settings()
 
     def cancel_download(self):
         if self.download_thread:
