@@ -1,6 +1,6 @@
 # Projects
 
-This repo contains some of my personal projects that I have created for various purposes.
+This repo contains some of my personal projects that I have created or modified for various purposes.
 
 ## ArchiveBooksDownloader
 
