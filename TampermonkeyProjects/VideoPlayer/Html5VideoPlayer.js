@@ -7,6 +7,7 @@
 // @match        *://*/*
 // @icon         https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png
 // @grant        none
+// @updateURL    https://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/VideoPlayer/Html5VideoPlayer.js
 // ==/UserScript==
 
 (function () {
@@ -56,8 +57,8 @@
     function speedUpVideo() {
         playbackRate += 0.1;
         video.playbackRate = playbackRate;
-    updateSpeedIndicator();
-}
+        updateSpeedIndicator();
+    }
 
     // Function to decrease the playback rate by 0.1
     function slowDownVideo() {

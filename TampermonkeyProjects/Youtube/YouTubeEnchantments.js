@@ -14,6 +14,7 @@
 // @grant          GM_registerMenuCommand
 // @run-at         document-idle
 // @noframes
+// @updateURL      https://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/Youtube/YouTubeEnchantments.js
 // ==/UserScript==
 
 (() => {
@@ -40,7 +41,7 @@
     }
 
     window.addEventListener('popstate', clearAutoLikedVideoIds);
-    
+
     function getVideoId() {
         const watchFlexyElem = document.querySelector('#page-manager > ytd-watch-flexy');
         if (watchFlexyElem && watchFlexyElem.hasAttribute('video-id')) {
@@ -128,11 +129,11 @@
         constructor(name, enabled) {
             this.debug = {};
             if (!window.console) {
-                return () => {};
+                return () => { };
             }
             Object.getOwnPropertyNames(window.console).forEach(key => {
                 if (typeof window.console[key] === 'function') {
-                    this.debug[key] = enabled ? window.console[key].bind(window.console, name + ': ') : () => {};
+                    this.debug[key] = enabled ? window.console[key].bind(window.console, name + ': ') : () => { };
                 }
             });
             return this.debug;
