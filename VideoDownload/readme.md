@@ -1,6 +1,6 @@
 # Video Download App
 
-A simple PyQt5-based application for downloading videos and audio from YouTube using yt-dlp and FFmpeg.
+A simple TTinker-based application for downloading videos and audio from YouTube using yt-dlp and FFmpeg.
 
 ## Features
 
