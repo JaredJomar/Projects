@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Disney Plus Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  Enhancements for Disney Plus video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
@@ -24,9 +24,9 @@
   // Function to create and show the settings dialog
   function showSettingsDialog() {
     const dialogHTML = `
-      <div id="disneyPlusEnhancementsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999;">
+      <div id="disneyPlusEnhancementsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
         <h3>Disney Plus Enhancements - Settings</h3>
-                  <br>
+        <br>
         <label>
           <input type="checkbox" id="enableAutoFullscreen" ${GM_getValue('enableAutoFullscreen', true) ? 'checked' : ''}>
           Enable Auto Fullscreen
@@ -42,7 +42,8 @@
           Auto Play Next Episode
         </label>
         <br>
-        <button id="saveSettingsButton">Save</button>
+        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer;">Save</button>
+        <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px;">Cancel</button>
       </div>
     `;
 
@@ -60,6 +61,13 @@
       GM_setValue('enableAutoFullscreen', document.getElementById('enableAutoFullscreen').checked);
 
       // Close the dialog after saving settings
+      document.getElementById('disneyPlusEnhancementsDialog').remove();
+    });
+
+    // Add event listener to the "Cancel" button
+    const cancelSettingsButton = document.getElementById('cancelSettingsButton');
+    cancelSettingsButton.addEventListener('click', () => {
+      // Close the dialog without saving settings
       document.getElementById('disneyPlusEnhancementsDialog').remove();
     });
   }
@@ -104,7 +112,6 @@
       autoPlayButton.click();
     }
 
-
     // Use requestAnimationFrame() to call this function at most once per frame,
     // which is more efficient and optimized for animations and timers compared to setInterval()
     window.requestAnimationFrame(skipIntroAndFullscreen);
@@ -120,5 +127,21 @@
   window.addEventListener('hashchange', () => {
     // When the hash (URL) changes, execute skipIntroAndFullscreen() again
     window.requestAnimationFrame(skipIntroAndFullscreen);
+  });
+
+  // Function to exit fullscreen mode
+  function exitFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }
+
+  // Add event listener to toggle settings dialog on F2 key press
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'F2') {
+      showSettingsDialog();
+    } else if (event.key === 'Escape') {
+      exitFullscreen();
+    }
   });
 })();
