@@ -8,7 +8,7 @@
 // @match        *://*/*
 // @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
 // @grant        none
-// @updateURL    https://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/NotARobot/AutoNotARobotCliker.js
+// @updateURL    https://raw.githubusercontent.com/JaredJomar/Projects/main/TampermonkeyProjects/NotARobot/AutoNotARobotCliker.js
 // ==/UserScript==
 
 (function () {
