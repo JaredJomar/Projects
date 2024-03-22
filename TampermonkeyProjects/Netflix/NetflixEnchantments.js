@@ -27,28 +27,33 @@
   // Function to create and show the settings dialog
   function showSettingsDialog() {
     const dialogHTML = `
-    <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
-      <h3 style="margin-top: 0;">Netflix Enchantments - Configuration</h3>
-      <label style="display: block; margin-bottom: 10px; color: white;">
-        <input type="checkbox" id="enableSkipRecap" ${GM_getValue('enableSkipRecap', true) ? 'checked' : ''}>
-        <span style="color: white;">Skip Recap</span>
-      </label>
-      <label style="display: block; margin-bottom: 10px; color: white;">
-        <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
-        <span style="color: white;">Skip Intro</span>
-      </label>
-      <label style="display: block; margin-bottom: 10px; color: white;">
-        <input type="checkbox" id="enableSkipOutro" ${GM_getValue('enableSkipOutro', true) ? 'checked' : ''}>
-        <span style="color: white;">Skip Outro</span>
-      </label>
-      <label style="display: block; margin-bottom: 10px; color: white;">
-        <input type="checkbox" id="cancelFullscreen" ${GM_getValue('cancelFullscreen', false) ? 'checked' : ''}>
-        <span style="color: white;">Cancel Fullscreen</span>
-      </label>
-      <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer;">Save</button>
-      <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px;">Cancel</button>
-    </div>
-  `;
+      <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white; width: 300px;">
+        <h3 style="margin-top: 0; font-size: 1.2em;">Netflix Enchantments</h3>
+        <br>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
+          <input type="checkbox" id="enableSkipRecap" ${GM_getValue('enableSkipRecap', true) ? 'checked' : ''}>
+          <span style="color: white;">Skip Recap</span>
+        </label>
+        <br>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
+          <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
+          <span style="color: white;">Skip Intro</span>
+        </label>
+        <br>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
+          <input type="checkbox" id="enableSkipOutro" ${GM_getValue('enableSkipOutro', true) ? 'checked' : ''}>
+          <span style="color: white;">Skip Outro</span>
+        </label>
+        <br>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
+          <input type="checkbox" id="cancelFullscreen" ${GM_getValue('cancelFullscreen', false) ? 'checked' : ''}>
+          <span style="color: white;">Cancel Fullscreen</span>
+        </label>
+        <br>
+        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer; font-size: 1em;">Save</button>
+        <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px; font-size: 1em;">Cancel</button>
+      </div>
+    `;
 
     const dialogWrapper = document.createElement('div');
     dialogWrapper.innerHTML = dialogHTML;
@@ -152,7 +157,7 @@
   setInterval(skipRecap, 1000);
   setInterval(skipIntroAndOutro, 1000);
 
-  GM_registerMenuCommand('Netflix Enchantments - Configuration', showSettingsDialog);
+  GM_registerMenuCommand('Netflix Enchantments', showSettingsDialog);
 
   let isSettingsDialogOpen = false;
 
