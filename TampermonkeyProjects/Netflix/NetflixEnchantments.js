@@ -14,64 +14,80 @@
 // ==/UserScript==
 
 (function () {
-  const MAX_SKIP_ATTEMPTS = 5;
+  const Max_Skip_Attempts = 5;
+  let skipRecapAttempts = 0;
   let skipIntroAttempts = 0;
   let skipOutroAttempts = 0;
 
   // Select elements on the page that we will interact with
-  const skipIntroButtonSelector = '.button-primary.watch-video--skip-content-button.medium.hasLabel.ltr-1mjzmhv';
+  const skipRecapButtonSelector = '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv';
+  const skipIntroButtonSelector = '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv';
   const skipOutroButtonSelector = '.color-primary.hasLabel.hasIcon.ltr-1jtux27';
 
   // Function to create and show the settings dialog
   function showSettingsDialog() {
     const dialogHTML = `
-      <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
-        <h3 style="margin-top: 0;">Netflix Enchantments - Configuración</h3>
-        <label style="display: block; margin-bottom: 10px; color: white;">
-          <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
-          <span style="color: white;">Skip Intro</span>
-        </label>
-        <label style="display: block; margin-bottom: 10px; color: white;">
-          <input type="checkbox" id="enableSkipOutro" ${GM_getValue('enableSkipOutro', true) ? 'checked' : ''}>
-          <span style="color: white;">Skip Outro</span>
-        </label>
-        <label style="display: block; margin-bottom: 10px; color: white;">
-          <input type="checkbox" id="cancelFullscreen" ${GM_getValue('cancelFullscreen', false) ? 'checked' : ''}>
-          <span style="color: white;">Cancel Fullscreen</span>
-        </label>
-        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer;">Guardar</button>
-      </div>
-    `;
+    <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
+      <h3 style="margin-top: 0;">Netflix Enchantments - Configuration</h3>
+      <label style="display: block; margin-bottom: 10px; color: white;">
+        <input type="checkbox" id="enableSkipRecap" ${GM_getValue('enableSkipRecap', true) ? 'checked' : ''}>
+        <span style="color: white;">Skip Recap</span>
+      </label>
+      <label style="display: block; margin-bottom: 10px; color: white;">
+        <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
+        <span style="color: white;">Skip Intro</span>
+      </label>
+      <label style="display: block; margin-bottom: 10px; color: white;">
+        <input type="checkbox" id="enableSkipOutro" ${GM_getValue('enableSkipOutro', true) ? 'checked' : ''}>
+        <span style="color: white;">Skip Outro</span>
+      </label>
+      <label style="display: block; margin-bottom: 10px; color: white;">
+        <input type="checkbox" id="cancelFullscreen" ${GM_getValue('cancelFullscreen', false) ? 'checked' : ''}>
+        <span style="color: white;">Cancel Fullscreen</span>
+      </label>
+      <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer;">Save</button>
+      <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px;">Cancel</button>
+    </div>
+  `;
 
     const dialogWrapper = document.createElement('div');
     dialogWrapper.innerHTML = dialogHTML;
-
     document.body.appendChild(dialogWrapper);
 
-    // Add event listener to the "Guardar" button
     const saveSettingsButton = document.getElementById('saveSettingsButton');
+    const cancelSettingsButton = document.getElementById('cancelSettingsButton');
+
     saveSettingsButton.addEventListener('click', () => {
-      // Save the state of each option to local storage
+      console.log('Save button clicked');
+      GM_setValue('enableSkipRecap', document.getElementById('enableSkipRecap').checked);
       GM_setValue('enableSkipIntro', document.getElementById('enableSkipIntro').checked);
       GM_setValue('enableSkipOutro', document.getElementById('enableSkipOutro').checked);
       GM_setValue('cancelFullscreen', document.getElementById('cancelFullscreen').checked);
+      closeSettingsDialog(); // Close the dialog after saving the settings
+    });
 
-      // Close the dialog after saving settings
-      document.getElementById('netflixEnchantmentsDialog').remove();
+    cancelSettingsButton.addEventListener('click', () => {
+      console.log('Cancel button clicked');
+      closeSettingsDialog(); // Close the dialog without saving the settings
     });
   }
 
+  function closeSettingsDialog() {
+    const dialog = document.getElementById('netflixEnchantmentsDialog');
+    if (dialog) {
+      dialog.remove();
+      // Exit fullscreen mode if active
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    }
+  }
+
   function sleep(ms) {
-    // Define a promise to sleep for a given number of milliseconds
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async function skipIntroAndOutro() {
-    // Reset skipIntroAttempts and skipOutroAttempts on every execution
-    skipIntroAttempts = 0;
-    skipOutroAttempts = 0;
-
-    // Helper function to click the skip intro or outro button
+  async function skipRecap() {
     function clickSkipButton(buttonSelector) {
       const skipButton = document.querySelector(buttonSelector);
       if (skipButton) {
@@ -79,59 +95,83 @@
       }
     }
 
-    // Helper function to enter fullscreen
+    clickSkipButton(skipRecapButtonSelector);
+  }
+
+  async function skipIntroAndOutro() {
+    skipIntroAttempts = 0;
+    skipOutroAttempts = 0;
+
+    function clickSkipButton(buttonSelector) {
+      const skipButton = document.querySelector(buttonSelector);
+      if (skipButton) {
+        skipButton.click();
+      }
+    }
+
     function enterFullscreen() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen();
       }
     }
 
-    // Helper function to exit fullscreen
     function exitFullscreen() {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
     }
 
-    // Automatically skip intro if the button is present and visible
+    const enableSkipRecap = GM_getValue('enableSkipRecap', true);
+    if (enableSkipRecap) {
+      clickSkipButton(skipRecapButtonSelector);
+      skipRecapAttempts++;
+    }
+
     const enableSkipIntro = GM_getValue('enableSkipIntro', true);
     if (enableSkipIntro) {
       clickSkipButton(skipIntroButtonSelector);
       skipIntroAttempts++;
     }
 
-    // Automatically skip outro if the button is present and visible
     const enableSkipOutro = GM_getValue('enableSkipOutro', true);
     if (enableSkipOutro) {
       clickSkipButton(skipOutroButtonSelector);
       skipOutroAttempts++;
     }
 
-    // Automatically enter fullscreen when a video starts playing
     if (document.querySelector('.watch-video--player-view')) {
       enterFullscreen();
     }
 
-    // Automatically exit fullscreen if the cancelFullscreen option is enabled
     const cancelFullscreen = GM_getValue('cancelFullscreen', false);
     if (cancelFullscreen && document.fullscreenElement) {
       exitFullscreen();
     }
-
-    // Use requestAnimationFrame() to call this function at most once per frame,
-    // which is more efficient and optimized for animations and timers compared to setInterval()
-    window.requestAnimationFrame(skipIntroAndOutro);
   }
 
-  // Add a custom menu "Netflix Enchantments - Configuración"
-  GM_registerMenuCommand('Netflix Enchantments - Configuración', showSettingsDialog);
+  setInterval(skipRecap, 1000);
+  setInterval(skipIntroAndOutro, 1000);
 
-  // Call the skipIntroAndOutro() function for the first time
-  window.requestAnimationFrame(skipIntroAndOutro);
+  GM_registerMenuCommand('Netflix Enchantments - Configuration', showSettingsDialog);
 
-  // Add an event listener for the hashchange event
-  window.addEventListener('hashchange', () => {
-    // When the hash (URL) changes, execute skipIntroAndOutro() again
-    window.requestAnimationFrame(skipIntroAndOutro);
+  let isSettingsDialogOpen = false;
+
+  function toggleSettingsDialog() {
+    if (isSettingsDialogOpen) {
+      closeSettingsDialog();
+      isSettingsDialogOpen = false;
+    } else {
+      showSettingsDialog();
+      isSettingsDialogOpen = true;
+    }
+  }
+
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'F2') {
+      toggleSettingsDialog();
+    } else if (event.key === 'Escape') {
+      exitFullscreen();
+    }
   });
+
 })();
