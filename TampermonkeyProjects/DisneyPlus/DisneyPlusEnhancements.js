@@ -25,7 +25,7 @@
   function showSettingsDialog() {
     const dialogHTML = `
       <div id="disneyPlusEnhancementsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
-        <h3>Disney Plus Enhancements - Settings</h3>
+        <h3>Disney Plus Enhancements</h3>
         <br>
         <label>
           <input type="checkbox" id="enableAutoFullscreen" ${GM_getValue('enableAutoFullscreen', true) ? 'checked' : ''}>
@@ -49,7 +49,6 @@
 
     const dialogWrapper = document.createElement('div');
     dialogWrapper.innerHTML = dialogHTML;
-
     document.body.appendChild(dialogWrapper);
 
     // Add event listener to the "Save" button
@@ -118,7 +117,7 @@
   }
 
   // Add a custom menu "Disney Plus Enhancements - Settings"
-  GM_registerMenuCommand('Disney Plus Enhancements - Settings', showSettingsDialog);
+  GM_registerMenuCommand('Disney Plus Enhancements', showSettingsDialog);
 
   // Call the skipIntroAndFullscreen() function for the first time
   window.requestAnimationFrame(skipIntroAndFullscreen);
