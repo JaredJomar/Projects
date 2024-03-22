@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
