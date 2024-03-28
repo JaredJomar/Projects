@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           YouTube Enchantments
-// @namespace      Based on YouTube Auto-Liker by HatScripts and Youtube Auto Scroll Down
+// @namespace      YouTube Auto-Liker 
 // @version        0.1
 // @description    Automatically likes videos of channels you're subscribed to and automatically scrolls down on Youtube with a toggle button
 // @author         JJJ
