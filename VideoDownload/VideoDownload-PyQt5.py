@@ -108,8 +108,8 @@ class DownloadThread(QThread):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,  # Add this line
             )
-
             for line in process.stdout:
                 if not self.running:
                     return
