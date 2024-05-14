@@ -13,6 +13,7 @@ Enhance your Netflix experience with Netflix Enchantments! This script adds new 
 - Automatically skips intros and outros on Netflix.
 - Provides an option to cancel fullscreen mode.
 - Automatically enables fullscreen mode when a video starts.
+- Press F2 to open the settings
 
 ## Usage
 
@@ -30,7 +31,7 @@ JJJ
 
 ## Version
 
-0.2
+0.3
 
 ## License
 

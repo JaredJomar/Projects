@@ -10,7 +10,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
-// @updateURL    https://raw.githubusercontent.com/JaredJomar/Projects/main/TampermonkeyProjects/Netflix/NetflixEnchantments.js
+// @license     MIT
 // ==/UserScript==
 
 (function () {

@@ -13,6 +13,7 @@ Enhance your Disney Plus experience with Disney Plus Enhancements! This script a
 - Automatically skips intros or recaps if the button is present and visible.
 - Automatically plays the next episode if the button is present and visible.
 - Automatically enables fullscreen mode when a video starts.
+- Press F2 to open the settings
 
 ## Usage
 

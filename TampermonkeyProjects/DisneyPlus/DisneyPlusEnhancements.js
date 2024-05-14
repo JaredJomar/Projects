@@ -10,7 +10,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
-// @updateURL    https://raw.githubusercontent.com/JaredJomar/Projects/main/TampermonkeyProjects/DisneyPlus/DisneyPlusEnhancements.js
+// @license     MIT
 // ==/UserScript==
 
 (function () {
