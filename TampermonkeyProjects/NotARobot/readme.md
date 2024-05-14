@@ -16,7 +16,6 @@ This script automatically clicks the "I'm not a robot" checkbox and any button w
 ## Usage
 
 - The script will automatically click the "I'm not a robot" checkbox when it appears on a website.
-- The script will automatically click any button with the class "play-box" when it appears on a website.
 
 ## Keyboard Shortcuts
 

@@ -14,7 +14,7 @@
 // @grant          GM_registerMenuCommand
 // @run-at         document-idle
 // @noframes
-// @updateURL      https://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/Youtube/YouTubeEnchantments.js
+// @license        MIT
 // ==/UserScript==
 
 (() => {

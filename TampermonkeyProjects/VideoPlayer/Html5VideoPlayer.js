@@ -7,7 +7,7 @@
 // @match        *://*/*
 // @icon         https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png
 // @grant        none
-// @updateURL    https://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/VideoPlayer/Html5VideoPlayer.js
+// @license      MIT
 // ==/UserScript==
 
 (function () {

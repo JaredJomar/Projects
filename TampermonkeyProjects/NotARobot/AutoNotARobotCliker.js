@@ -2,12 +2,12 @@
 // @name         Auto Click "I'm not a robot"
 // @namespace    http://tampermonkey.net/
 // @version      0.3
-// @description  Automatically clicks the "I'm not a robot" checkbox and a button with the class "play-box" on websites
+// @description  Automatically clicks the "I'm not a robot" checkbox
 // @author       JJJ
 // @match        *://*/*
 // @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
 // @grant        none
-// @updateURL    https://raw.githubusercontent.com/JaredJomar/Projects/main/TampermonkeyProjects/NotARobot/AutoNotARobotCliker.js
+// @license      MIT
 // ==/UserScript==
 
 (function () {

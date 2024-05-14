@@ -8,7 +8,7 @@
 // @match        https://gaming.amazon.com/*
 // @icon         https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0
 // @grant        none
-// @updateURL    hhttps://github.com/JaredJomar/Projects/blob/main/TampermonkeyProjects/Twitch/TwitchEnhancements.js
+// @license      MIT
 // ==/UserScript==
 
 (function () {
