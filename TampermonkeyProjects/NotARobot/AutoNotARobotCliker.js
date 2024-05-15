@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Auto Click "I'm not a robot"
 // @namespace    http://tampermonkey.net/
-// @version      0.3
-// @description  Automatically clicks the "I'm not a robot" checkbox
+// @version      0.4
+// @description  Automatically clicks the "I'm not a robot" checkbox and Solves CloudFlare Turnstile
 // @author       JJJ
 // @match        *://*/*
 // @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
@@ -38,4 +38,15 @@
     } else {
         console.log("Start element not found.");
     }
+
+    // Solve CloudFlare Turnstile
+    (function () {
+        'use strict';
+
+        setInterval(function () {
+            document.querySelector('#challenge-stage')?.querySelectorAll('*')?.forEach(element => {
+                element.click();
+            });
+        }, 3000);
+    })();
 })();
