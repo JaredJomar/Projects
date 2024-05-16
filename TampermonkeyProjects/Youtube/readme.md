@@ -12,12 +12,23 @@ Enhance your Youtube experience with Youtube Enchantments! This script adds new 
 
 - Automatically likes videos from channels you're subscribed to.
 - Automatically scrolls down on Youtube with a toggle button.
+- Removes the ad-blocking warning dialog.
+- Provides a settings menu to customize the script's behavior.
 
 ## Usage
 
 - The script will automatically like any video from channels you're subscribed to.
 - Press the "Page Down" key to start auto-scrolling.
 - Press the "Page Up" key to stop auto-scrolling.
+- Open the settings menu by right-clicking on the Tampermonkey icon and selecting "YouTube Enchantments Settings".
+
+## Settings
+
+- Debug Mode: Log debug messages to the console.
+- Check Frequency (ms): It will wait 5000 milliseconds between checking if a video should be liked.
+- Watch Threshold %: The percentage of the video watched before liking it. You can select the threshold from a dropdown menu.
+- Like if Not Subscribed: Like videos from channels you are not subscribed to.
+- Auto-like Live Streams: Automatically like live streams.
 
 ## Keyboard Shortcuts
 
@@ -30,7 +41,7 @@ JJJ
 
 ## Version
 
-0.1
+0.2
 
 ## License
 
