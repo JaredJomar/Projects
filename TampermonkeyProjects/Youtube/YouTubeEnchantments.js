@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      Based on YouTube Auto-Liker by HatScripts and Youtube Auto Scroll Down
-// @version        0.2
+// @version        0.3
 // @description    Automatically likes videos of channels you're subscribed to and automatically scrolls down on Youtube with a toggle button. Also removes the ad-blocking warning dialog.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -191,6 +191,19 @@
         document.body.appendChild(dialogContainer);
     }
 
+    // Function to remove the ad-blocking dialog
+    function removeAdBlockingDialog() {
+        const dialog = document.querySelector('tp-yt-paper-dialog');
+        if (dialog) {
+            const dialogText = dialog.querySelector('#title yt-attributed-string')?.textContent;
+            if (dialogText?.includes('Los bloqueadores de anuncios no se permiten en YouTube') || dialogText?.includes("Ad blockers aren't allowed on YouTube")) {
+                dialog.remove();
+            }
+        }
+    }
+
+    // Call the function to remove the ad-blocking dialog when the script loads
+    removeAdBlockingDialog();
 
     // Clear the set of auto-liked video IDs when the page state changes
     function clearAutoLikedVideoIds() {
@@ -337,11 +350,7 @@
             if (mutation.addedNodes.length > 0) {
                 mutation.addedNodes.forEach((node) => {
                     if (node.nodeName === 'TP-YT-PAPER-DIALOG') {
-                        const dialogText = node.querySelector('#title yt-attributed-string').textContent;
-                        if (dialogText.includes('Los bloqueadores de anuncios no se permiten en YouTube') || dialogText.includes("Ad blockers aren't allowed on YouTube")) {
-                            // Ad-blocking dialog detected, remove it
-                            node.remove();
-                        }
+                        removeAdBlockingDialog();
                     }
                 });
             }
