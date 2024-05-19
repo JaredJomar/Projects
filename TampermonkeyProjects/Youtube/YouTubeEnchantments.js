@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      Based on YouTube Auto-Liker by HatScripts and Youtube Auto Scroll Down
-// @version        0.3
+// @version        0.4
 // @description    Automatically likes videos of channels you're subscribed to and automatically scrolls down on Youtube with a toggle button. Also removes the ad-blocking warning dialog.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -33,11 +33,12 @@
 
     // Default settings for the script
     const defaultSettings = {
-        debugMode: false,
-        checkFrequency: 5000,
-        watchThreshold: 0,
+        autoLikeEnabled: true,
+        autoLikeLiveStreams: false,
         likeIfNotSubscribed: false,
-        autoLikeLiveStreams: false
+        watchThreshold: 0,
+        checkFrequency: 5000,
+        debugMode: false
     };
 
     // Load settings from storage or use default settings
@@ -254,7 +255,7 @@
     function wait(DEBUG) {
         if (watchThresholdReached(DEBUG)) {
             try {
-                if (settings.likeIfNotSubscribed || isSubscribed(DEBUG)) {
+                if (settings.autoLikeEnabled && (settings.likeIfNotSubscribed || isSubscribed(DEBUG))) {
                     if (settings.autoLikeLiveStreams || window.getComputedStyle(document.querySelector('.ytp-live-badge')).display === 'none') {
                         like(DEBUG);
                     }
