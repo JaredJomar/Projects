@@ -1,13 +1,13 @@
 // ==UserScript==
-// @name Auto Click "I'm not a robot"
-// @namespace http://tampermonkey.net/
-// @version 0.5
-// @description Automatically clicks the "I'm not a robot" checkbox and Solves CloudFlare Turnstile
-// @author JJJ
-// @match *://*/*
-// @icon https://pngimg.com/uploads/robot/robot_PNG96.png
-// @grant none
-// @license MIT
+// @name         Auto Click "I'm not a robot"
+// @namespace    http://tampermonkey.net/
+// @version      0.5
+// @description  Automatically clicks the "I'm not a robot" checkbox and Solves CloudFlare Turnstile
+// @author       JJJ
+// @match        *://*/*
+// @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
+// @grant        none
+// @license      MIT
 // ==/UserScript==
 
 (function () {
