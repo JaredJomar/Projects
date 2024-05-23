@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Disney Plus Enhancements
+// @name         Disney Plus Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.6
 // @description  Enhancements for Disney Plus video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
@@ -14,36 +14,39 @@
 // ==/UserScript==
 
 (function () {
-  const MAX_SKIP_ATTEMPTS = 5;
-  let skipAttempts = 0;
+  const config = {
+    enableAutoFullscreen: GM_getValue('enableAutoFullscreen', true),
+    enableSkipIntro: GM_getValue('enableSkipIntro', true),
+    enableAutoPlayNext: GM_getValue('enableAutoPlayNext', false),
+  };
 
-  // Select elements on the page that we will interact with
-  const skipIntroButtonSelector = '.skip__button:first-child';
-  const autoPlayButtonSelector = '*[data-testid="up-next-play-button"]';
+  const selectors = {
+    skipIntroButton: '.skip__button:first-child',
+    autoPlayButton: '*[data-testid="up-next-play-button"]',
+  };
 
-  // Function to create and show the settings dialog
   function showSettingsDialog() {
     const dialogHTML = `
-      <div id="disneyPlusEnhancementsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white;">
-        <h3>Disney Plus Enhancements</h3>
+      <div id="disneyPlusEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white; width: 300px;">
+        <h3 style="margin-top: 0; font-size: 1.2em;">Disney Plus Enchantments</h3>
         <br>
-        <label>
-          <input type="checkbox" id="enableAutoFullscreen" ${GM_getValue('enableAutoFullscreen', true) ? 'checked' : ''}>
-          Enable Auto Fullscreen
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically enter fullscreen mode">
+          <input type="checkbox" id="enableAutoFullscreen" ${config.enableAutoFullscreen ? 'checked' : ''}>
+          <span style="color: white;">Auto Fullscreen</span>
         </label>
         <br>
-        <label>
-          <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
-          Skip Intro
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the intro of episodes">
+          <input type="checkbox" id="enableSkipIntro" ${config.enableSkipIntro ? 'checked' : ''}>
+          <span style="color: white;">Skip Intro</span>
         </label>
         <br>
-        <label>
-          <input type="checkbox" id="enableAutoPlayNext" ${GM_getValue('enableAutoPlayNext', false) ? 'checked' : ''}>
-          Auto Play Next Episode
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically play the next episode">
+          <input type="checkbox" id="enableAutoPlayNext" ${config.enableAutoPlayNext ? 'checked' : ''}>
+          <span style="color: white;">Auto Play Next Episode</span>
         </label>
         <br>
-        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer;">Save</button>
-        <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px;">Cancel</button>
+        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer; font-size: 1em;">Save</button>
+        <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px; font-size: 1em;">Cancel</button>
       </div>
     `;
 
@@ -51,96 +54,104 @@
     dialogWrapper.innerHTML = dialogHTML;
     document.body.appendChild(dialogWrapper);
 
-    // Add event listener to the "Save" button
     const saveSettingsButton = document.getElementById('saveSettingsButton');
-    saveSettingsButton.addEventListener('click', () => {
-      // Save the state of each option to local storage
-      GM_setValue('enableSkipIntro', document.getElementById('enableSkipIntro').checked);
-      GM_setValue('enableAutoPlayNext', document.getElementById('enableAutoPlayNext').checked);
-      GM_setValue('enableAutoFullscreen', document.getElementById('enableAutoFullscreen').checked);
+    const cancelSettingsButton = document.getElementById('cancelSettingsButton');
 
-      // Close the dialog after saving settings
-      document.getElementById('disneyPlusEnhancementsDialog').remove();
+    saveSettingsButton.addEventListener('click', () => {
+      console.log('Save button clicked');
+      config.enableAutoFullscreen = document.getElementById('enableAutoFullscreen').checked;
+      config.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
+      config.enableAutoPlayNext = document.getElementById('enableAutoPlayNext').checked;
+      saveSettings();
+      closeSettingsDialog();
     });
 
-    // Add event listener to the "Cancel" button
-    const cancelSettingsButton = document.getElementById('cancelSettingsButton');
     cancelSettingsButton.addEventListener('click', () => {
-      // Close the dialog without saving settings
-      document.getElementById('disneyPlusEnhancementsDialog').remove();
+      console.log('Cancel button clicked');
+      closeSettingsDialog();
     });
   }
 
-  async function skipIntroAndFullscreen() {
-    // Reset skipAttempts on every execution
-    skipAttempts = 0;
-
-    // Function to check if an element is visible
-    function isElementVisible(element) {
-      return element && element.offsetParent !== null;
-    }
-
-    // Helper function to dispatch keydown event
-    function dispatchKeydownEvent(key) {
-      const event = new KeyboardEvent('keydown', { key });
-      document.dispatchEvent(event);
-    }
-
-    // Detect if a video is playing (example: checking if a video element exists)
-    const videoElement = document.querySelector('video');
-
-    if (videoElement) {
-      // Request fullscreen if it hasn't been done yet and the "Enable Auto Fullscreen" option is enabled
-      if (!document.fullscreenElement && GM_getValue('enableAutoFullscreen', true)) {
-        document.documentElement.requestFullscreen();
+  function closeSettingsDialog() {
+    const dialog = document.getElementById('disneyPlusEnchantmentsDialog');
+    if (dialog) {
+      dialog.remove();
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
       }
     }
-
-    // Automatically skip intros or recaps if the button is present and visible
-    const enableSkipIntro = GM_getValue('enableSkipIntro', true);
-    const skipIntroButton = document.querySelector(skipIntroButtonSelector);
-    if (enableSkipIntro && skipIntroButton && isElementVisible(skipIntroButton)) {
-      skipIntroButton.firstChild.click();
-      skipAttempts++;
-    }
-
-    // Automatically play the next episode if the button is present and visible
-    const enableAutoPlayNext = GM_getValue('enableAutoPlayNext', false);
-    const autoPlayButton = document.querySelector(autoPlayButtonSelector);
-    if (enableAutoPlayNext && autoPlayButton && isElementVisible(autoPlayButton)) {
-      autoPlayButton.click();
-    }
-
-    // Use requestAnimationFrame() to call this function at most once per frame,
-    // which is more efficient and optimized for animations and timers compared to setInterval()
-    window.requestAnimationFrame(skipIntroAndFullscreen);
   }
 
-  // Add a custom menu "Disney Plus Enhancements - Settings"
-  GM_registerMenuCommand('Disney Plus Enhancements', showSettingsDialog);
+  function saveSettings() {
+    GM_setValue('enableAutoFullscreen', config.enableAutoFullscreen);
+    GM_setValue('enableSkipIntro', config.enableSkipIntro);
+    GM_setValue('enableAutoPlayNext', config.enableAutoPlayNext);
+  }
 
-  // Call the skipIntroAndFullscreen() function for the first time
-  window.requestAnimationFrame(skipIntroAndFullscreen);
+  function isElementVisible(element) {
+    return element && element.offsetParent !== null;
+  }
 
-  // Add an event listener for the hashchange event
-  window.addEventListener('hashchange', () => {
-    // When the hash (URL) changes, execute skipIntroAndFullscreen() again
-    window.requestAnimationFrame(skipIntroAndFullscreen);
-  });
+  function clickButton(selector) {
+    const button = document.querySelector(selector);
+    if (button && isElementVisible(button)) {
+      button.click();
+    }
+  }
 
-  // Function to exit fullscreen mode
+  function enterFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    }
+  }
+
   function exitFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
     }
   }
 
-  // Add event listener to toggle settings dialog on F2 key press
+  function handleSkipActions() {
+    try {
+      if (config.enableAutoFullscreen) {
+        enterFullscreen();
+      }
+
+      if (config.enableSkipIntro) {
+        clickButton(selectors.skipIntroButton);
+      }
+
+      if (config.enableAutoPlayNext) {
+        clickButton(selectors.autoPlayButton);
+      }
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
+  }
+
+  const observer = new MutationObserver(handleSkipActions);
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  GM_registerMenuCommand('Disney Plus Enchantments', showSettingsDialog);
+
+  let isSettingsDialogOpen = false;
+
+  function toggleSettingsDialog() {
+    if (isSettingsDialogOpen) {
+      closeSettingsDialog();
+      isSettingsDialogOpen = false;
+    } else {
+      showSettingsDialog();
+      isSettingsDialogOpen = true;
+    }
+  }
+
   document.addEventListener('keyup', (event) => {
     if (event.key === 'F2') {
-      showSettingsDialog();
+      toggleSettingsDialog();
     } else if (event.key === 'Escape') {
       exitFullscreen();
     }
   });
+
 })();
