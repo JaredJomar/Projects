@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
@@ -14,39 +14,42 @@
 // ==/UserScript==
 
 (function () {
-  const Max_Skip_Attempts = 5;
-  let skipRecapAttempts = 0;
-  let skipIntroAttempts = 0;
-  let skipOutroAttempts = 0;
+  const config = {
+    enableSkipRecap: GM_getValue('enableSkipRecap', true),
+    enableSkipIntro: GM_getValue('enableSkipIntro', true),
+    enableSkipOutro: GM_getValue('enableSkipOutro', true),
+    cancelFullscreen: GM_getValue('cancelFullscreen', false),
+  };
 
-  // Select elements on the page that we will interact with
-  const skipRecapButtonSelector = '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv';
-  const skipIntroButtonSelector = '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv';
-  const skipOutroButtonSelector = '.color-primary.hasLabel.hasIcon.ltr-1jtux27';
+  const selectors = {
+    skipRecapButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
+    skipIntroButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
+    skipOutroButton: '.color-primary.hasLabel.hasIcon.ltr-1jtux27',
+    fullscreenView: '.watch-video--player-view',
+  };
 
-  // Function to create and show the settings dialog
   function showSettingsDialog() {
     const dialogHTML = `
       <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white; width: 300px;">
         <h3 style="margin-top: 0; font-size: 1.2em;">Netflix Enchantments</h3>
         <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
-          <input type="checkbox" id="enableSkipRecap" ${GM_getValue('enableSkipRecap', true) ? 'checked' : ''}>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip episode recaps">
+          <input type="checkbox" id="enableSkipRecap" ${config.enableSkipRecap ? 'checked' : ''}>
           <span style="color: white;">Skip Recap</span>
         </label>
         <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
-          <input type="checkbox" id="enableSkipIntro" ${GM_getValue('enableSkipIntro', true) ? 'checked' : ''}>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the intro of episodes">
+          <input type="checkbox" id="enableSkipIntro" ${config.enableSkipIntro ? 'checked' : ''}>
           <span style="color: white;">Skip Intro</span>
         </label>
         <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
-          <input type="checkbox" id="enableSkipOutro" ${GM_getValue('enableSkipOutro', true) ? 'checked' : ''}>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the outro of episodes">
+          <input type="checkbox" id="enableSkipOutro" ${config.enableSkipOutro ? 'checked' : ''}>
           <span style="color: white;">Skip Outro</span>
         </label>
         <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;">
-          <input type="checkbox" id="cancelFullscreen" ${GM_getValue('cancelFullscreen', false) ? 'checked' : ''}>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically exit fullscreen mode">
+          <input type="checkbox" id="cancelFullscreen" ${config.cancelFullscreen ? 'checked' : ''}>
           <span style="color: white;">Cancel Fullscreen</span>
         </label>
         <br>
@@ -64,16 +67,17 @@
 
     saveSettingsButton.addEventListener('click', () => {
       console.log('Save button clicked');
-      GM_setValue('enableSkipRecap', document.getElementById('enableSkipRecap').checked);
-      GM_setValue('enableSkipIntro', document.getElementById('enableSkipIntro').checked);
-      GM_setValue('enableSkipOutro', document.getElementById('enableSkipOutro').checked);
-      GM_setValue('cancelFullscreen', document.getElementById('cancelFullscreen').checked);
-      closeSettingsDialog(); // Close the dialog after saving the settings
+      config.enableSkipRecap = document.getElementById('enableSkipRecap').checked;
+      config.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
+      config.enableSkipOutro = document.getElementById('enableSkipOutro').checked;
+      config.cancelFullscreen = document.getElementById('cancelFullscreen').checked;
+      saveSettings();
+      closeSettingsDialog();
     });
 
     cancelSettingsButton.addEventListener('click', () => {
       console.log('Cancel button clicked');
-      closeSettingsDialog(); // Close the dialog without saving the settings
+      closeSettingsDialog();
     });
   }
 
@@ -81,81 +85,66 @@
     const dialog = document.getElementById('netflixEnchantmentsDialog');
     if (dialog) {
       dialog.remove();
-      // Exit fullscreen mode if active
       if (document.fullscreenElement) {
         document.exitFullscreen();
       }
     }
   }
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  function saveSettings() {
+    GM_setValue('enableSkipRecap', config.enableSkipRecap);
+    GM_setValue('enableSkipIntro', config.enableSkipIntro);
+    GM_setValue('enableSkipOutro', config.enableSkipOutro);
+    GM_setValue('cancelFullscreen', config.cancelFullscreen);
   }
 
-  async function skipRecap() {
-    function clickSkipButton(buttonSelector) {
-      const skipButton = document.querySelector(buttonSelector);
-      if (skipButton) {
-        skipButton.click();
-      }
-    }
-
-    clickSkipButton(skipRecapButtonSelector);
-  }
-
-  async function skipIntroAndOutro() {
-    skipIntroAttempts = 0;
-    skipOutroAttempts = 0;
-
-    function clickSkipButton(buttonSelector) {
-      const skipButton = document.querySelector(buttonSelector);
-      if (skipButton) {
-        skipButton.click();
-      }
-    }
-
-    function enterFullscreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      }
-    }
-
-    function exitFullscreen() {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
-    }
-
-    const enableSkipRecap = GM_getValue('enableSkipRecap', true);
-    if (enableSkipRecap) {
-      clickSkipButton(skipRecapButtonSelector);
-      skipRecapAttempts++;
-    }
-
-    const enableSkipIntro = GM_getValue('enableSkipIntro', true);
-    if (enableSkipIntro) {
-      clickSkipButton(skipIntroButtonSelector);
-      skipIntroAttempts++;
-    }
-
-    const enableSkipOutro = GM_getValue('enableSkipOutro', true);
-    if (enableSkipOutro) {
-      clickSkipButton(skipOutroButtonSelector);
-      skipOutroAttempts++;
-    }
-
-    if (document.querySelector('.watch-video--player-view')) {
-      enterFullscreen();
-    }
-
-    const cancelFullscreen = GM_getValue('cancelFullscreen', false);
-    if (cancelFullscreen && document.fullscreenElement) {
-      exitFullscreen();
+  function clickButton(selector) {
+    const button = document.querySelector(selector);
+    if (button) {
+      button.click();
     }
   }
 
-  setInterval(skipRecap, 1000);
-  setInterval(skipIntroAndOutro, 1000);
+  function enterFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    }
+  }
+
+  function exitFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }
+
+  function handleSkipActions() {
+    try {
+      if (config.enableSkipRecap) {
+        clickButton(selectors.skipRecapButton);
+      }
+
+      if (config.enableSkipIntro) {
+        clickButton(selectors.skipIntroButton);
+      }
+
+      if (config.enableSkipOutro) {
+        clickButton(selectors.skipOutroButton);
+      }
+
+      if (document.querySelector(selectors.fullscreenView)) {
+        enterFullscreen();
+      }
+
+      if (config.cancelFullscreen && document.fullscreenElement) {
+        exitFullscreen();
+      }
+    } catch (error) {
+      console.error('An error occurred:', error);
+    }
+  }
+
+  const observer = new MutationObserver(handleSkipActions);
+  observer.observe(document.body, { childList: true, subtree: true });
 
   GM_registerMenuCommand('Netflix Enchantments', showSettingsDialog);
 
