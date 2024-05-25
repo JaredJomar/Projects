@@ -61,6 +61,12 @@ A simple TTinker-based application for downloading videos and audio from YouTube
 3. Install yt-dlp: `winget install yt-dlp.yt-dlp`
 4. Install FFmpeg: `winget install Gyan.FFmpeg`
 
+## Executable 
+1. Download the Executable 
+2. Install yt-dlp: `winget install yt-dlp.yt-dlp`
+3. Install FFmpeg: `winget install Gyan.FFmpeg`
+4. Select the path to yt-dpl and ffmepg in the setting 
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
