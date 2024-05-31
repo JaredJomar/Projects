@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeFLV Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  Select video provider option automatically and add a Page Up button to scroll to the top of the page.
 // @author       JJJ
 // @match        https://www3.animeflv.net/ver/*
@@ -106,10 +106,10 @@
         const dropdownMenu = document.createElement('select');
         dropdownMenu.id = 'optionDropdown';
 
-        options.forEach((option, index) => {
+        options.forEach((option) => {
             const dropdownOption = document.createElement('option');
-            dropdownOption.value = index;
-            dropdownOption.textContent = option.getAttribute('title') || `Option ${index + 1}`;
+            dropdownOption.value = option.getAttribute('title') || option.textContent.trim();
+            dropdownOption.textContent = option.getAttribute('title') || option.textContent.trim();
             dropdownMenu.appendChild(dropdownOption);
         });
 
@@ -125,14 +125,16 @@
 
     // Function to handle option selection
     function handleOptionSelection() {
-        const selectedOptionIndex = document.getElementById('optionDropdown').value;
+        const selectedOptionValue = document.getElementById('optionDropdown').value;
         const options = document.querySelectorAll(CLASS_SELECTOR);
 
-        if (selectedOptionIndex < options.length) {
-            options[selectedOptionIndex].click();
-            localStorage.setItem(STORAGE_KEY, selectedOptionIndex);
-            toggleMenu();
-        }
+        options.forEach((option) => {
+            if ((option.getAttribute('title') || option.textContent.trim()) === selectedOptionValue) {
+                option.click();
+                localStorage.setItem(STORAGE_KEY, selectedOptionValue);
+                toggleMenu();
+            }
+        });
     }
 
     // Function to create the custom menu
@@ -141,9 +143,9 @@
         console.log('Options found:', options.length);
 
         const dropdownMenu = createDropdownMenu(options);
-        const selectedOptionIndex = localStorage.getItem(STORAGE_KEY);
-        if (selectedOptionIndex !== null) {
-            dropdownMenu.value = selectedOptionIndex;
+        const selectedOptionValue = localStorage.getItem(STORAGE_KEY);
+        if (selectedOptionValue !== null) {
+            dropdownMenu.value = selectedOptionValue;
         }
 
         const confirmButton = document.createElement('button');
@@ -162,12 +164,14 @@
 
     // Function to automatically select the saved option
     function autoSelectOption() {
-        const selectedOptionIndex = localStorage.getItem(STORAGE_KEY);
-        if (selectedOptionIndex !== null) {
+        const selectedOptionValue = localStorage.getItem(STORAGE_KEY);
+        if (selectedOptionValue !== null) {
             const options = document.querySelectorAll(CLASS_SELECTOR);
-            if (selectedOptionIndex < options.length) {
-                options[selectedOptionIndex].click();
-            }
+            options.forEach((option) => {
+                if ((option.getAttribute('title') || option.textContent.trim()) === selectedOptionValue) {
+                    option.click();
+                }
+            });
         }
     }
 
@@ -206,7 +210,7 @@
 
         window.addEventListener('scroll', togglePageUpButton);
 
-        setTimeout(autoSelectOption, 500); // Delay execution to allow page load
+        setTimeout(autoSelectOption, 100); // Delay execution to allow page load
     }
 
     // Run the script
