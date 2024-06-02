@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      Based on YouTube Auto-Liker by HatScripts and Youtube Auto Scroll Down
-// @version        0.4
-// @description    Automatically likes videos of channels you're subscribed to and automatically scrolls down on Youtube with a toggle button. Also removes the ad-blocking warning dialog.
+// @version        0.5
+// @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
 // @exclude        https://www.youtube.com/*/community
@@ -26,10 +26,18 @@
         DISLIKE_BUTTON: '#menu .YtDislikeButtonViewModelHost button, #segmented-dislike-button button, #dislike-button button'
     };
 
+    const PLAYER_CONTAINER_SELECTOR = '#player-container-outer';
+    const PLAYABILITY_ERROR_SELECTOR = 'yt-playability-error-supported-renderers';
+    const IFRAME_ID = 'adblock-bypass-player';
+
+    // Variable to keep track of whether the settings dialog is open
+    let settingsDialogOpen = false;
+
     // Set to store video IDs that have been auto-liked
     const autoLikedVideoIds = new Set();
     let isScrolling = false;
     let scrollInterval;
+    let currentVideoId = '';
 
     // Default settings for the script
     const defaultSettings = {
@@ -69,7 +77,8 @@
     function onInit() {
         const DEBUG = new Debugger(GM_info.script.name, settings.debugMode);
         setInterval(wait, settings.checkFrequency, DEBUG);
-        createSettingsMenu();
+        createSettingsMenu()
+        document.addEventListener('keydown', handleKeyPress);
     }
 
     // Function to create the settings menu
@@ -113,10 +122,17 @@
 
         const closeButton = document.createElement('button');
         closeButton.textContent = 'Close';
-        closeButton.addEventListener('click', () => {
-            document.body.removeChild(dialog);
+        closeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeSettingsDialog();
         });
         dialog.appendChild(closeButton);
+
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) {
+                closeSettingsDialog();
+            }
+        });
 
         return dialog;
     }
@@ -191,20 +207,6 @@
 
         document.body.appendChild(dialogContainer);
     }
-
-    // Function to remove the ad-blocking dialog
-    function removeAdBlockingDialog() {
-        const dialog = document.querySelector('tp-yt-paper-dialog');
-        if (dialog) {
-            const dialogText = dialog.querySelector('#title yt-attributed-string')?.textContent;
-            if (dialogText?.includes('Los bloqueadores de anuncios no se permiten en YouTube') || dialogText?.includes("Ad blockers aren't allowed on YouTube")) {
-                dialog.remove();
-            }
-        }
-    }
-
-    // Call the function to remove the ad-blocking dialog when the script loads
-    removeAdBlockingDialog();
 
     // Clear the set of auto-liked video IDs when the page state changes
     function clearAutoLikedVideoIds() {
@@ -345,22 +347,98 @@
         }
     });
 
-    // Observe DOM changes to detect the ad-blocking dialog
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeName === 'TP-YT-PAPER-DIALOG') {
-                        removeAdBlockingDialog();
-                    }
-                });
+    function handleAdBlockError(DEBUG) {
+        DEBUG.info('Checking for AdBlock error...');
+        const playabilityError = document.querySelector(PLAYABILITY_ERROR_SELECTOR);
+        if (playabilityError) {
+            DEBUG.info('AdBlock error detected. Replacing player...');
+            const videoId = getVideoId();
+            if (videoId && videoId !== currentVideoId) {
+                currentVideoId = videoId;
+                replacePlayer(videoId, DEBUG);
             }
+        }
+    }
+
+    function replacePlayer(videoId, DEBUG) {
+        DEBUG.info(`Replacing player with iframe for video ID: ${videoId}`);
+        const playerContainer = document.querySelector(PLAYER_CONTAINER_SELECTOR);
+        if (playerContainer) {
+            playerContainer.innerHTML = '';
+            const iframe = createIframe(videoId);
+            playerContainer.appendChild(iframe);
+            DEBUG.info('Player replaced successfully');
+        } else {
+            DEBUG.warn('Player container not found');
+        }
+    }
+
+    function createIframe(videoId) {
+        const iframe = document.createElement('iframe');
+        iframe.id = IFRAME_ID;
+        iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+        iframe.allow = 'autoplay; encrypted-media';
+        iframe.allowFullscreen = true;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        return iframe;
+    }
+
+    function observeDomChanges() {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const addedNodes = mutation.addedNodes;
+                    for (let node of addedNodes) {
+                        if (node.nodeType === Node.ELEMENT_NODE && node.matches(PLAYABILITY_ERROR_SELECTOR)) {
+                            const DEBUG = new Debugger(GM_info.script.name, settings.debugMode);
+                            handleAdBlockError(DEBUG);
+                            break;
+                        }
+                    }
+                }
+            });
         });
-    });
 
-    // Start observing the body element for changes
-    observer.observe(document.body, { childList: true, subtree: true });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
 
-    // Call the functions to initialize the script
+    // Function to handle key press events
+    function handleKeyPress(event) {
+        if (event.key === 'F2') {
+            toggleSettingsDialog();
+        }
+    }
+
+    // Function to toggle the settings dialog
+    function toggleSettingsDialog() {
+        if (settingsDialogOpen) {
+            closeSettingsDialog();
+        } else {
+            openSettingsDialog();
+        }
+    }
+
+    // Function to close the settings dialog
+    function closeSettingsDialog() {
+        const settingsDialog = document.querySelector('.settings-dialog');
+        if (settingsDialog) {
+            settingsDialog.remove();
+            settingsDialogOpen = false;
+        }
+    }
+
+    // Function to open the settings dialog
+    function openSettingsDialog() {
+        const settingsDialog = createSettingsDialog();
+        settingsDialog.classList.add('settings-dialog');
+        document.body.appendChild(settingsDialog);
+        settingsDialogOpen = true;
+    }
+
+    // Initialize the script
     onInit();
-})();
+    observeDomChanges();
+}
+)();
