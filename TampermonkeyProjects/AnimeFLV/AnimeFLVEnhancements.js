@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         AnimeFLV Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Select video provider option automatically and add a Page Up button to scroll to the top of the page.
 // @author       JJJ
 // @match        https://www3.animeflv.net/ver/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=animeflv.net
 // @grant        GM_addStyle
+// @grant        GM_registerMenuCommand
 // @license      MIT
 // ==/UserScript==
 
@@ -211,6 +212,8 @@
         window.addEventListener('scroll', togglePageUpButton);
 
         setTimeout(autoSelectOption, 100); // Delay execution to allow page load
+
+        GM_registerMenuCommand('AnimeFLV Enhancements', toggleMenu);
     }
 
     // Run the script
