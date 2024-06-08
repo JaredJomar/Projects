@@ -1,3 +1,0 @@
-Make the Video download download the later ffmeg and ty-dl
-Them grab the path into the program to not need to look 
-for it if you don't have it install already 
