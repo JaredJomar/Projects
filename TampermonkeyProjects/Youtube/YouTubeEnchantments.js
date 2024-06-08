@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      Based on YouTube Auto-Liker by HatScripts and Youtube Auto Scroll Down
-// @version        0.5
+// @version        0.6
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -342,8 +342,12 @@
         if (event.key === "PageDown") {
             toggleScrolling();
         } else if (event.key === "PageUp") {
-            clearInterval(scrollInterval);
-            isScrolling = false;
+            if (isScrolling) {
+                clearInterval(scrollInterval);
+                isScrolling = false;
+            } else {
+                window.scrollTo(0, 0);
+            }
         }
     });
 
