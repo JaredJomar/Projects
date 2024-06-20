@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QSettings, QSize, QPoint, Qt
 from PyQt5.QtGui import QPalette, QColor
 from download_thread import DownloadThread
+from settings_window import SettingsWindow
 from constants import (
     WINDOW_BACKGROUND_COLOR,
     TAB_BACKGROUND_COLOR,
@@ -167,44 +168,8 @@ class MainWindow(QMainWindow):
         return widget
 
     def create_settings_tab(self):
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        ffmpeg_layout = QHBoxLayout()
-        ffmpeg_label = QLabel("<b>FFmpeg Path:</b>")
-        ffmpeg_layout.addWidget(ffmpeg_label)
-
-        self.ffmpeg_input = QLineEdit()
-        self.ffmpeg_input.setStyleSheet(
-            f"QLineEdit {{ background-color: {INPUT_BACKGROUND_COLOR}; color: {INPUT_TEXT_COLOR}; font-weight: bold; }}")
-        ffmpeg_layout.addWidget(self.ffmpeg_input)
-
-        ffmpeg_browse_button = QPushButton("Browse")
-        ffmpeg_browse_button.clicked.connect(self.browse_ffmpeg)
-        ffmpeg_browse_button.setStyleSheet(
-            f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
-        ffmpeg_layout.addWidget(ffmpeg_browse_button)
-
-        layout.addLayout(ffmpeg_layout)
-
-        ytdlp_layout = QHBoxLayout()
-        ytdlp_label = QLabel("<b>yt-dlp Path:</b>")
-        ytdlp_layout.addWidget(ytdlp_label)
-
-        self.yt_dlp_input = QLineEdit()
-        self.yt_dlp_input.setStyleSheet(
-            f"QLineEdit {{ background-color: {INPUT_BACKGROUND_COLOR}; color: {INPUT_TEXT_COLOR}; font-weight: bold; }}")
-        ytdlp_layout.addWidget(self.yt_dlp_input)
-
-        ytdlp_browse_button = QPushButton("Browse")
-        ytdlp_browse_button.clicked.connect(self.browse_ytdlp)
-        ytdlp_browse_button.setStyleSheet(
-            f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
-        ytdlp_layout.addWidget(ytdlp_browse_button)
-
-        layout.addLayout(ytdlp_layout)
-
-        return widget
+        settings_window = SettingsWindow(self)
+        return settings_window
 
     def browse_folder(self):
         file, _ = QFileDialog.getOpenFileName(
@@ -227,23 +192,11 @@ class MainWindow(QMainWindow):
             self.progress_bar.setValue(0)
             self.progress_text.clear()
 
-    def browse_ffmpeg(self):
-        file = QFileDialog.getOpenFileName(self, "Select ffmpeg")
-        if file[0]:
-            self.ffmpeg_input.setText(file[0])
-            self.save_settings()
-
-    def browse_ytdlp(self):
-        file = QFileDialog.getOpenFileName(self, "Select yt-dlp")
-        if file[0]:
-            self.yt_dlp_input.setText(file[0])
-            self.save_settings()
-
     def start_download(self):
         url = self.url_input.text()
         output_folder = self.download_folder_input.text()
-        ffmpeg_path = self.ffmpeg_input.text()
-        yt_dlp_path = self.yt_dlp_input.text()
+        ffmpeg_path = self.settingsTab.ffmpeg_input.text()
+        yt_dlp_path = self.settingsTab.yt_dlp_input.text()
         download_type = self.download_type_combobox.currentText()
         resolution = self.resolution_combobox.currentText()
 
@@ -270,22 +223,18 @@ class MainWindow(QMainWindow):
     def save_settings(self):
         self.settings.setValue(
             "download_folder", self.download_folder_input.text())
-        self.settings.setValue("ffmpeg_path", self.ffmpeg_input.text())
-        self.settings.setValue("yt_dlp_path", self.yt_dlp_input.text())
+        self.settings.setValue(
+            "ffmpeg_path", self.settingsTab.ffmpeg_input.text())
+        self.settings.setValue(
+            "yt_dlp_path", self.settingsTab.yt_dlp_input.text())
         self.settings.setValue("window_size", self.size())
         self.settings.setValue("window_position", self.pos())
 
     def load_settings(self):
         download_folder = self.settings.value("download_folder", "")
-        ffmpeg_path = self.settings.value("ffmpeg_path", "")
-        yt_dlp_path = self.settings.value("yt_dlp_path", "")
 
         if download_folder:
             self.download_folder_input.setText(download_folder)
-        if ffmpeg_path:
-            self.ffmpeg_input.setText(ffmpeg_path)
-        if yt_dlp_path:
-            self.yt_dlp_input.setText(yt_dlp_path)
 
         window_size = self.settings.value("window_size", QSize(800, 600))
         window_position = self.settings.value(
