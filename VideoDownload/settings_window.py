@@ -52,6 +52,7 @@ class SettingsWindow(QDialog):
 
         ffmpeg_layout = QHBoxLayout()
         ffmpeg_label = QLabel("<b>FFmpeg Path:</b>")
+        ffmpeg_label.setStyleSheet("color: white;")
         ffmpeg_layout.addWidget(ffmpeg_label)
 
         self.ffmpeg_input = QLineEdit()
@@ -69,6 +70,7 @@ class SettingsWindow(QDialog):
 
         ytdlp_layout = QHBoxLayout()
         ytdlp_label = QLabel("<b>yt-dlp Path:</b>")
+        ytdlp_label.setStyleSheet("color: white;")
         ytdlp_layout.addWidget(ytdlp_label)
 
         self.yt_dlp_input = QLineEdit()
