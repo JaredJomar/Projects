@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Prime Video Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  Enhancements for Prime Video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.amazon.com/gp/video/*
@@ -10,7 +10,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_registerMenuCommand
-// @license     MIT
+// @license      MIT
 // ==/UserScript==
 
 (function () {
@@ -161,5 +161,46 @@
             exitFullscreen();
         }
     });
+
+    // Auto skip ads
+
+    const timePattern = /(\d?\d:){0,2}\d?\d/;
+    const intervalDuration = 200;
+    let adBypassed = false;
+
+    setInterval(() => {
+        let videoElement;
+        const playerContainer = document.querySelector(".rendererContainer");
+        if (playerContainer) {
+            videoElement = playerContainer.querySelector('video');
+        }
+
+        const skipIndicator = document.querySelector(".atvwebplayersdk-adtimeindicator-text");
+        const remainingAdTimeElement = document.querySelector(".atvwebplayersdk-ad-timer-remaining-time");
+
+        if (videoElement && videoElement.currentTime && (remainingAdTimeElement || skipIndicator)) {
+            if (!adBypassed) {
+                let adDurationElement;
+                if (remainingAdTimeElement && timePattern.test(remainingAdTimeElement.textContent)) adDurationElement = remainingAdTimeElement;
+                if (skipIndicator && timePattern.test(skipIndicator.textContent)) adDurationElement = skipIndicator;
+
+                const adDurationParts = adDurationElement.textContent.match(timePattern)[0].split(':');
+                let adDurationSeconds = 0;
+                for (let i = 0; i < adDurationParts.length; i++) {
+                    adDurationSeconds += parseInt(adDurationParts[i], 10) * Math.pow(60, adDurationParts.length - 1 - i);
+                }
+                videoElement.currentTime += adDurationSeconds;
+                adBypassed = true;
+
+                console.log('=====================');
+                console.log('AD SKIPPED ON PRIME VIDEO');
+                console.log('=====================');
+            }
+        } else {
+            adBypassed = false;
+        }
+    }, intervalDuration);
+
+    // End code of auto skip ads
 
 })();
