@@ -19,59 +19,65 @@
 
     // CSS styles for the custom menu and page background
     const menuStyles = `
-        /* Set background color to #2F353A for all elements */
-        * {
-            background-color: #2F353A !important;
-        }
-        
-        /* Set text color to white for all text elements */
-        body, p, h1, h2, h3, h4, h5, h6, span, a, li, div, button {
-            color: white !important;
-        }
-        
-        /* Additional styles to improve visibility on links, if needed */
-        a {
-            text-decoration: underline !important;
-        }
-
-        #customMenu {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.95);
-            border: 2px solid #000;
-            padding: 15px;
-            z-index: 9999;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            width: 300px;
-            text-align: center;
-        }
-
-        #customMenu select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        #customMenu button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        #customMenu button:hover {
-            background-color: #0056b3;
-        }
-    `;
+            /* Set background color to #2F353A for all elements */
+            body,div, li, ul, header, footer {
+                background-color: #2F353A !important;
+            }
+            
+            /* Set text color to white for all text elements */
+            body, p, h1, h2, h3, h4, h5, h6, span, a, li, div:not(#customMenu div), button:not(#customMenu button) {
+                color: white !important;
+            }
+            
+            /* Additional styles to improve visibility on links, if needed */
+            a:not(#customMenu a) {
+                text-decoration: underline !important;
+            }
+    
+            #customMenu {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(255, 255, 255, 0.95) !important; /* Ensure background color is not overridden */
+                border: 2px solid #000;
+                padding: 15px;
+                z-index: 9999;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                font-family: Arial, sans-serif;
+                width: 300px;
+                text-align: center;
+                color: black !important; /* Ensure text color is not overridden */
+            }
+    
+            #customMenu select {
+                width: 100% !important;
+                padding: 10px !important;
+                margin-bottom: 10px !important;
+                border: 1px solid #ccc !important;
+                border-radius: 4px !important;
+                background-color: #FFFFFF !important; /* Ensure background color is white */
+                color: black !important; /* Ensure text color is not overridden */
+                -webkit-appearance: none !important; /* Disable default styling */
+                -moz-appearance: none !important; /* Disable default styling */
+                appearance: none !important; /* Disable default styling */
+            }
+    
+            #customMenu button {
+                padding: 10px 20px;
+                border: none;
+                background-color: #007bff !important; /* Ensure background color is not overridden */
+                color: white !important; /* Ensure text color is not overridden */
+                font-size: 14px;
+                cursor: pointer;
+                border-radius: 4px;
+            }
+    
+            #customMenu button:hover {
+                background-color: #0056b3 !important; /* Ensure hover background color is not overridden */
+            }
+        `;
 
     // Function to create the dropdown menu
     function createDropdownMenu(options) {
