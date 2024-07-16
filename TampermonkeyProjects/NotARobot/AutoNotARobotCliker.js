@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Auto Click "I'm not a robot"
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @description  Automatically clicks the "I'm not a robot" checkbox and Solves CloudFlare Turnstile
 // @author       JJJ
 // @match        *://*/*
@@ -21,50 +21,71 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Function to find and click the reCAPTCHA checkbox
+    // Function to simulate a click event
+    function simulateClick(element) {
+        const evt = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        element.dispatchEvent(evt);
+    }
+
+    // Function to find the reCAPTCHA checkbox element
+    function findRecaptchaCheckboxElement() {
+        return document.querySelector('.recaptcha-checkbox-border') ||
+            document.querySelector('[role="checkbox"][aria-labelledby="recaptcha-anchor-label"]');
+    }
+
+    // Function to click the reCAPTCHA checkbox
     async function clickRecaptchaCheckbox() {
         const recaptchaCheckboxElement = findRecaptchaCheckboxElement();
         if (recaptchaCheckboxElement) {
-            recaptchaCheckboxElement.click();
+            simulateClick(recaptchaCheckboxElement);
             await sleep(delayBetweenClicks);
         }
     }
 
-    // Function to locate the reCAPTCHA checkbox element
-    function findRecaptchaCheckboxElement() {
-        // Search for elements containing the "I'm not a robot" text
-        const recaptchaTextElements = document.querySelectorAll('*:not(script):not(style)');
-        for (const element of recaptchaTextElements) {
-            if (element.textContent.includes("I'm not a robot")) {
-                return element.closest('div').querySelector('.recaptcha-checkbox');
-            }
-        }
-
-        // Search for elements with the class 'recaptcha-checkbox'
-        const recaptchaCheckboxElements = document.querySelectorAll('.recaptcha-checkbox');
-        for (const element of recaptchaCheckboxElements) {
-            return element;
-        }
-
-        return null;
-    }
-
-    // Function to solve Cloudflare Turnstile challenges by clicking on all elements in the challenge stage
+    // Function to solve Cloudflare Turnstile challenges
     async function solveCloudflareTurnstile() {
         const challengeStage = document.querySelector('#challenge-stage');
         if (challengeStage) {
             const elements = challengeStage.querySelectorAll('*');
             for (const element of elements) {
-                // Dispatch a mouse event to simulate a click
-                element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                simulateClick(element);
                 await sleep(50); // Small delay between clicks
             }
         }
     }
+
+    // Set up a mutation observer to detect when the reCAPTCHA or Turnstile is added to the page
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                const checkbox = findRecaptchaCheckboxElement();
+                if (checkbox) {
+                    simulateClick(checkbox);
+                    observer.disconnect();
+                    break;
+                }
+                solveCloudflareTurnstile(); // Attempt to solve Cloudflare Turnstile challenges
+            }
+        }
+    });
+
+    // Start observing the document body for changes
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Try to click immediately on script load
+    (async function () {
+        await clickRecaptchaCheckbox();
+        await solveCloudflareTurnstile();
+    })();
 
     // Set an interval to periodically attempt to click the reCAPTCHA checkbox and solve the Cloudflare Turnstile
     setInterval(async () => {
         await clickRecaptchaCheckbox();
         await solveCloudflareTurnstile();
     }, 1500);
+
 })();
