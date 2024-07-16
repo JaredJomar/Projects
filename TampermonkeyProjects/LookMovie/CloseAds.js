@@ -1,37 +1,66 @@
 // ==UserScript==
-// @name Close Ads
-// @namespace https://www.lookmovie2.to/
-// @version 0.3
-// @description Close ads on LookMovie 
-// @author JJJ
-// @match https://www.lookmovie2.to/*
-// @icon https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to
-// @grant none
-// @license MIT
-// @downloadURL https://update.greasyfork.org/scripts/495537/Close%20Ads.user.js
-// @updateURL https://update.greasyfork.org/scripts/495537/Close%20Ads.meta.js
+// @name         Close Ads  
+// @namespace    https://www.lookmovie2.to/
+// @version      0.4
+// @description  Close ads on LookMovie 
+// @author       JJJ
+// @match        https://www.lookmovie2.to/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to
+// @grant        none
+// @license      MIT
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    // Function to close the ads
+    // Configuration
+    const config = {
+        closeButtonSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
+        checkInterval: 50, // Check every 50ms
+        maxAttempts: 100 // Maximum number of attempts (5 seconds total)
+    };
+
+    // Function to close ads
     function closeAds() {
-        var closeButton = document.querySelector('#PlayerZone > section > a.close-icon.player-ads-summer-2024--close');
-        if (closeButton) {
+        const closeButton = document.querySelector(config.closeButtonSelector);
+        if (closeButton && closeButton.style.display !== 'none') {
             closeButton.click();
+            console.log('Ad closed');
+            return true; // Ad was closed
         }
+        return false; // No ad to close
     }
 
-    // Mutation observer for changes in the DOM
-    const observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function (mutation) {
-            if (mutation.addedNodes.length > 0) {
-                closeAds();
+    // Function to repeatedly attempt closing ads
+    function attemptClosingAds() {
+        let attempts = 0;
+        const intervalId = setInterval(() => {
+            if (closeAds() || attempts >= config.maxAttempts) {
+                clearInterval(intervalId);
+                console.log('Ad closing process finished');
             }
-        });
-    });
+            attempts++;
+        }, config.checkInterval);
+    }
 
-    // Observe changes in the <body>
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Function to initialize the ad closing process
+    function initAdCloser() {
+        console.log('Ad closer initialized');
+        attemptClosingAds();
+    }
+
+    // Start the process as soon as possible
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initAdCloser();
+    } else {
+        document.addEventListener('DOMContentLoaded', initAdCloser);
+    }
+
+    // Fallback: If DOMContentLoaded doesn't fire, start after a short delay
+    setTimeout(initAdCloser, 1000);
+
+    // Listen for errors and log them
+    window.addEventListener('error', (e) => {
+        console.error('Error in Close Ads script:', e.error);
+    });
 })();
