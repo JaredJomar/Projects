@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Close Ads  
 // @namespace    https://www.lookmovie2.to/
-// @version      0.4
+// @version      0.5
 // @description  Close ads on LookMovie 
 // @author       JJJ
 // @match        https://www.lookmovie2.to/*
@@ -17,7 +17,8 @@
     const config = {
         closeButtonSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
         checkInterval: 50, // Check every 50ms
-        maxAttempts: 100 // Maximum number of attempts (5 seconds total)
+        maxAttempts: 100, // Maximum number of attempts (5 seconds total)
+        continuousCheck: true // Keep checking for ads continuously
     };
 
     // Function to close ads
@@ -31,22 +32,27 @@
         return false; // No ad to close
     }
 
-    // Function to repeatedly attempt closing ads
-    function attemptClosingAds() {
+    // Function to continuously attempt closing ads
+    function continuousAdClosing() {
         let attempts = 0;
         const intervalId = setInterval(() => {
-            if (closeAds() || attempts >= config.maxAttempts) {
+            if (closeAds()) {
+                attempts = 0; // Reset attempts when an ad is closed
+            } else {
+                attempts++;
+            }
+
+            if (!config.continuousCheck && attempts >= config.maxAttempts) {
                 clearInterval(intervalId);
                 console.log('Ad closing process finished');
             }
-            attempts++;
         }, config.checkInterval);
     }
 
     // Function to initialize the ad closing process
     function initAdCloser() {
         console.log('Ad closer initialized');
-        attemptClosingAds();
+        continuousAdClosing();
     }
 
     // Start the process as soon as possible
