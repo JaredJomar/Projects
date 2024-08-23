@@ -1,4 +1,4 @@
-# Disney Plus Enhancements 
+# Disney Plus Enhancements
 
 Enhance your Disney Plus experience with Disney Plus Enhancements! This script adds new features to the Disney Plus video player.
 
@@ -13,18 +13,20 @@ Enhance your Disney Plus experience with Disney Plus Enhancements! This script a
 - Automatically skips intros or recaps if the button is present and visible.
 - Automatically plays the next episode if the button is present and visible.
 - Automatically enables fullscreen mode when a video starts.
-- Press F2 to open the settings
+- Press F2 to open the settings dialog.
+- Press Escape to exit fullscreen mode.
 
 ## Usage
 
 - The script will automatically skip intros and recaps if the corresponding settings are enabled.
-- You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu.
+- You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu or by pressing F2.
 - The script will automatically play the next episode if the corresponding settings are enabled.
 - The script will automatically enable fullscreen mode when a video starts.
 
 ## Keyboard Shortcuts
 
-- No keyboard shortcuts are available for this script.
+- Press F2 to open the settings dialog.
+- Press Escape to exit fullscreen mode.
 
 ## Author
 
@@ -32,7 +34,7 @@ JJJ
 
 ## Version
 
-0.4
+0.6
 
 ## License
 
