@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Auto Click "I'm not a robot"
 // @namespace    http://tampermonkey.net/
-// @version      0.8
-// @description  Automatically clicks the "I'm not a robot" checkbox and solves CloudFlare Turnstile challenges with improved reliability and human-like behavior simulation.
+// @version      0.9
+// @description  Automatically clicks the "I'm not a robot"
 // @author       JJJ
 // @match        *://*/*
 // @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
@@ -13,180 +13,109 @@
 (function () {
     'use strict';
 
-    // Constants to simplify delay modifications
-    const MIN_DELAY = 500;  // Increased to better simulate human behavior
-    const MAX_DELAY = 1500;  // Increased to better simulate human behavior
-    const BASE_CHECK_DELAY = 3000;  // Increased to give more time for verification
-    const CURSOR_MOVE_MIN_DELAY = 20;  // Min delay for cursor movement
-    const CURSOR_MOVE_MAX_DELAY = 40;  // Max delay for cursor movement
-    const MAX_RETRIES = 5;
+    // Constants for selectors and attributes
+    const CHECKBOX = "#checkbox";
+    const ARIA_CHECKED = "aria-checked";
 
-    let challengeInProgress = false;
-    let pageReloaded = false;
-
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    // Utility function to select a single element
+    function qSelector(selector) {
+        return document.querySelector(selector);
     }
 
-    function getRandomDelay(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+    // Utility function to check if an element is hidden
+    function isHidden(el) {
+        return (el.offsetParent === null);
     }
 
-    function easeInOutQuad(t) {
-        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    }
-
-    function simulateCursorMovement(startX, startY, endX, endY, callback) {
-        const steps = 40;  // Increased steps for smoother movement
-        const delay = getRandomDelay(CURSOR_MOVE_MIN_DELAY, CURSOR_MOVE_MAX_DELAY);  // Randomized delay for more human-like behavior
-        let currentStep = 0;
-
-        function move() {
-            if (currentStep <= steps) {
-                const progress = currentStep / steps;
-                const easeProgress = easeInOutQuad(progress);
-
-                const curveX = startX + (endX - startX) * easeProgress;
-                const curveY = startY + (endY - startY) * easeProgress;
-
-                const randomX = curveX + (Math.random() - 0.5) * 5;
-                const randomY = curveY + (Math.random() - 0.5) * 5;
-
-                const moveEvent = new MouseEvent('mousemove', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    clientX: randomX,
-                    clientY: randomY
-                });
-                document.dispatchEvent(moveEvent);
-
-                currentStep++;
-                setTimeout(move, delay);
-            } else {
-                callback();
+    // Handler for reCaptcha V2
+    const reCaptchaV2Handler = {
+        // Find the checkbox element for reCaptcha V2
+        findCheckboxElement() {
+            return document.querySelector('.recaptcha-checkbox-border') ||
+                document.querySelector('[role="checkbox"][aria-labelledby="recaptcha-anchor-label"]') ||
+                qSelector(CHECKBOX);
+        },
+        // Solve the reCaptcha V2 by clicking the checkbox
+        solve() {
+            const checkbox = this.findCheckboxElement();
+            if (checkbox && !isHidden(checkbox) && checkbox.getAttribute(ARIA_CHECKED) !== "true") {
+                checkbox.click();
             }
         }
+    };
 
-        move();
-    }
-
-    function simulateClick(element) {
-        if (element) {
-            const rect = element.getBoundingClientRect();
-            const endX = rect.left + (rect.width / 2);
-            const endY = rect.top + (rect.height / 2);
-            const startX = Math.random() * window.innerWidth;
-            const startY = Math.random() * window.innerHeight;
-
-            console.log(`Simulating cursor movement from (${startX}, ${startY}) to (${endX}, ${endY})`);
-            simulateCursorMovement(startX, startY, endX, endY, () => {
-                const clickEvent = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    clientX: endX,
-                    clientY: endY
-                });
-                element.dispatchEvent(clickEvent);
-                console.log(`Clicked element at (${endX}, ${endY})`);
-            });
-        } else {
-            console.log('Element to simulate click on is not found');
-        }
-    }
-
-    function findRecaptchaCheckboxElement() {
-        const element = document.querySelector('.recaptcha-checkbox-border') ||
-            document.querySelector('[role="checkbox"][aria-labelledby="recaptcha-anchor-label"]');
-        if (element) {
-            console.log('Found reCAPTCHA checkbox element');
-        } else {
-            console.log('reCAPTCHA checkbox element not found');
-        }
-        return element;
-    }
-
-    async function clickRecaptchaCheckbox() {
-        const recaptchaCheckboxElement = findRecaptchaCheckboxElement();
-        if (recaptchaCheckboxElement) {
-            console.log('Clicking reCAPTCHA checkbox');
-            simulateClick(recaptchaCheckboxElement);
-            await sleep(getRandomDelay(MIN_DELAY, MAX_DELAY));
-        }
-    }
-
-    async function solveCloudflareTurnstile() {
-        const challengeStage = document.querySelector('#challenge-stage');
-        if (challengeStage) {
-            console.log('Found Cloudflare Turnstile challenge stage');
-            const elements = challengeStage.querySelectorAll('*');
-            for (const element of elements) {
-                simulateClick(element);
-                await sleep(getRandomDelay(MIN_DELAY, MAX_DELAY));
+    // Handler for reCaptcha V2 callback
+    const reCaptchaV2CallbackHandler = {
+        // Find the callback function for reCaptcha V2
+        findCallbackFunction() {
+            if (typeof ___grecaptcha_cfg !== 'undefined') {
+                const keys = Object.keys(___grecaptcha_cfg.clients).filter(key => key !== 'load');
+                for (const key of keys) {
+                    const client = ___grecaptcha_cfg.clients[key];
+                    if (client && typeof client.hl?.l?.callback === 'function') {
+                        return client.hl.l.callback;
+                    }
+                }
             }
-        } else {
-            console.log('Cloudflare Turnstile challenge stage not found');
-        }
-
-        const otherChallengeTypes = document.querySelectorAll('.challenge-body .challenge-element, .challenge-stage .challenge-element');
-        if (otherChallengeTypes.length > 0) {
-            console.log('Found additional Turnstile challenge elements');
-            for (const element of otherChallengeTypes) {
-                simulateClick(element);
-                await sleep(getRandomDelay(MIN_DELAY, MAX_DELAY));
+            return null;
+        },
+        // Solve the reCaptcha V2 by invoking the callback function
+        solve() {
+            const callbackFn = this.findCallbackFunction();
+            if (typeof callbackFn === 'function') {
+                callbackFn();
             }
-        } else {
-            console.log('No additional Turnstile challenge elements found');
         }
-    }
+    };
 
-    function isTurnstileSolved() {
-        const turnstileCompleted = document.querySelector('.challenge-stage.completed') ||
-            document.querySelector('.challenge-passed');
-        if (turnstileCompleted) {
-            console.log('Turnstile challenge completed');
-        } else {
-            console.log('Turnstile challenge not completed');
-        }
-        return !!turnstileCompleted;
-    }
-
-    async function attemptToSolveTurnstile() {
-        if (challengeInProgress) {
-            console.log('Challenge in progress, skipping attempt');
-            return false;
-        }
-
-        challengeInProgress = true;
-        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            console.log(`Attempt ${attempt} to solve Turnstile`);
-            await solveCloudflareTurnstile();
-            await sleep(BASE_CHECK_DELAY + getRandomDelay(0, 1000));  // Added random delay to check delay
-            if (isTurnstileSolved()) {
-                console.log('Turnstile solved');
-                challengeInProgress = false;
-                return true;
+    // Handler for reCaptcha V2 Enterprise
+    const reCaptchaV2EnterpriseHandler = {
+        // Find the checkbox element for reCaptcha V2 Enterprise
+        findEnterpriseCheckboxElement() {
+            return document.querySelector('.enterprise-checkbox') ||
+                document.querySelector('[aria-labelledby="recaptcha-accessible-status"]');
+        },
+        // Solve the reCaptcha V2 Enterprise by clicking the checkbox
+        solve() {
+            const checkbox = this.findEnterpriseCheckboxElement();
+            if (checkbox && !isHidden(checkbox) && checkbox.getAttribute(ARIA_CHECKED) !== "true") {
+                checkbox.click();
             }
-            console.log('Turnstile not solved, retrying...');
         }
-        console.log('Failed to solve Turnstile after max retries');
-        challengeInProgress = false;
-        return false;
-    }
+    };
 
+    // Handler for hCaptcha
+    const hCaptchaHandler = {
+        // Find the checkbox element for hCaptcha
+        findCheckboxElement() {
+            return document.querySelector('.hcaptcha-checkbox') ||
+                document.querySelector('[aria-labelledby="hcaptcha-anchor-label"]');
+        },
+        // Solve the hCaptcha by clicking the checkbox
+        solve() {
+            const checkbox = this.findCheckboxElement();
+            if (checkbox && !isHidden(checkbox) && checkbox.getAttribute(ARIA_CHECKED) !== "true") {
+                checkbox.click();
+            }
+        }
+    };
+
+    // Main captcha solver that tries to solve all types of captchas
+    const captchaSolver = {
+        solve() {
+            reCaptchaV2Handler.solve();
+            reCaptchaV2CallbackHandler.solve();
+            reCaptchaV2EnterpriseHandler.solve();
+            hCaptchaHandler.solve();
+        }
+    };
+
+    // Initialize a MutationObserver to detect changes in the DOM
     function initializeObserver() {
-        const observer = new MutationObserver(async (mutations) => {
+        const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    console.log('Mutation detected: childList change');
-                    const checkbox = findRecaptchaCheckboxElement();
-                    if (checkbox) {
-                        simulateClick(checkbox);
-                        observer.disconnect();
-                        return;
-                    }
-                    await attemptToSolveTurnstile();  // Always attempt to solve Turnstile on mutation
+                    captchaSolver.solve();
                 }
             }
         });
@@ -194,26 +123,17 @@
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    async function init() {
-        console.log('Initial attempt to solve reCAPTCHA and Turnstile');
-        const recaptchaPresent = findRecaptchaCheckboxElement() !== null;
-        const turnstilePresent = document.querySelector('#challenge-stage') !== null || document.querySelector('.challenge-body .challenge-element, .challenge-stage .challenge-element') !== null;
+    // Initialize the script
+    function init() {
+        captchaSolver.solve();
 
-        if (recaptchaPresent || turnstilePresent) {
-            await clickRecaptchaCheckbox();
-            await attemptToSolveTurnstile();
-
-            setInterval(async () => {
-                console.log('Periodic attempt to solve reCAPTCHA and Turnstile');
-                await clickRecaptchaCheckbox();
-                await attemptToSolveTurnstile();
-            }, 1500);
-        } else {
-            console.log('No CAPTCHA or Turnstile challenge detected, no need to reload the page');
-        }
+        // Periodically try to solve captchas
+        setInterval(() => {
+            captchaSolver.solve();
+        }, 1000);
     }
 
-    // Ensure the script runs after the DOM is fully loaded
+    // Check if the document is still loading
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initializeObserver();
@@ -223,4 +143,10 @@
         initializeObserver();
         init();
     }
+
+    // Compatibility check for supported browsers
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isCompatibleBrowser = ['chrome', 'edg', 'brave', 'firefox'].some(browser => userAgent.includes(browser));
+
+    console.log(isCompatibleBrowser ? 'Running on a compatible browser' : 'Running on an unsupported browser');
 })();
