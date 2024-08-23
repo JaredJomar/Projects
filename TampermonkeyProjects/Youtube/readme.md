@@ -1,39 +1,44 @@
-# Youtube Enchantments 
+# YouTube Enchantments
 
-Enhance your Youtube experience with Youtube Enchantments! This script adds new features to Youtube for a more personalized experience.
+This user script enhances your YouTube experience by automatically liking videos of channels you're subscribed to, scrolling down on YouTube with a toggle button, and bypassing the AdBlock ban.
 
 ## Installation
 
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
+1. Make sure you have a user script manager installed in your browser, such as Tampermonkey.
+2. Create a new script in Tampermonkey and copy the provided script into the editor.
 3. Save the script.
 
 ## Features
 
-- Automatically likes videos from channels you're subscribed to.
-- Automatically scrolls down on Youtube with a toggle button.
-- Removes the ad-blocking warning dialog.
-- Provides a settings menu to customize the script's behavior.
+### Auto Like Videos
+
+Automatically likes videos of channels you're subscribed to. This feature helps you support your favorite content creators without any manual effort.
+
+### Auto Scroll Down
+
+Provides a toggle button to automatically scroll down on YouTube. This feature is useful for continuously loading more content without manual scrolling.
+
+### Bypass AdBlock Ban
+
+Bypasses the AdBlock ban on YouTube, allowing you to watch videos without interruptions from ads.
 
 ## Usage
 
-- The script will automatically like any video from channels you're subscribed to.
-- Press the "Page Down" key to start auto-scrolling.
-- Press the "Page Up" key to stop auto-scrolling.
-- Open the settings menu by right-clicking on the Tampermonkey icon and selecting "YouTube Enchantments Settings".
+Once the script is installed and activated, the features will automatically run in the background. You can configure the settings by opening the settings dialog.
 
-## Settings
+### Settings Dialog
 
-- Debug Mode: Log debug messages to the console.
-- Check Frequency (ms): It will wait 5000 milliseconds between checking if a video should be liked.
-- Watch Threshold %: The percentage of the video watched before liking it. You can select the threshold from a dropdown menu.
-- Like if Not Subscribed: Like videos from channels you are not subscribed to.
-- Auto-like Live Streams: Automatically like live streams.
+To open the settings dialog, use the Tampermonkey menu. The settings dialog allows you to enable or disable the following features:
+- Auto Like Videos
+- Auto Like Live Streams
+- Like If Not Subscribed
+- Watch Threshold
+- Check Frequency
+- Debug Mode
 
 ## Keyboard Shortcuts
 
-- **Page Down**: Start auto-scrolling.
-- **Page Up**: Stop auto-scrolling.
+- Press F2 to open the settings dialog.
 
 ## Author
 
@@ -41,10 +46,10 @@ JJJ
 
 ## Version
 
-0.2
+0.6
 
 ## License
 
 This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
 
-![YouTube Logo](https://www.google.com/s2/favicons?sz=64&domain=youtube.com)
+![YouTube Icon](https://www.google.com/s2/favicons?sz=64&domain=youtube.com)
