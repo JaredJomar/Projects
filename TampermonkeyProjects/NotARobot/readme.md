@@ -1,6 +1,6 @@
-# Auto Click "I'm not a robot" and "play-box" button
+# Auto Click "I'm not a robot"
 
-This script automatically clicks the "I'm not a robot" checkbox and any button with the class "play-box" on websites.
+This user script automatically clicks the "I'm not a robot" checkbox on various captcha systems.
 
 ## Installation
 
@@ -10,16 +10,16 @@ This script automatically clicks the "I'm not a robot" checkbox and any button w
 
 ## Features
 
-- Automatically clicks the "I'm not a robot" checkbox on websites.
-- Automatically clicks any button with the class "play-box" on websites.
+- Automatically clicks the "I'm not a robot" checkbox on reCaptcha V2, reCaptcha V2 Enterprise, and hCaptcha.
+- Uses MutationObserver to detect changes in the DOM and solve captchas dynamically.
+- Periodically attempts to solve captchas every second.
+- Compatibility check for supported browsers (Chrome, Edge, Brave, Firefox).
 
 ## Usage
 
-- The script will automatically click the "I'm not a robot" checkbox when it appears on a website.
-
-## Keyboard Shortcuts
-
-- No keyboard shortcuts are available for this script.
+- The script will automatically click the "I'm not a robot" checkbox if it is visible and not already checked.
+- The script uses a MutationObserver to detect changes in the DOM and solve captchas dynamically.
+- The script periodically attempts to solve captchas every second.
 
 ## Author
 
@@ -27,7 +27,7 @@ JJJ
 
 ## Version
 
-0.3
+0.9
 
 ## License
 
