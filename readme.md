@@ -16,7 +16,7 @@ This project is a collection of JavaScript scripts that I use with the Tampermon
 
 - Disney Plus Enhancements: Enhance your Disney Plus experience with Disney Plus Enhancements! This script adds new features to the Disney Plus video player.
 - Netflix Enchantments: Enhance your Netflix experience with Netflix Enchantments! This script adds new features to the Netflix video player.
-- Twitch Enhancements: This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, and claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/).
+- Twitch Enhancements: This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/), and adding a Redeem On GOG button next to the Copy Code.
 
 ## Disney Plus Enhancements Features
 
@@ -35,6 +35,12 @@ This project is a collection of JavaScript scripts that I use with the Tampermon
 - Auto Claim Channel Points
 - Enables theater mode 
 - Auto Claim Prime Rewards
+- Add Redeem On GOG Button
+
+
+## Note App
+
+Simple note-taking application using PyQt5.
 
 ## License
 
