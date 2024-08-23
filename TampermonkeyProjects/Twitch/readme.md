@@ -22,6 +22,10 @@ Enables theater mode on the Twitch video player for a more immersive viewing exp
 
 To claim prime rewards, make sure to open the reward page on [https://gaming.amazon.com/](https://gaming.amazon.com/). The script will then automatically click the "Get in-game content" button.
 
+### Redeem Codes on GOG
+
+Automatically redeems codes on [https://www.gog.com/en/redeem](https://www.gog.com/en/redeem) from Amazon Gaming pages when you click the Redeem On GOG button.
+
 ## Usage
 
 Once the script is installed and activated, the features will automatically run in the background. There's no need for manual intervention.
@@ -32,11 +36,7 @@ JJJ
 
 ## Version
 
-0.1
-
-## Support
-
-If you encounter any issues or have suggestions for improvements, feel free to open an issue on the [GitHub repository](#insert-github-repository-link).
+0.3
 
 ## License
 
