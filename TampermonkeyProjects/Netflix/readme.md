@@ -10,20 +10,21 @@ Enhance your Netflix experience with Netflix Enchantments! This script adds new 
 
 ## Features
 
-- Automatically skips intros and outros on Netflix.
+- Automatically skips recaps, intros, and outros on Netflix.
 - Provides an option to cancel fullscreen mode.
 - Automatically enables fullscreen mode when a video starts.
-- Press F2 to open the settings
+- Press F2 to open the settings.
 
 ## Usage
 
-- The script will automatically skip intros and outros if the corresponding settings are enabled.
+- The script will automatically skip recaps, intros, and outros if the corresponding settings are enabled.
 - You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu.
 - The script will automatically enable fullscreen mode when a video starts.
 
 ## Keyboard Shortcuts
 
-- No keyboard shortcuts are available for this script.
+- Press F2 to open the settings.
+- Press ESC to exit fullscreen mode.
 
 ## Author
 
@@ -31,7 +32,7 @@ JJJ
 
 ## Version
 
-0.3
+0.4
 
 ## License
 
