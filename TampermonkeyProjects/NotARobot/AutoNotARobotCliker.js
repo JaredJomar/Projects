@@ -2,7 +2,7 @@
 // @name         Auto Click "I'm not a robot"
 // @namespace    http://tampermonkey.net/
 // @version      0.9
-// @description  Automatically clicks the "I'm not a robot"
+// @description  Automatically clicks the "I'm not a robot" checkbox on reCaptcha V2, reCaptcha V2 callback, reCaptcha V2 Enterprise, and hCaptcha captchas
 // @author       JJJ
 // @match        *://*/*
 // @icon         https://pngimg.com/uploads/robot/robot_PNG96.png
