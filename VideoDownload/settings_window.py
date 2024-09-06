@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
 )
-from PyQt5.QtCore import QSettings
+from PyQt5.QtCore import QSettings, pyqtSignal
 from constants import (
     BUTTON_BACKGROUND_COLOR,
     BUTTON_TEXT_COLOR,
@@ -22,6 +22,8 @@ import subprocess
 
 
 class SettingsWindow(QDialog):
+    settings_saved = pyqtSignal()  # Define a custom signal
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings")
@@ -111,6 +113,7 @@ class SettingsWindow(QDialog):
     def save_settings(self):
         self.settings.setValue("ffmpeg_path", self.ffmpeg_input.text())
         self.settings.setValue("yt_dlp_path", self.yt_dlp_input.text())
+        self.settings_saved.emit()  # Emit the custom signal
         self.accept()
 
     def load_settings(self):
@@ -123,27 +126,51 @@ class SettingsWindow(QDialog):
             self.yt_dlp_input.setText(yt_dlp_path)
 
     def install_ffmpeg(self):
+        ffmpeg_path = os.path.expandvars(
+            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-6.1-full_build/bin/ffmpeg.exe")
+        if os.path.exists(ffmpeg_path):
+            QMessageBox.information(
+                self, "Installation", "FFmpeg is already installed.")
+            self.ffmpeg_input.setText(ffmpeg_path)
+            self.settings.setValue("ffmpeg_path", ffmpeg_path)
+            return
+
         try:
             subprocess.run(
                 ["winget", "install", "Gyan.FFmpeg", "--silent"], check=True)
-            ffmpeg_path = self.get_dependency_path("ffmpeg")
-            self.ffmpeg_input.setText(ffmpeg_path)
-            self.settings.setValue("ffmpeg_path", ffmpeg_path)
-            QMessageBox.information(
-                self, "Installation", "FFmpeg has been successfully installed.")
+            if os.path.exists(ffmpeg_path):
+                self.ffmpeg_input.setText(ffmpeg_path)
+                self.settings.setValue("ffmpeg_path", ffmpeg_path)
+                QMessageBox.information(
+                    self, "Installation", "FFmpeg has been successfully installed.")
+            else:
+                QMessageBox.warning(self, "Installation Error",
+                                    "Failed to locate FFmpeg after installation.")
         except subprocess.CalledProcessError:
             QMessageBox.warning(self, "Installation Error",
                                 "Failed to install FFmpeg using winget.")
 
     def install_ytdlp(self):
+        ytdlp_path = os.path.expandvars(
+            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
+        if os.path.exists(ytdlp_path):
+            QMessageBox.information(
+                self, "Installation", "yt-dlp is already installed.")
+            self.yt_dlp_input.setText(ytdlp_path)
+            self.settings.setValue("yt_dlp_path", ytdlp_path)
+            return
+
         try:
             subprocess.run(
                 ["winget", "install", "yt-dlp.yt-dlp", "--silent"], check=True)
-            ytdlp_path = self.get_dependency_path("yt-dlp")
-            self.yt_dlp_input.setText(ytdlp_path)
-            self.settings.setValue("yt_dlp_path", ytdlp_path)
-            QMessageBox.information(
-                self, "Installation", "yt-dlp has been successfully installed.")
+            if os.path.exists(ytdlp_path):
+                self.yt_dlp_input.setText(ytdlp_path)
+                self.settings.setValue("yt_dlp_path", ytdlp_path)
+                QMessageBox.information(
+                    self, "Installation", "yt-dlp has been successfully installed.")
+            else:
+                QMessageBox.warning(self, "Installation Error",
+                                    "Failed to locate yt-dlp after installation.")
         except subprocess.CalledProcessError:
             QMessageBox.warning(self, "Installation Error",
                                 "Failed to install yt-dlp using winget.")

@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QThread, pyqtSignal
 import subprocess
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
 class DownloadThread(QThread):
@@ -39,7 +39,8 @@ class DownloadThread(QThread):
             raise ValueError(f"Invalid download type: {self.download_type}")
 
     def construct_video_command(self, url):
-        format_spec = "bestvideo" if self.resolution == "best" else f"bestvideo[height<={self.resolution}]"
+        format_spec = "bestvideo" if self.resolution == "best" else f"bestvideo[height<={
+            self.resolution}]"
         return [
             self.yt_dlp_path,
             "--format",
@@ -50,6 +51,10 @@ class DownloadThread(QThread):
             self.output_folder + "/%(title)s.%(ext)s",
             "--ffmpeg-location",
             self.ffmpeg_path,
+            "--concurrent-fragments",
+            "5",  # Increase the number of connections
+            "--external-downloader",
+            "aria2c",  # Use aria2c as the external downloader
             url,
         ]
 
@@ -66,11 +71,16 @@ class DownloadThread(QThread):
             self.output_folder + "/%(title)s.%(ext)s",
             "--ffmpeg-location",
             self.ffmpeg_path,
+            "--concurrent-fragments",
+            "5",  # Increase the number of connections
+            "--external-downloader",
+            "aria2c",  # Use aria2c as the external downloader
             url,
         ]
 
     def construct_video_with_audio_command(self, url):
-        format_spec = "bestvideo+bestaudio/best" if self.resolution == "best" else f"bestvideo[height<={self.resolution}]+bestaudio/best"
+        format_spec = "bestvideo+bestaudio/best" if self.resolution == "best" else f"bestvideo[height<={
+            self.resolution}]+bestaudio/best"
         return [
             self.yt_dlp_path,
             "--format",
@@ -80,6 +90,10 @@ class DownloadThread(QThread):
             self.output_folder + "/%(title)s.%(ext)s",
             "--ffmpeg-location",
             self.ffmpeg_path,
+            "--concurrent-fragments",
+            "5",  # Increase the number of connections
+            "--external-downloader",
+            "aria2c",  # Use aria2c as the external downloader
             url,
         ]
 

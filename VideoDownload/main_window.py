@@ -35,7 +35,9 @@ from constants import (
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.initUI()
 
+    def initUI(self):
         self.setStyleSheet(f"background-color: {WINDOW_BACKGROUND_COLOR};")
 
         self.settings = QSettings("YourCompany", "VideoDownloadApp")
@@ -43,16 +45,15 @@ class MainWindow(QMainWindow):
         palette = self.create_palette()
         self.setPalette(palette)
 
-        self.tabWidget = QTabWidget(self)
-        self.tabWidget.setStyleSheet(
-            f"QTabWidget::pane {{ background-color: {TAB_BACKGROUND_COLOR}; }}")
-        self.tabWidget.setTabBarAutoHide(True)
-        self.setCentralWidget(self.tabWidget)
+        self.tabs = QTabWidget()
 
         self.mainTab = self.create_main_tab()
-        self.tabWidget.addTab(self.mainTab, "  Main  ")
+        self.tabs.addTab(self.mainTab, "  Main  ")
+
         self.settingsTab = self.create_settings_tab()
-        self.tabWidget.addTab(self.settingsTab, "  Settings  ")
+        self.tabs.addTab(self.settingsTab, "Settings")
+
+        self.setCentralWidget(self.tabs)
 
         self.customize_appearance()
 
@@ -168,8 +169,15 @@ class MainWindow(QMainWindow):
         return widget
 
     def create_settings_tab(self):
-        settings_window = SettingsWindow(self)
-        return settings_window
+        # Create the settings window as a tab widget
+        settings_widget = SettingsWindow()
+        settings_widget.settings_saved.connect(
+            self.on_settings_saved)  # Connect the signal
+        return settings_widget
+
+    def on_settings_saved(self):
+        # Navigate to the main tab (assuming it's at index 0)
+        self.tabs.setCurrentIndex(0)
 
     def browse_folder(self):
         file, _ = QFileDialog.getOpenFileName(
@@ -246,14 +254,18 @@ class MainWindow(QMainWindow):
     def customize_appearance(self):
         menu = self.menuBar()
         menu.setStyleSheet(
-            "QMenuBar { background-color: #06283D; color: white; font-weight: bold; }")
+            "QMenuBar { background-color: #06283D; color: white; font-weight: bold; }"
+        )
 
         self.settingsTab.setStyleSheet(
-            "QWidget { background-color: #000128; color: white; font-weight: bold; }")
+            "QWidget { background-color: #000128; color: white; font-weight: bold; }"
+        )
 
-        tabBar = self.tabWidget.tabBar()
+        tabBar = self.tabs.tabBar()
         tabBar.setStyleSheet(
-            "QTabBar::tab { background-color: #000128; color: white; font-weight: bold; }")
+            "QTabBar::tab { background-color: #000128; color: white; font-weight: bold; padding: 10px 20px; margin-right: 10px; min-width: 100px; }"
+            "QTabBar::tab:selected { background-color: #06283D; }"
+        )
 
         self.progress_bar.setStyleSheet(
             "QProgressBar { border: 1px solid #47B5FF; border-radius: 5px; text-align: center; background-color: #06283D; color: white; }"
