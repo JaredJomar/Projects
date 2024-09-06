@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, and redeem codes on GOG from Amazon Gaming pages.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
@@ -26,7 +26,6 @@
     const PRIME_REWARD_SELECTOR = 'span[data-a-target="tw-button-text"] p[data-a-target="buy-box_call-to-action-text"][title="Get in-game content"], p[data-a-target="buy-box_call-to-action-text"][title="Get game"]';
 
     // Redeem on GOG Constants
-    const GOG_COPY_BUTTON_WRAPPER_SELECTOR = '.copy-button-wrapper';
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
     const GOG_CONTINUE_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Proceed to the next step"]';
     const GOG_FINAL_REDEEM_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Redeem the code"]';
@@ -126,38 +125,44 @@
 
     // Function to add the "Redeem on GOG" button
     function addGogRedeemButton() {
-        const copyButtonWrapper = document.querySelector(GOG_COPY_BUTTON_WRAPPER_SELECTOR);
+        const redeemButtonWrapper = document.querySelector('.redeem-button-wrapper');
 
-        if (copyButtonWrapper && !document.querySelector('.redeem-button')) {
-            const redeemButtonDiv = document.createElement('div');
-            redeemButtonDiv.className = 'copy-button tw-align-self-center redeem-button';
+        if (redeemButtonWrapper && !document.querySelector('.gog-redeem-button')) {
+            const gogRedeemButtonDiv = document.createElement('div');
+            gogRedeemButtonDiv.className = 'redeem-button tw-align-self-center gog-redeem-button';
 
-            const redeemButton = document.createElement('button');
-            redeemButton.ariaLabel = 'Redeem code on GOG';
-            redeemButton.className = 'tw-interactive tw-button tw-button--full-width';
-            redeemButton.dataset.aTarget = 'redeem-code';
-            redeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text">Redeem on GOG</span>';
+            const gogRedeemButton = document.createElement('a');
+            gogRedeemButton.href = 'https://www.gog.com/en/redeem';
+            gogRedeemButton.target = '_blank';
+            gogRedeemButton.rel = 'noopener noreferrer';
+            gogRedeemButton.className = 'tw-interactive tw-button tw-button--full-width';
+            gogRedeemButton.dataset.aTarget = 'redeem-on-gog';
+            gogRedeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text"><div class="tw-inline-flex"><p class="" title="Redeem on GOG">Redeem on GOG</p>&nbsp;&nbsp;<figure aria-label="ExternalLinkWithBox" class="tw-svg"><svg class="tw-svg__asset tw-svg__asset--externallinkwithbox tw-svg__asset--inherit" width="12px" height="12px" version="1.1" viewBox="0 0 11 11" x="0px" y="0px"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.3125 6.875V9.625C10.3125 10.3844 9.69689 11 8.9375 11H1.375C0.615608 11 0 10.3844 0 9.625V2.0625C0 1.30311 0.615608 0.6875 1.375 0.6875H4.125V2.0625H1.375V9.625H8.9375V6.875H10.3125ZM9.62301 2.34727L5.29664 6.67364L4.32437 5.70136L8.65073 1.375H6.18551V0H10.998V4.8125H9.62301V2.34727Z"></path></svg></figure></div></span>';
 
-            redeemButtonDiv.appendChild(redeemButton);
-            copyButtonWrapper.appendChild(redeemButtonDiv);
+            gogRedeemButtonDiv.appendChild(gogRedeemButton);
+            redeemButtonWrapper.appendChild(gogRedeemButtonDiv);
 
-            redeemButton.addEventListener('click', function () {
-                const code = document.querySelector('input[data-a-target="copy-code-input"]').value;
-                if (code) {
-                    navigator.clipboard.writeText(code).then(function () {
-                        window.location.href = 'https://www.gog.com/en/redeem';
-                    });
+            gogRedeemButton.addEventListener('click', function (e) {
+                e.preventDefault();
+                const codeInput = document.querySelector('input[aria-label]');
+                if (codeInput) {
+                    const code = codeInput.value;
+                    if (code) {
+                        navigator.clipboard.writeText(code).then(function () {
+                            window.open('https://www.gog.com/en/redeem', '_blank');
+                        });
+                    }
                 }
             });
 
             const style = document.createElement('style');
             style.innerHTML = `
-                .copy-button-wrapper {
+                .redeem-button-wrapper {
                     display: flex;
                     justify-content: space-between;
                 }
-                .copy-button,
-                .redeem-button {
+                .redeem-button,
+                .gog-redeem-button {
                     margin: 0 5px;
                 }
             `;
@@ -200,8 +205,8 @@
 
     if (window.location.hostname === 'gaming.amazon.com') {
         const observer = new MutationObserver((mutations, obs) => {
-            const copyButtonWrapper = document.querySelector(GOG_COPY_BUTTON_WRAPPER_SELECTOR);
-            if (copyButtonWrapper) {
+            const redeemButtonWrapper = document.querySelector('.redeem-button-wrapper');
+            if (redeemButtonWrapper) {
                 addGogRedeemButton();
                 obs.disconnect();
             }
