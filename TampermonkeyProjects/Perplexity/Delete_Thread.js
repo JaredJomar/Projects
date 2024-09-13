@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Delete Thread
 // @namespace http://tampermonkey.net/
-// @version 0.1
+// @version 0.1.1
 // @description Delete thread on Perplexity by pressing the Delete key and confirming with Enter
 // @author JJJ
 // @match https://www.perplexity.ai/*
@@ -64,7 +64,7 @@
 
     // Function to cancel the deletion
     function cancelDeletion() {
-        var nevermindButton = document.querySelector('');
+        var nevermindButton = document.querySelector('button.bg-offsetPlus.dark\\:bg-offsetPlusDark.text-textMain.dark\\:text-textMainDark.md\\:hover\\:text-textOff.md\\:dark\\:hover\\:text-textOffDark.font-sans.focus\\:outline-none.outline-none.outline-transparent.transition.duration-300.ease-in-out.font-sans.select-none.items-center.relative.group\\/button.justify-center.text-center.items-center.rounded.cursor-point.active\\:scale-95.origin-center.whitespace-nowrap.flex.w-full.md\\:inline-flex.md\\:w-auto.text-base.px-md.font-medium.h-10 .flex.items-center.min-w-0.justify-center.gap-xs .text-align-center.relative.truncate.leading-loose');
         if (nevermindButton) {
             nevermindButton.click();
             console.log('Nevermind triggered');
