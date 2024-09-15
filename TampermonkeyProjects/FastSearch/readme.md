@@ -22,8 +22,9 @@ Fast Search is a userscript that allows you to quickly search across various sit
 - `li` - LinkedIn: `https://www.linkedin.com/search/results/all/?keywords=`
 - `r` - Reddit: `https://www.reddit.com/search/?q=`
 - `so` - Stack Overflow: `https://stackoverflow.com/search?q=`
-- `t` - Twitter: `https://twitter.com/search?q=`
+- `t` - Twitch: `https://www.twitch.tv/search?term=`
 - `w` - Wikipedia: `https://en.wikipedia.org/w/index.php?search=`
+- `x` - Twitter: `https://twitter.com/search?q=`
 - `y` - YouTube: `https://www.youtube.com/results?search_query=`
 
 ## Author

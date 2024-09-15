@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1
+// @version      0.1.1
 // @description  Quickly search various sites using custom shortcuts.
 // @match        *://*/*
 // @icon         https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn
@@ -25,8 +25,9 @@
         "li": "https://www.linkedin.com/search/results/all/?keywords=",
         "r": "https://www.reddit.com/search/?q=",
         "so": "https://stackoverflow.com/search?q=",
-        "t": "https://twitter.com/search?q=",
+        "t": "https://www.twitch.tv/search?term=",
         "w": "https://en.wikipedia.org/w/index.php?search=",
+        "x": "https://twitter.com/search?q=",
         "y": "https://www.youtube.com/results?search_query="
     };
 
@@ -58,7 +59,11 @@
     // Perform the search
     function performSearch() {
         const userInput = prompt("Enter search command:");
-        const [shortcut, ...queryParts] = (userInput || "").trim().split(" ");
+        if (!userInput) {
+            notifyUser("Search canceled.");
+            return;
+        }
+        const [shortcut, ...queryParts] = userInput.trim().split(" ");
         const query = queryParts.join(" ");
 
         // Default to Google if shortcut is not found
