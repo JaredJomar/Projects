@@ -2,9 +2,9 @@
 // @name         Fast Search
 // @namespace    fast-search
 // @version      0.1
+// @icon         https://example.com/icons/fast-search.ico
 // @description  Quickly search various sites using custom shortcuts.
 // @match        *://*/*
-// @icon         https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn
 // @grant        GM_notification
 // @license      MIT
 // ==/UserScript==
@@ -12,11 +12,12 @@
 (function () {
     'use strict';
 
-    // Define search engine shortcuts and URLs
+    // Define search engine shortcuts and URLs in alphabetical order
     const SEARCH_ENGINES = {
         "a": "https://www.amazon.com/s?k=",
         "b": "https://www.bing.com/search?q=",
         "d": "https://duckduckgo.com/?q=",
+        "gf": "https://greasyfork.org/en/scripts?q=",
         "gh": "https://github.com/search?q=",
         "gi": "https://www.google.com/search?tbm=isch&q=",
         "g": "https://www.google.com/search?q=",
@@ -60,15 +61,9 @@
         const [shortcut, ...queryParts] = (userInput || "").trim().split(" ");
         const query = queryParts.join(" ");
 
-        let baseUrl = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES["g"];
-        let searchUrl;
-
-        if (query) {
-            searchUrl = `${baseUrl}${encodeURIComponent(query)}`;
-        } else {
-            // Use Google search with the shortcut as the query if no query is provided
-            searchUrl = SEARCH_ENGINES["g"] + encodeURIComponent(shortcut);
-        }
+        // Default to Google if shortcut is not found
+        const baseUrl = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES["g"];
+        const searchUrl = query ? `${baseUrl}${encodeURIComponent(query)}` : `${SEARCH_ENGINES["g"]}${encodeURIComponent(shortcut)}`;
 
         notifyUser("Redirecting to your search...");
         window.location.href = searchUrl;
