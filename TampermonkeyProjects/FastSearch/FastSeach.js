@@ -2,9 +2,9 @@
 // @name         Fast Search
 // @namespace    fast-search
 // @version      0.1
-// @icon         https://example.com/icons/fast-search.ico
 // @description  Quickly search various sites using custom shortcuts.
 // @match        *://*/*
+// @icon         https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn
 // @grant        GM_notification
 // @license      MIT
 // ==/UserScript==
