@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1.1
+// @version      0.1.2
 // @description  Quickly search various sites using custom shortcuts.
 // @match        *://*/*
 // @icon         https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn
@@ -28,7 +28,8 @@
         "t": "https://www.twitch.tv/search?term=",
         "w": "https://en.wikipedia.org/w/index.php?search=",
         "x": "https://twitter.com/search?q=",
-        "y": "https://www.youtube.com/results?search_query="
+        "y": "https://www.youtube.com/results?search_query=",
+        "tk": "https://www.tiktok.com/search?q="
     };
 
     // Notify user with a message

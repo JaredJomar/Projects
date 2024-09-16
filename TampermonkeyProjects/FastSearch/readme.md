@@ -26,14 +26,14 @@ Fast Search is a userscript that allows you to quickly search across various sit
 - `w` - Wikipedia: `https://en.wikipedia.org/w/index.php?search=`
 - `x` - Twitter: `https://twitter.com/search?q=`
 - `y` - YouTube: `https://www.youtube.com/results?search_query=`
-
+- `tk` - TikTok: `https://www.tiktok.com/search?q=`
 ## Author
 
 JJJ
 
 ## Version
 
-0.1
+0.1.2
 
 ## License
 
