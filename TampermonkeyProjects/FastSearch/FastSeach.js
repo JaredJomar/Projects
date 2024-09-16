@@ -39,7 +39,6 @@
         "sc": "https://soundcloud.com/search?q="
     };
 
-
     // Notify user with a message
     function notifyUser(message) {
         if (!('Notification' in window)) {
@@ -76,8 +75,8 @@
         const query = queryParts.join(" ");
 
         // Default to Google if shortcut is not found
-        const baseUrl = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES["g"];
-        const searchUrl = query ? `${baseUrl}${encodeURIComponent(query)}` : `${SEARCH_ENGINES["g"]}${encodeURIComponent(shortcut)}`;
+        const baseUrl = searchEngines[shortcut] || searchEngines["g"];
+        const searchUrl = query ? `${baseUrl}${encodeURIComponent(query)}` : `${searchEngines["g"]}${encodeURIComponent(shortcut)}`;
 
         notifyUser("Redirecting to your search...");
         window.location.href = searchUrl;
