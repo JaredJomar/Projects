@@ -27,6 +27,13 @@ Fast Search is a userscript that allows you to quickly search across various sit
 - `x` - Twitter: `https://twitter.com/search?q=`
 - `y` - YouTube: `https://www.youtube.com/results?search_query=`
 - `tk` - TikTok: `https://www.tiktok.com/search?q=`
+- `f` - Facebook: `https://www.facebook.com/search/top/?q=`
+- `i` - Instagram: `https://www.instagram.com/explore/tags/`
+- `p` - Pinterest: `https://www.pinterest.com/search/pins/?q=`
+- `tu` - Tumblr: `https://www.tumblr.com/search/`
+- `q` - Quora: `https://www.quora.com/search?q=`
+- `fl` - Flickr: `https://www.flickr.com/search/?text=`
+- `sc` - SoundCloud: `https://soundcloud.com/search?q=`
 
 ## Author
 
