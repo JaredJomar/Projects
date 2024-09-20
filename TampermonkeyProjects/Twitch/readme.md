@@ -1,7 +1,6 @@
 # Twitch Enhancements
 
-This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/), and add a Redeem On GOG button https://gaming.amazon.com/home next to the Copy Code.
-
+This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/), add a Redeem On GOG button https://gaming.amazon.com/home next to the Claim Code and a Redeem On Legacy Games Button next to the Copy Code.
 ## Installation
 
 1. Make sure you have a user script manager installed in your browser, such as Tampermonkey.
@@ -26,6 +25,9 @@ To claim prime rewards, make sure to open the reward page on [https://gaming.ama
 
 Automatically redeems codes on [https://www.gog.com/en/redeem](https://www.gog.com/en/redeem) from Amazon Gaming pages when you click the Redeem On GOG button.
 
+### Redeem Code on Legacy Games
+Automatically redeems codes on [https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/](https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/) from Amazon Gaming pages when you click the Redeem On Legacy Games button.
+
 ## Usage
 
 Once the script is installed and activated, the features will automatically run in the background. There's no need for manual intervention.
@@ -36,7 +38,7 @@ JJJ
 
 ## Version
 
-0.3
+0.5
 
 ## License
 

@@ -1,15 +1,18 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, and redeem codes on GOG from Amazon Gaming pages.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
 // @match        https://gaming.amazon.com/*
 // @match        https://www.twitch.tv/drops/inventory*
 // @match        https://www.gog.com/en/redeem
+// @match        https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/
 // @icon         https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0
-// @grant        none
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
 // @license      MIT
 // ==/UserScript==
 
@@ -29,6 +32,13 @@
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
     const GOG_CONTINUE_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Proceed to the next step"]';
     const GOG_FINAL_REDEEM_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Redeem the code"]';
+
+    // Redeem on Legacy Games Constants
+    const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/';
+    const LEGACY_GAMES_CODE_INPUT_SELECTOR = '#primedeal_game_code';
+    const LEGACY_GAMES_EMAIL_INPUT_SELECTOR = '#primedeal_email';
+    const LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR = '#primedeal_email_validate';
+    const LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR = '#submitbutton';
 
     let claiming = false;
 
@@ -125,48 +135,49 @@
 
     // Function to add the "Redeem on GOG" button
     function addGogRedeemButton() {
-        const redeemButtonWrapper = document.querySelector('.redeem-button-wrapper');
+        const claimCodeButton = document.querySelector('p[title="Claim Code"]');
+        if (claimCodeButton && !document.querySelector('.gog-redeem-button')) {
+            const claimCodeWrapper = claimCodeButton.closest('.claim-button-wrapper');
+            if (claimCodeWrapper) {
+                const gogRedeemButtonDiv = document.createElement('div');
+                gogRedeemButtonDiv.className = 'claim-button tw-align-self-center gog-redeem-button';
 
-        if (redeemButtonWrapper && !document.querySelector('.gog-redeem-button')) {
-            const gogRedeemButtonDiv = document.createElement('div');
-            gogRedeemButtonDiv.className = 'redeem-button tw-align-self-center gog-redeem-button';
+                const gogRedeemButton = document.createElement('a');
+                gogRedeemButton.href = 'https://www.gog.com/en/redeem';
+                gogRedeemButton.rel = 'noopener noreferrer';
+                gogRedeemButton.className = 'tw-interactive tw-button tw-button--full-width';
+                gogRedeemButton.dataset.aTarget = 'redeem-on-gog';
+                gogRedeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text"><div class="tw-inline-flex"><p class="" title="Redeem on GOG">Redeem on GOG</p>&nbsp;&nbsp;<figure aria-label="ExternalLinkWithBox" class="tw-svg"><svg class="tw-svg__asset tw-svg__asset--externallinkwithbox tw-svg__asset--inherit" width="12px" height="12px" version="1.1" viewBox="0 0 11 11" x="0px" y="0px"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.3125 6.875V9.625C10.3125 10.3844 9.69689 11 8.9375 11H1.375C0.615608 11 0 10.3844 0 9.625V2.0625C0 1.30311 0.615608 0.6875 1.375 0.6875H4.125V2.0625H1.375V9.625H8.9375V6.875H10.3125ZM9.62301 2.34727L5.29664 6.67364L4.32437 5.70136L8.65073 1.375H6.18551V0H10.998V4.8125H9.62301V2.34727Z"></path></svg></figure></div></span>';
 
-            const gogRedeemButton = document.createElement('a');
-            gogRedeemButton.href = 'https://www.gog.com/en/redeem';
-            gogRedeemButton.target = '_blank';
-            gogRedeemButton.rel = 'noopener noreferrer';
-            gogRedeemButton.className = 'tw-interactive tw-button tw-button--full-width';
-            gogRedeemButton.dataset.aTarget = 'redeem-on-gog';
-            gogRedeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text"><div class="tw-inline-flex"><p class="" title="Redeem on GOG">Redeem on GOG</p>&nbsp;&nbsp;<figure aria-label="ExternalLinkWithBox" class="tw-svg"><svg class="tw-svg__asset tw-svg__asset--externallinkwithbox tw-svg__asset--inherit" width="12px" height="12px" version="1.1" viewBox="0 0 11 11" x="0px" y="0px"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.3125 6.875V9.625C10.3125 10.3844 9.69689 11 8.9375 11H1.375C0.615608 11 0 10.3844 0 9.625V2.0625C0 1.30311 0.615608 0.6875 1.375 0.6875H4.125V2.0625H1.375V9.625H8.9375V6.875H10.3125ZM9.62301 2.34727L5.29664 6.67364L4.32437 5.70136L8.65073 1.375H6.18551V0H10.998V4.8125H9.62301V2.34727Z"></path></svg></figure></div></span>';
+                gogRedeemButtonDiv.appendChild(gogRedeemButton);
+                claimCodeWrapper.appendChild(gogRedeemButtonDiv);
 
-            gogRedeemButtonDiv.appendChild(gogRedeemButton);
-            redeemButtonWrapper.appendChild(gogRedeemButtonDiv);
-
-            gogRedeemButton.addEventListener('click', function (e) {
-                e.preventDefault();
-                const codeInput = document.querySelector('input[aria-label]');
-                if (codeInput) {
-                    const code = codeInput.value;
-                    if (code) {
-                        navigator.clipboard.writeText(code).then(function () {
-                            window.open('https://www.gog.com/en/redeem', '_blank');
-                        });
+                gogRedeemButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const codeInput = document.querySelector('input[aria-label]');
+                    if (codeInput) {
+                        const code = codeInput.value;
+                        if (code) {
+                            navigator.clipboard.writeText(code).then(function () {
+                                window.location.href = 'https://www.gog.com/en/redeem';
+                            });
+                        }
                     }
-                }
-            });
+                });
 
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .redeem-button-wrapper {
-                    display: flex;
-                    justify-content: space-between;
-                }
-                .redeem-button,
-                .gog-redeem-button {
-                    margin: 0 5px;
-                }
-            `;
-            document.head.appendChild(style);
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .claim-button-wrapper {
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                    .claim-button,
+                    .gog-redeem-button {
+                        margin: 0 5px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         }
     }
 
@@ -203,12 +214,103 @@
         });
     }
 
+    // Function to add the "Redeem on Legacy Games" button
+    function addLegacyGamesRedeemButton() {
+        const copyCodeButton = document.querySelector('button[aria-label="Copy code to your clipboard"]');
+        if (copyCodeButton && !document.querySelector('.legacy-games-redeem-button')) {
+            const copyCodeWrapper = copyCodeButton.closest('.copy-button-wrapper');
+            if (copyCodeWrapper) {
+                const legacyGamesRedeemButtonDiv = document.createElement('div');
+                legacyGamesRedeemButtonDiv.className = 'copy-button tw-align-self-center legacy-games-redeem-button';
+
+                const legacyGamesRedeemButton = document.createElement('button');
+                legacyGamesRedeemButton.ariaLabel = 'Redeem on Legacy Games';
+                legacyGamesRedeemButton.className = 'tw-interactive tw-button tw-button--full-width';
+                legacyGamesRedeemButton.dataset.aTarget = 'redeem-on-legacy-games';
+                legacyGamesRedeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text">Redeem on Legacy Games</span>';
+
+                legacyGamesRedeemButtonDiv.appendChild(legacyGamesRedeemButton);
+                copyCodeWrapper.appendChild(legacyGamesRedeemButtonDiv);
+
+                legacyGamesRedeemButton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const codeInput = document.querySelector('input[aria-label]');
+                    if (codeInput) {
+                        const code = codeInput.value;
+                        if (code) {
+                            navigator.clipboard.writeText(code).then(function () {
+                                const email = GM_getValue('legacyGamesEmail', null);
+                                if (!email) {
+                                    const userEmail = prompt('Please enter your email address:');
+                                    if (userEmail) {
+                                        GM_setValue('legacyGamesEmail', userEmail);
+                                        window.location.href = LEGACY_GAMES_REDEEM_URL;
+                                    }
+                                } else {
+                                    window.location.href = LEGACY_GAMES_REDEEM_URL;
+                                }
+                            });
+                        }
+                    }
+                });
+
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .copy-button-wrapper {
+                        display: flex;
+                        justify-content: space-between;
+                    }
+                    .copy-button,
+                    .legacy-games-redeem-button {
+                        margin: 0 5px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+    }
+
+    // Function to redeem code on Legacy Games
+    function redeemCodeOnLegacyGames() {
+        navigator.clipboard.readText().then(function (code) {
+            const codeInput = document.querySelector(LEGACY_GAMES_CODE_INPUT_SELECTOR);
+            const emailInput = document.querySelector(LEGACY_GAMES_EMAIL_INPUT_SELECTOR);
+            const emailValidateInput = document.querySelector(LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR);
+            const email = GM_getValue('legacyGamesEmail', null);
+
+            if (codeInput && emailInput && emailValidateInput && email) {
+                codeInput.value = code;
+                emailInput.value = email;
+                emailValidateInput.value = email;
+
+                // Simulate input event to ensure any listeners are triggered
+                const inputEvent = new Event('input', { bubbles: true });
+                codeInput.dispatchEvent(inputEvent);
+                emailInput.dispatchEvent(inputEvent);
+                emailValidateInput.dispatchEvent(inputEvent);
+
+                // Click the submit button after a short delay
+                setTimeout(() => {
+                    const submitButton = document.querySelector(LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR);
+                    if (submitButton) {
+                        submitButton.click();
+                    }
+                }, 500); // Adjust the delay as needed
+            }
+        }).catch(function (err) {
+            console.error('Failed to read clipboard contents: ', err);
+        });
+    }
+
     if (window.location.hostname === 'gaming.amazon.com') {
         const observer = new MutationObserver((mutations, obs) => {
-            const redeemButtonWrapper = document.querySelector('.redeem-button-wrapper');
-            if (redeemButtonWrapper) {
+            const claimCodeButton = document.querySelector('p[title="Claim Code"]');
+            if (claimCodeButton) {
                 addGogRedeemButton();
-                obs.disconnect();
+            }
+            const copyCodeButton = document.querySelector('button[aria-label="Copy code to your clipboard"]');
+            if (copyCodeButton) {
+                addLegacyGamesRedeemButton();
             }
         });
 
@@ -218,10 +320,15 @@
         });
 
         addGogRedeemButton();
+        addLegacyGamesRedeemButton();
     }
 
     if (window.location.hostname === 'www.gog.com' && window.location.pathname === '/en/redeem') {
         window.addEventListener('load', redeemCodeOnGOG);
+    }
+
+    if (window.location.hostname === 'promo.legacygames.com' && window.location.pathname === '/i-love-finding-cats-and-pups-ce-prime-deal/') {
+        window.addEventListener('load', redeemCodeOnLegacyGames);
     }
 
     setTimeout(enableTheaterMode, 1000);
