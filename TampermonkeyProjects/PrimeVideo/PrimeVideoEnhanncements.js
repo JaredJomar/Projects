@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Prime Video Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.2.1
 // @description  Enhancements for Prime Video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.amazon.com/gp/video/*
@@ -14,6 +14,8 @@
 // ==/UserScript==
 
 (function () {
+    'use strict';
+
     const config = {
         enableSkipRecap: GM_getValue('enableSkipRecap', true),
         enableSkipIntro: GM_getValue('enableSkipIntro', true),
@@ -22,9 +24,14 @@
     };
 
     const selectors = {
-        skipRecapButton: 'button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
-        skipIntroButton: 'button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
+        skipRecapButton: 'div.f16im4ho > div > button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
+        skipIntroButton: 'div.f16im4ho > div > button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
         fullscreenVideo: 'video',
+    };
+
+    const buttonState = {
+        skipRecap: false,
+        skipIntro: false
     };
 
     function showSettingsDialog() {
@@ -56,23 +63,8 @@
         dialogWrapper.innerHTML = dialogHTML;
         document.body.appendChild(dialogWrapper);
 
-        const saveSettingsButton = document.getElementById('saveSettingsButton');
-        const cancelSettingsButton = document.getElementById('cancelSettingsButton');
-
-        saveSettingsButton.addEventListener('click', () => {
-            console.log('Save button clicked');
-            config.enableSkipRecap = document.getElementById('enableSkipRecap').checked;
-            config.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
-            config.enableSkipOutro = document.getElementById('enableSkipOutro').checked;
-            config.enableAutoFullscreen = document.getElementById('enableAutoFullscreen').checked;
-            saveSettings();
-            closeSettingsDialog();
-        });
-
-        cancelSettingsButton.addEventListener('click', () => {
-            console.log('Cancel button clicked');
-            closeSettingsDialog();
-        });
+        document.getElementById('saveSettingsButton').addEventListener('click', saveAndCloseSettings);
+        document.getElementById('cancelSettingsButton').addEventListener('click', closeSettingsDialog);
     }
 
     function closeSettingsDialog() {
@@ -85,52 +77,54 @@
         }
     }
 
-    function saveSettings() {
-        GM_setValue('enableSkipRecap', config.enableSkipRecap);
-        GM_setValue('enableSkipIntro', config.enableSkipIntro);
-        GM_setValue('enableSkipOutro', config.enableSkipOutro);
-        GM_setValue('enableAutoFullscreen', config.enableAutoFullscreen);
+    function saveAndCloseSettings() {
+        ['enableSkipRecap', 'enableSkipIntro', 'enableAutoFullscreen'].forEach(setting => {
+            config[setting] = document.getElementById(setting).checked;
+            GM_setValue(setting, config[setting]);
+        });
+        closeSettingsDialog();
     }
 
-    function clickButton(selector) {
+    function clickButton(selector, buttonType) {
         const button = document.querySelector(selector);
-        if (button) {
+        if (button && !buttonState[buttonType]) {
             button.click();
+            buttonState[buttonType] = true;
+            console.log(`${buttonType} button clicked`);
         }
     }
 
-    function enterFullscreen() {
+    function toggleFullscreen() {
         const videoElement = document.querySelector(selectors.fullscreenVideo);
         if (videoElement) {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
             }
-        }
-    }
-
-    function exitFullscreen() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
         }
     }
 
     function handleSkipActions() {
         try {
             if (config.enableSkipRecap) {
-                clickButton(selectors.skipRecapButton);
+                clickButton(selectors.skipRecapButton, 'skipRecap');
             }
 
             if (config.enableSkipIntro) {
-                clickButton(selectors.skipIntroButton);
+                clickButton(selectors.skipIntroButton, 'skipIntro');
             }
 
-            if (config.enableSkipOutro) {
-                // Add selector for skip outro button if available
+            if (config.enableAutoFullscreen && !document.fullscreenElement) {
+                toggleFullscreen();
             }
 
-            if (config.enableAutoFullscreen && !config.cancelFullscreen) {
-                enterFullscreen();
-            }
+            // Reset button states if buttons are not found
+            ['skipRecap', 'skipIntro'].forEach(buttonType => {
+                if (!document.querySelector(selectors[`${buttonType}Button`])) {
+                    buttonState[buttonType] = false;
+                }
+            });
 
         } catch (error) {
             console.error('An error occurred:', error);
@@ -145,12 +139,11 @@
     let isSettingsDialogOpen = false;
 
     function toggleSettingsDialog() {
+        isSettingsDialogOpen = !isSettingsDialogOpen;
         if (isSettingsDialogOpen) {
-            closeSettingsDialog();
-            isSettingsDialogOpen = false;
-        } else {
             showSettingsDialog();
-            isSettingsDialogOpen = true;
+        } else {
+            closeSettingsDialog();
         }
     }
 
@@ -158,49 +151,39 @@
         if (event.key === 'F2') {
             toggleSettingsDialog();
         } else if (event.key === 'Escape') {
-            exitFullscreen();
+            document.exitFullscreen();
         }
     });
 
     // Auto skip ads
-
     const timePattern = /(\d?\d:){0,2}\d?\d/;
     const intervalDuration = 200;
     let adBypassed = false;
 
     setInterval(() => {
-        let videoElement;
         const playerContainer = document.querySelector(".rendererContainer");
-        if (playerContainer) {
-            videoElement = playerContainer.querySelector('video');
-        }
-
+        const videoElement = playerContainer ? playerContainer.querySelector('video') : null;
         const skipIndicator = document.querySelector(".atvwebplayersdk-adtimeindicator-text");
         const remainingAdTimeElement = document.querySelector(".atvwebplayersdk-ad-timer-remaining-time");
 
         if (videoElement && videoElement.currentTime && (remainingAdTimeElement || skipIndicator)) {
             if (!adBypassed) {
-                let adDurationElement;
-                if (remainingAdTimeElement && timePattern.test(remainingAdTimeElement.textContent)) adDurationElement = remainingAdTimeElement;
-                if (skipIndicator && timePattern.test(skipIndicator.textContent)) adDurationElement = skipIndicator;
+                let adDurationElement = remainingAdTimeElement && timePattern.test(remainingAdTimeElement.textContent) ? remainingAdTimeElement :
+                    skipIndicator && timePattern.test(skipIndicator.textContent) ? skipIndicator : null;
 
-                const adDurationParts = adDurationElement.textContent.match(timePattern)[0].split(':');
-                let adDurationSeconds = 0;
-                for (let i = 0; i < adDurationParts.length; i++) {
-                    adDurationSeconds += parseInt(adDurationParts[i], 10) * Math.pow(60, adDurationParts.length - 1 - i);
+                if (adDurationElement) {
+                    const adDurationParts = adDurationElement.textContent.match(timePattern)[0].split(':');
+                    const adDurationSeconds = adDurationParts.reduce((acc, part, index) =>
+                        acc + parseInt(part, 10) * Math.pow(60, adDurationParts.length - 1 - index), 0);
+
+                    videoElement.currentTime += adDurationSeconds;
+                    adBypassed = true;
+                    console.log('=====================\nAD SKIPPED ON PRIME VIDEO\n=====================');
                 }
-                videoElement.currentTime += adDurationSeconds;
-                adBypassed = true;
-
-                console.log('=====================');
-                console.log('AD SKIPPED ON PRIME VIDEO');
-                console.log('=====================');
             }
         } else {
             adBypassed = false;
         }
     }, intervalDuration);
-
-    // End code of auto skip ads
 
 })();
