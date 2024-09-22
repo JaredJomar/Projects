@@ -28,17 +28,18 @@ Once the script is installed and activated, the features will automatically run 
 
 ### Settings Dialog
 
-To open the settings dialog, use the Tampermonkey menu. The settings dialog allows you to enable or disable the following features:
+To open the settings dialog, press F2 or use the Tampermonkey menu. The settings dialog allows you to enable or disable the following features:
 - Auto Like Videos
 - Auto Like Live Streams
 - Like If Not Subscribed
-- Watch Threshold
+- Watch Threshold (adjustable with a slider)
 - Check Frequency
-- Debug Mode
 
 ## Keyboard Shortcuts
 
-- Press F2 to open the settings dialog.
+- Press F2 to open or close the settings dialog.
+- Press PageDown to toggle auto-scrolling.
+- Press PageUp to stop auto-scrolling or scroll to the top of the page.
 
 ## Author
 
@@ -46,7 +47,7 @@ JJJ
 
 ## Version
 
-0.6
+0.7
 
 ## License
 
