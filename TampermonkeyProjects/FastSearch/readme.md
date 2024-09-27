@@ -29,7 +29,8 @@ Fast Search is a userscript that allows you to quickly search across various sit
 - `tk` - TikTok: `https://www.tiktok.com/search?q=`
 - `f` - Facebook: `https://www.facebook.com/search/top/?q=`
 - `i` - Instagram: `https://www.instagram.com/explore/tags/`
-- `p` - Pinterest: `https://www.pinterest.com/search/pins/?q=`
+- `p` - Perplexity: `https://www.perplexity.ai/?q=`
+- `pi` - Pinterest: `https://www.pinterest.com/search/pins/?q=`
 - `tu` - Tumblr: `https://www.tumblr.com/search/`
 - `q` - Quora: `https://www.quora.com/search?q=`
 - `fl` - Flickr: `https://www.flickr.com/search/?text=`
@@ -41,7 +42,7 @@ JJJ
 
 ## Version
 
-0.1.3
+0.1.4
 
 ## License
 
