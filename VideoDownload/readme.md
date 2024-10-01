@@ -62,10 +62,27 @@ A simple PyQt5-based application for downloading videos and audio from YouTube u
 4. Install FFmpeg: `winget install Gyan.FFmpeg`
 
 ## Executable 
-1. Download the Executable 
-2. Install yt-dlp: `winget install yt-dlp.yt-dlp`
-3. Install FFmpeg: `winget install Gyan.FFmpeg`
-4. Select the path to yt-dpl and ffmepg in the setting 
+
+1. Download the Executable: [VideoDownload_v2.exe](https://github.com/JaredJomar/Projects/raw/4c9fc979dea354ffb73f578f20edb5d107c5bd2a/VideoDownload/VideoDownload_v2.exe?download=)
+2. Install yt-dlp: Open the terminal and run:
+
+   ```sh
+   winget install yt-dlp.yt-dlp
+   ```
+
+3. Install FFmpeg: Open the terminal and run:
+
+   ```sh
+   winget install Gyan.FFmpeg
+   ```
+4. Select the path to yt-dlp and FFmpeg in the settings
+Path should be something like this:
+   ```json
+      "ffmpeg_path": C:\Users\YourUsername\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-7.0.2-full_build\bin\ffmpeg.exe
+      "yt_dlp_path": C:\Users\YourUsername\AppData\Local\Microsoft\WinGet\Packages\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\yt-dlp.exe
+   ```
+
+
 
 ## License
 
