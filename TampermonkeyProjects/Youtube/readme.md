@@ -35,7 +35,7 @@ To open the settings dialog, press F2 or use the Tampermonkey menu. The settings
 - Watch Threshold (adjustable with a slider)
 - Check Frequency
 
-## Keyboard Shortcuts
+### Keyboard Shortcuts
 
 - Press F2 to open or close the settings dialog.
 - Press PageDown to toggle auto-scrolling.
@@ -47,7 +47,7 @@ JJJ
 
 ## Version
 
-0.7
+0.8
 
 ## License
 
