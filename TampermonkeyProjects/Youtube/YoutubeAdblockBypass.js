@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name           Youtube AdBlock Bypass
+// @name           YouTube AdBlock Ban Bypass 
 // @namespace      http://tampermonkey.net/
 // @version        0.1
-// @description    Bypass Youtube Adblock
+// @description    Bypass YouTube Adblock Ban
 // @author         JJJ
 // @match          https://www.youtube.com/*
 // @match          https://www.youtube-nocookie.com/*
