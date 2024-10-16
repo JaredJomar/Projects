@@ -1,6 +1,6 @@
 # Close Ads
 
-This user script automatically closes ads on LookMovie.
+This user script automatically closes ads on LookMovie, removes specific reCAPTCHA divs except on the threat protection page, and removes banner ads.
 
 ## Installation
 
@@ -11,8 +11,11 @@ This user script automatically closes ads on LookMovie.
 ## Features
 
 - Automatically closes ads on LookMovie.
+- Removes specific reCAPTCHA divs except on the threat protection page.
+- Removes banner ads.
 - Configurable maximum attempts to close ads.
 - Continuous checking for ads.
+- Debounced ad handling to improve performance.
 
 ## Usage
 
@@ -21,9 +24,13 @@ This user script automatically closes ads on LookMovie.
 
 ## Configuration
 
-- `closeButtonSelector`: CSS selector for the close button of the ads.
+- `closePlayerAdSelector`: CSS selector for the close button of the ads.
+- `IPreferAdsSelector`: CSS selector for the "I Prefer Ads" button.
+- `notifyButtonSelector`: CSS selector for the notify button.
 - `maxAttempts`: Maximum number of attempts to close ads.
 - `continuousCheck`: Whether to continuously check for ads.
+- `debounceTime`: Time in milliseconds to debounce the ad handling function.
+- `threatProtectionUrl`: URL of the threat protection page where reCAPTCHA div should not be removed.
 
 ## Author
 
@@ -31,7 +38,7 @@ JJJ
 
 ## Version
 
-0.6
+0.6.1
 
 ## License
 
