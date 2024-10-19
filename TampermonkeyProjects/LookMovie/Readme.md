@@ -26,11 +26,13 @@ This user script automatically closes ads on LookMovie, removes specific reCAPTC
 
 - `closePlayerAdSelector`: CSS selector for the close button of the ads.
 - `IPreferAdsSelector`: CSS selector for the "I Prefer Ads" button.
-- `notifyButtonSelector`: CSS selector for the notify button.
+- `notifyDivSelector`: CSS selector for the notify button.
+- `bannerAdSelector`: CSS selector for the banner ads.
+- `reCaptchaDivStyles`: Array of inline styles to identify reCAPTCHA divs.
 - `maxAttempts`: Maximum number of attempts to close ads.
 - `continuousCheck`: Whether to continuously check for ads.
 - `debounceTime`: Time in milliseconds to debounce the ad handling function.
-- `threatProtectionUrl`: URL of the threat protection page where reCAPTCHA div should not be removed.
+- `threatProtectionBaseUrl`: URL of the threat protection page where reCAPTCHA div should not be removed.
 
 ## Author
 
