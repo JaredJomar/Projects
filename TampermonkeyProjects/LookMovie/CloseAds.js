@@ -2,7 +2,7 @@
 // @name         Close Ads
 // @namespace    https://www.lookmovie2.to/
 // @version      0.6.1
-// @description  Closes ads on LookMovie and removes specific reCAPTCHA and banner ads from the page
+// @description  Closes ads on LookMovie and removes specific reCAPTCHA, banner ads from the page
 // @author       JJJ
 // @match        https://www.lookmovie2.to/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to
@@ -13,16 +13,20 @@
 (function () {
     'use strict';
 
-    const currentUrl = window.location.href;
-
-    // Configuration
     const config = {
         closePlayerAdSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
         IPreferAdsSelector: 'button.no.stay-free[data-notify-html="buttonStayFree"]',
-        notifyButtonSelector: 'body > div.notifyjs-corner > div > div.notifyjs-container > div > div.buttons > button',
+        notifyDivSelector: 'div.notifyjs-corner',
+        bannerAdSelector: '.banner-become-affiliate',
+        reCaptchaDivStyles: [
+            'background-color: rgb(255, 255, 255);',
+            'border: 1px solid rgb(204, 204, 204);',
+            'z-index: 2000000000;',
+            'position: absolute;'
+        ],
         maxAttempts: 50,
-        continuousCheck: true,
         debounceTime: 200,
+        continuousCheck: true,
         threatProtectionBaseUrl: 'https://www.lookmovie2.to/threat-protection/'
     };
 
@@ -30,55 +34,42 @@
     let observer = null;
     let debounceTimeout = null;
 
-    // Function to remove the specific reCAPTCHA div based on the styles
-    const removeReCaptchaDiv = () => {
-        if (!currentUrl.startsWith(config.threatProtectionBaseUrl)) {
-            const reCaptchaDiv = document.querySelector('div[style*="background-color: rgb(255, 255, 255);"][style*="border: 1px solid rgb(204, 204, 204);"][style*="z-index: 2000000000;"][style*="position: absolute;"]');
-            if (reCaptchaDiv) {
-                reCaptchaDiv.remove();
-                console.log('reCAPTCHA div removed');
-                return true;
+    // Function to interact with elements like clicking or removing
+    const interactWithElement = (selector, action = 'remove') => {
+        const element = document.querySelector(selector);
+        if (element) {
+            if (action === 'click') {
+                element.click();
+                console.log(`${selector} clicked`);
+            } else {
+                element.remove();
+                console.log(`${selector} removed`);
             }
-        }
-        return false;
-    };
-
-    // Function to remove the banner ad div
-    const removeBannerAd = () => {
-        const bannerAdDiv = document.querySelector('.banner-become-affiliate');
-        if (bannerAdDiv) {
-            bannerAdDiv.remove();
-            console.log('Banner ad removed');
             return true;
         }
         return false;
     };
 
-    // Function to close ads or click relevant buttons
+    // Function to remove elements with specific inline styles
+    const removeElementByStyles = (styles) => {
+        const element = document.querySelector(`div[style*="${styles.join('"][style*="')}"]`);
+        if (element) {
+            element.remove();
+            console.log('Element with matching styles removed');
+            return true;
+        }
+        return false;
+    };
+
+    // Function to handle ad closing and element interactions
     const handleAds = () => {
         try {
-            if (removeReCaptchaDiv() || removeBannerAd()) {
-                return true;
-            }
-
-            const closePlayerAdButton = document.querySelector(config.closePlayerAdSelector);
-            if (closePlayerAdButton) {
-                closePlayerAdButton.click();
-                console.log('Ad closed');
-                return true;
-            }
-
-            const IPreferAdsButton = document.querySelector(config.IPreferAdsSelector);
-            if (IPreferAdsButton) {
-                IPreferAdsButton.click();
-                console.log('"I Prefer Ads" button clicked');
-                return true;
-            }
-
-            const notifyButton = document.querySelector(config.notifyButtonSelector);
-            if (notifyButton) {
-                notifyButton.click();
-                console.log('Notify button clicked');
+            // Prioritize removal of reCAPTCHA, notification, and banner ads
+            if (removeElementByStyles(config.reCaptchaDivStyles) ||
+                interactWithElement(config.notifyDivSelector) ||
+                interactWithElement(config.bannerAdSelector) ||
+                interactWithElement(config.closePlayerAdSelector, 'click') ||
+                interactWithElement(config.IPreferAdsSelector, 'click')) {
                 return true;
             }
         } catch (error) {
@@ -87,7 +78,7 @@
         return false;
     };
 
-    // Debounced function to handle mutations
+    // Debounced function to handle ad removal during mutations
     const debouncedHandleAds = () => {
         clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
@@ -104,11 +95,9 @@
         }, config.debounceTime);
     };
 
-    // Function to handle mutations
-    const handleMutations = (mutations) => {
-        mutations.forEach(() => {
-            debouncedHandleAds();
-        });
+    // Function to handle DOM mutations
+    const handleMutations = () => {
+        debouncedHandleAds();
     };
 
     // Function to start the MutationObserver
@@ -129,7 +118,7 @@
         }
     };
 
-    // Function to initialize the process
+    // Function to initialize the ad closer
     const initAdCloser = () => {
         console.log('Ad closer initialized');
         if (handleAds()) {
@@ -137,10 +126,10 @@
         }
 
         startObserver();
-
         window.addEventListener('beforeunload', stopObserver);
     };
 
+    // Initialize once the document is ready
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         initAdCloser();
     } else {
@@ -149,21 +138,16 @@
 
     setTimeout(initAdCloser, 1000);
 
-    window.addEventListener('error', (e) => {
-        console.error('Error in Close Ads script:', e.error);
-    });
-
-    (function () {
-        if (!window.MutationObserver) {
-            window.MutationObserver = window.WebKitMutationObserver || window.MozMutationObserver || class {
-                constructor(callback) {
-                    this.callback = callback;
-                }
-                observe() {
-                    console.warn('MutationObserver not supported by this browser.');
-                }
-                disconnect() { }
-            };
-        }
-    })();
+    // Polyfill for MutationObserver if not supported
+    if (!window.MutationObserver) {
+        window.MutationObserver = window.WebKitMutationObserver || window.MozMutationObserver || class {
+            constructor(callback) {
+                this.callback = callback;
+            }
+            observe() {
+                console.warn('MutationObserver not supported by this browser.');
+            }
+            disconnect() { }
+        };
+    }
 })();
