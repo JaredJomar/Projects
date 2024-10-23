@@ -60,6 +60,7 @@
         lm: "https://www.lookmovie2.to/movies/search/?q=",
         ls: "https://www.lookmovie2.to/shows/search/?q=",
     };
+
     /**
      * Checks if the current focus is in an editable element.
      * @returns {boolean} True if focus is in an editable element, false otherwise.
@@ -82,7 +83,7 @@
             // Add special parameters for Epic Games
             baseUrl += `${encodeURIComponent(query)}&sortBy=relevancy&sortDir=DESC&count=40`;
         } else {
-            baseUrl += encodeURIComponent(query || shortcut);
+            baseUrl += encodeURIComponent(query);
         }
 
         return baseUrl;
@@ -93,12 +94,7 @@
      * @param {string} url - The URL to open.
      */
     const openNewTab = (url) => {
-        const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-        if (newWindow) {
-            newWindow.opener = null;
-        } else {
-            console.error('Failed to open new tab. Pop-up might be blocked.');
-        }
+        window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     /**
@@ -119,17 +115,21 @@
     const handleSearch = () => {
         const userInput = prompt("Enter search command:");
         if (!userInput) {
-            console.log("Search canceled.");
-            return;
+            return; // User cancelled the prompt
         }
 
-        const [shortcut, ...queryParts] = userInput.trim().split(" ");
+        const [rawShortcut, ...queryParts] = userInput.trim().split(/\s+/);
+        const shortcut = rawShortcut.toLowerCase();
         const query = queryParts.join(" ");
 
         if (shortcut === 'sg') {
             searchMultipleGamingPlatforms(query);
+        } else if (SEARCH_ENGINES.hasOwnProperty(shortcut)) {
+            const searchUrl = constructSearchUrl(shortcut, query || '');
+            openNewTab(searchUrl);
         } else {
-            const searchUrl = constructSearchUrl(shortcut, query);
+            // If the shortcut is not recognized, default to Google search
+            const searchUrl = SEARCH_ENGINES.g + encodeURIComponent(userInput);
             openNewTab(searchUrl);
         }
     };
@@ -138,7 +138,6 @@
      * Initializes the Fast Search script.
      */
     const init = () => {
-        console.log('Fast Search script initialized');
         document.addEventListener('keydown', event => {
             if (event.key === 'Insert' && !isFocusInEditable()) {
                 handleSearch();
