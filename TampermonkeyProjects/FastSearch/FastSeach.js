@@ -11,8 +11,8 @@
 
 (function () {
     'use strict';
-
     // Search Engines categorized into groups
+
 
     // Search
     const SEARCH_ENGINES = {
@@ -56,7 +56,7 @@
         bat: "https://shop.battle.net/search?q=",
 
         // Movies and TV Shows
-        c: "https://cuevana3ver.com/?s=",
+        c: "https://wow.cuevana3.nu/search?s=",
         lm: "https://www.lookmovie2.to/movies/search/?q=",
         ls: "https://www.lookmovie2.to/shows/search/?q=",
     };
