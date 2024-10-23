@@ -55,8 +55,11 @@
         ori: "https://www.origin.com/search?searchString=",
         bat: "https://shop.battle.net/search?q=",
 
+        // Movies and TV Shows
+        c: "https://cuevana3ver.com/?s=",
+        lm: "https://www.lookmovie2.to/movies/search/?q=",
+        ls: "https://www.lookmovie2.to/shows/search/?q=",
     };
-
     /**
      * Checks if the current focus is in an editable element.
      * @returns {boolean} True if focus is in an editable element, false otherwise.
