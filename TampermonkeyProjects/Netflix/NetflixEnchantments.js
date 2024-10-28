@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.4.1
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
@@ -19,6 +19,7 @@
     enableSkipIntro: GM_getValue('enableSkipIntro', true),
     enableSkipOutro: GM_getValue('enableSkipOutro', true),
     cancelFullscreen: GM_getValue('cancelFullscreen', false),
+    hideGames: GM_getValue('hideGames', true),
   };
 
   const selectors = {
@@ -26,6 +27,7 @@
     skipIntroButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
     skipOutroButton: '.color-primary.hasLabel.hasIcon.ltr-1jtux27',
     fullscreenView: '.watch-video--player-view',
+    gamesSection: '.lolomoRow[data-list-context="popularGames"]',
   };
 
   function showSettingsDialog() {
@@ -53,6 +55,11 @@
           <span style="color: white;">Cancel Fullscreen</span>
         </label>
         <br>
+        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Hide the games section">
+          <input type="checkbox" id="hideGames" ${config.hideGames ? 'checked' : ''}>
+          <span style="color: white;">Hide Games</span>
+        </label>
+        <br>
         <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer; font-size: 1em;">Save</button>
         <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px; font-size: 1em;">Cancel</button>
       </div>
@@ -71,6 +78,7 @@
       config.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
       config.enableSkipOutro = document.getElementById('enableSkipOutro').checked;
       config.cancelFullscreen = document.getElementById('cancelFullscreen').checked;
+      config.hideGames = document.getElementById('hideGames').checked;
       saveSettings();
       closeSettingsDialog();
     });
@@ -96,6 +104,7 @@
     GM_setValue('enableSkipIntro', config.enableSkipIntro);
     GM_setValue('enableSkipOutro', config.enableSkipOutro);
     GM_setValue('cancelFullscreen', config.cancelFullscreen);
+    GM_setValue('hideGames', config.hideGames);
   }
 
   function clickButton(selector) {
@@ -114,6 +123,13 @@
   function exitFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
+    }
+  }
+
+  function hideGamesSection() {
+    const gamesSection = document.querySelector(selectors.gamesSection);
+    if (gamesSection) {
+      gamesSection.style.display = 'none';
     }
   }
 
@@ -137,6 +153,10 @@
 
       if (config.cancelFullscreen && document.fullscreenElement) {
         exitFullscreen();
+      }
+
+      if (config.hideGames) {
+        hideGamesSection();
       }
     } catch (error) {
       console.error('An error occurred:', error);

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Close Ads
 // @namespace    https://www.lookmovie2.to/
-// @version      0.6
-// @description  Close ads on LookMovie
+// @version      0.6.1
+// @description  Closes ads on LookMovie and removes specific reCAPTCHA, banner ads from the page
 // @author       JJJ
 // @match        https://www.lookmovie2.to/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to
@@ -13,104 +13,141 @@
 (function () {
     'use strict';
 
-    // Configuration
     const config = {
-        closeButtonSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
-        maxAttempts: 100,
-        continuousCheck: true
+        closePlayerAdSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
+        IPreferAdsSelector: 'button.no.stay-free[data-notify-html="buttonStayFree"]',
+        notifyDivSelector: 'div.notifyjs-corner',
+        bannerAdSelector: '.banner-become-affiliate',
+        reCaptchaDivStyles: [
+            'background-color: rgb(255, 255, 255);',
+            'border: 1px solid rgb(204, 204, 204);',
+            'z-index: 2000000000;',
+            'position: absolute;'
+        ],
+        maxAttempts: 50,
+        debounceTime: 200,
+        continuousCheck: true,
+        threatProtectionBaseUrl: 'https://www.lookmovie2.to/threat-protection/'
     };
 
     let attempts = 0;
     let observer = null;
+    let debounceTimeout = null;
 
-    // Function to close ads
-    function closeAds() {
+    // Function to interact with elements like clicking or removing
+    const interactWithElement = (selector, action = 'remove') => {
+        const element = document.querySelector(selector);
+        if (element) {
+            if (action === 'click') {
+                element.click();
+                console.log(`${selector} clicked`);
+            } else {
+                element.remove();
+                console.log(`${selector} removed`);
+            }
+            return true;
+        }
+        return false;
+    };
+
+    // Function to remove elements with specific inline styles
+    const removeElementByStyles = (styles) => {
+        const element = document.querySelector(`div[style*="${styles.join('"][style*="')}"]`);
+        if (element) {
+            element.remove();
+            console.log('Element with matching styles removed');
+            return true;
+        }
+        return false;
+    };
+
+    // Function to handle ad closing and element interactions
+    const handleAds = () => {
         try {
-            const closeButton = document.querySelector(config.closeButtonSelector);
-            if (closeButton && closeButton.style.display !== 'none') {
-                closeButton.click();
-                console.log('Ad closed');
-                return true; // Ad was closed
+            // Prioritize removal of reCAPTCHA, notification, and banner ads
+            if (removeElementByStyles(config.reCaptchaDivStyles) ||
+                interactWithElement(config.notifyDivSelector) ||
+                interactWithElement(config.bannerAdSelector) ||
+                interactWithElement(config.closePlayerAdSelector, 'click') ||
+                interactWithElement(config.IPreferAdsSelector, 'click')) {
+                return true;
             }
         } catch (error) {
-            console.error('Error while trying to close the ad:', error);
+            console.error('Error while handling ads or buttons:', error);
         }
-        return false; // No ad to close
-    }
+        return false;
+    };
 
-    // Function to handle mutations
-    function handleMutations(mutations) {
-        mutations.forEach(() => {
-            if (closeAds()) {
-                attempts = 0; // Reset attempts on success
+    // Debounced function to handle ad removal during mutations
+    const debouncedHandleAds = () => {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            if (handleAds()) {
+                attempts = 0;
             } else {
                 attempts++;
             }
 
             if (!config.continuousCheck && attempts >= config.maxAttempts) {
                 stopObserver();
-                console.log('Ad closing process finished');
+                console.log('Ad handling process finished');
             }
-        });
-    }
+        }, config.debounceTime);
+    };
+
+    // Function to handle DOM mutations
+    const handleMutations = () => {
+        debouncedHandleAds();
+    };
 
     // Function to start the MutationObserver
-    function startObserver() {
-        if (observer) return; // Prevent multiple observers
+    const startObserver = () => {
+        if (observer) return;
 
         observer = new MutationObserver(handleMutations);
         observer.observe(document.body, { childList: true, subtree: true });
         console.log('MutationObserver started');
-    }
+    };
 
     // Function to stop the MutationObserver
-    function stopObserver() {
+    const stopObserver = () => {
         if (observer) {
             observer.disconnect();
             observer = null;
             console.log('MutationObserver stopped');
         }
-    }
+    };
 
-    // Function to initialize the ad closing process
-    function initAdCloser() {
+    // Function to initialize the ad closer
+    const initAdCloser = () => {
         console.log('Ad closer initialized');
-        if (closeAds()) {
-            attempts = 0; // Reset attempts on success
+        if (handleAds()) {
+            attempts = 0;
         }
 
         startObserver();
+        window.addEventListener('beforeunload', stopObserver);
+    };
 
-        window.addEventListener('beforeunload', stopObserver); // Cleanup on unload
-    }
-
-    // Start the process as soon as possible
+    // Initialize once the document is ready
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         initAdCloser();
     } else {
         document.addEventListener('DOMContentLoaded', initAdCloser);
     }
 
-    // Fallback: If DOMContentLoaded doesn't fire, start after a short delay
     setTimeout(initAdCloser, 1000);
 
-    // Listen for errors and log them
-    window.addEventListener('error', (e) => {
-        console.error('Error in Close Ads script:', e.error);
-    });
-
-    // Polyfill for MutationObserver for older browsers
-    (function () {
-        if (!window.MutationObserver) {
-            window.MutationObserver = window.WebKitMutationObserver || window.MozMutationObserver || class {
-                constructor(callback) {
-                    this.callback = callback;
-                }
-                observe() {
-                    console.warn('MutationObserver not supported by this browser.');
-                }
-                disconnect() { }
-            };
-        }
-    })();
+    // Polyfill for MutationObserver if not supported
+    if (!window.MutationObserver) {
+        window.MutationObserver = window.WebKitMutationObserver || window.MozMutationObserver || class {
+            constructor(callback) {
+                this.callback = callback;
+            }
+            observe() {
+                console.warn('MutationObserver not supported by this browser.');
+            }
+            disconnect() { }
+        };
+    }
 })();
