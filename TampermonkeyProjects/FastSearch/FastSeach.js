@@ -16,6 +16,7 @@
 
     // Search
     const SEARCH_ENGINES = {
+        a: "https://www.amazon.com/s?k=",
         g: "https://www.google.com/search?q=",
         b: "https://www.bing.com/search?q=",
         d: "https://duckduckgo.com/?q=",
