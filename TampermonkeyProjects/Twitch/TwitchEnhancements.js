@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.5.1
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, claim drops, and add redeem buttons for GOG and Legacy Games on Twitch and Amazon Gaming websites.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
@@ -25,8 +25,8 @@
     const CLOSE_MODAL_BUTTON_SELECTOR = 'button[aria-label="Close modal"]';
     const THEATER_MODE_CLASS = 'theatre-mode';
     const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
-    const CLAIM_DROPS_SELECTOR = '[class="ScCoreButton-sc-ocjdkq-0 ScCoreButtonPrimary-sc-ocjdkq-1 ejeLlX eHSNkH"]';
-    const PRIME_REWARD_SELECTOR = 'span[data-a-target="tw-button-text"] p[data-a-target="buy-box_call-to-action-text"][title="Get in-game content"], p[data-a-target="buy-box_call-to-action-text"][title="Get game"]';
+    const CLAIM_DROPS_SELECTOR = 'button.ScCoreButton-sc-ocjdkq-0.cgOGyD';
+    const PRIME_REWARD_SELECTOR = 'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]';
 
     // Redeem on GOG Constants
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
@@ -302,6 +302,17 @@
         });
     }
 
+    // Function to open all "Claim Game" buttons in new tabs
+    function openClaimGameTabs() {
+        const claimGameButtons = document.querySelectorAll('div[data-a-target="tw-core-button-label-text"].Layout-sc-1xcs6mc-0.bFxzAY');
+        claimGameButtons.forEach(button => {
+            const parentButton = button.closest('a');
+            if (parentButton) {
+                window.open(parentButton.href, '_blank');
+            }
+        });
+    }
+
     if (window.location.hostname === 'gaming.amazon.com') {
         const observer = new MutationObserver((mutations, obs) => {
             const claimCodeButton = document.querySelector('p[title="Claim Code"]');
@@ -344,4 +355,18 @@
             window.location.reload();
         }
     }, 15 * 60000);
+
+    let o = new MutationObserver((m) => {
+        let script = document.createElement("script");
+        script.innerHTML = `
+        const openClaimGameTabs=()=>{const claimGameButtons=document.querySelectorAll('div[data-a-target="tw-core-button-label-text"].Layout-sc-1xcs6mc-0.bFxzAY');claimGameButtons.forEach(button=>{const parentButton=button.closest('a');if(parentButton){window.open(parentButton.href,'_blank');}});};
+    `;
+        document.getElementById("PrimeOfferPopover-header").innerHTML = "";
+        document.getElementById("PrimeOfferPopover-header").appendChild(script);
+        document.getElementById("PrimeOfferPopover-header").innerHTML += `
+        <input type='button' style='border: none; background-color: #9147ff; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer;' class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-full-width tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative' value='Claim All' onclick='openClaimGameTabs();'>
+    `;
+    });
+
+    o.observe(document.body, { childList: true });
 })();
