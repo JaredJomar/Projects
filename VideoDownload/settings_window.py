@@ -19,6 +19,7 @@ from constants import (
 )
 import os
 import subprocess
+import shutil
 
 
 class SettingsWindow(QDialog):
@@ -46,6 +47,12 @@ class SettingsWindow(QDialog):
         install_ytdlp_button.setStyleSheet(
             f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
         install_layout.addWidget(install_ytdlp_button)
+
+        install_aria2_button = QPushButton("Install aria2c")
+        install_aria2_button.clicked.connect(self.install_aria2c)
+        install_aria2_button.setStyleSheet(
+            f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
+        install_layout.addWidget(install_aria2_button)
 
         layout.addLayout(install_layout)
 
@@ -127,7 +134,7 @@ class SettingsWindow(QDialog):
 
     def install_ffmpeg(self):
         ffmpeg_path = os.path.expandvars(
-            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-6.1-full_build/bin/ffmpeg.exe")
+            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-7.1-full_build/bin/ffmpeg.exe")
         if os.path.exists(ffmpeg_path):
             QMessageBox.information(
                 self, "Installation", "FFmpeg is already installed.")
@@ -174,6 +181,36 @@ class SettingsWindow(QDialog):
         except subprocess.CalledProcessError:
             QMessageBox.warning(self, "Installation Error",
                                 "Failed to install yt-dlp using winget.")
+
+    def install_aria2c(self):
+        if shutil.which('aria2c'):
+            QMessageBox.information(
+                self, "Installation", "aria2c is already installed.")
+            return
+
+        try:
+            subprocess.run(
+                ['choco', 'install', '-y', 'aria2'], 
+                check=True,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # Wait and check for successful installation
+            import time
+            for _ in range(5):
+                time.sleep(2)
+                if shutil.which('aria2c'):
+                    QMessageBox.information(
+                        self, "Installation", "aria2c has been successfully installed.")
+                    return
+                    
+            QMessageBox.warning(
+                self, "Installation Error", 
+                "Failed to locate aria2c after installation. Please try installing manually.")
+        except subprocess.CalledProcessError:
+            QMessageBox.warning(
+                self, "Installation Error",
+                "Failed to install aria2c using Chocolatey. Please make sure Chocolatey is installed.")
 
     def get_dependency_path(self, dependency):
         try:
