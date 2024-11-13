@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      http://tampermonkey.net/
-// @version        0.8
+// @version        0.8.1
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -18,10 +18,28 @@
 (() => {
     'use strict';
 
+    // Polyfill for Edge if necessary
+    if (!window.Blob || !window.URL || !window.Worker) {
+        console.warn('Browser compatibility features missing');
+        return;
+    }
+
+    // Inject the YouTube IFrame API script with error handling
+    function injectYouTubeAPI() {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://www.youtube.com/iframe_api';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    // Updated constants
     const SELECTORS = {
         PLAYER: '#movie_player',
-        SUBSCRIBE_BUTTON: '#subscribe-button > ytd-subscribe-button-renderer, ytd-reel-player-overlay-renderer #subscribe-button',
-        LIKE_BUTTON: '#menu .YtLikeButtonViewModelHost button, #segmented-like-button button, #like-button button',
+        SUBSCRIBE_BUTTON: '#subscribe-button > ytd-subscribe-button-renderer, ytd-reel-player-overlay-renderer #subscribe-button, tp-yt-paper-button[subscribed]',
+        LIKE_BUTTON: '#menu .YtLikeButtonViewModelHost button, #segmented-like-button button, #like-button button, tp-yt-paper-button[aria-pressed]',
         DISLIKE_BUTTON: '#menu .YtDislikeButtonViewModelHost button, #segmented-dislike-button button, #dislike-button button',
         PLAYER_CONTAINER: '#player-container-outer',
         ERROR_SCREEN: '#error-screen',
@@ -32,9 +50,9 @@
     const CONSTANTS = {
         IFRAME_ID: 'adblock-bypass-player',
         STORAGE_KEY: 'youtubeEnchantmentsSettings',
-        DELAY: 200,
-        MAX_TRIES: 100,
-        DUPLICATE_CHECK_INTERVAL: 5000
+        DELAY: 300, // Increased delay for Edge
+        MAX_TRIES: 150, // Increased max tries
+        DUPLICATE_CHECK_INTERVAL: 7000 // Increased interval
     };
 
     const defaultSettings = {
@@ -42,7 +60,8 @@
         autoLikeLiveStreams: false,
         likeIfNotSubscribed: false,
         watchThreshold: 0,
-        checkFrequency: 5000
+        checkFrequency: 5000,
+        adBlockBypassEnabled: false
     };
 
     let settings = loadSettings();
@@ -85,19 +104,59 @@
         }
     };
 
+    let player;
+
+    // Updated PlayerManager
     const playerManager = {
+        async initPlayer() {
+            try {
+                await injectYouTubeAPI();
+                const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
+                if (iframe) {
+                    player = new YT.Player(CONSTANTS.IFRAME_ID, {
+                        events: {
+                            'onReady': this.onPlayerReady.bind(this),
+                            'onStateChange': this.onPlayerStateChange.bind(this),
+                            'onError': (event) => {
+                                console.error('Player error:', event.data);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to initialize player:', error);
+            }
+        },
+
+        onPlayerReady(event) {
+            console.log('Player is ready');
+        },
+
+        onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.AD_STARTED) {
+                console.log('Ad is playing, allowing ad to complete.');
+            } else if (event.data === YT.PlayerState.ENDED || event.data === YT.PlayerState.PLAYING) {
+                console.log('Video is playing, ensuring it is tracked in history.');
+            }
+        },
+
         createIframe(url) {
-            const { videoId, playlistId, index } = urlUtils.extractParams(url);
-            if (!videoId) return null;
+            try {
+                const { videoId, playlistId, index } = urlUtils.extractParams(url);
+                if (!videoId) return null;
 
-            const iframe = document.createElement('iframe');
-            const commonArgs = 'autoplay=1&modestbranding=1';
-            const embedUrl = playlistId
-                ? `https://www.youtube-nocookie.com/embed/${videoId}?${commonArgs}&list=${playlistId}&index=${index}`
-                : `https://www.youtube-nocookie.com/embed/${videoId}?${commonArgs}${urlUtils.getTimestampFromUrl(url)}`;
+                const iframe = document.createElement('iframe');
+                const commonArgs = 'autoplay=1&modestbranding=1&enablejsapi=1&origin=' + encodeURIComponent(window.location.origin);
+                const embedUrl = playlistId
+                    ? `https://www.youtube.com/embed/${videoId}?${commonArgs}&list=${playlistId}&index=${index}`
+                    : `https://www.youtube.com/embed/${videoId}?${commonArgs}${urlUtils.getTimestampFromUrl(url)}`;
 
-            this.setIframeAttributes(iframe, embedUrl);
-            return iframe;
+                this.setIframeAttributes(iframe, embedUrl);
+                return iframe;
+            } catch (error) {
+                console.error('Failed to create iframe:', error);
+                return null;
+            }
         },
 
         setIframeAttributes(iframe, url) {
@@ -105,7 +164,7 @@
             iframe.src = url;
             iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
             iframe.allowFullscreen = true;
-            iframe.style.cssText = 'height:100%; width:100%; border:none; border-radius:12px;';
+            iframe.style.cssText = 'height:100%; width:calc(100% - 240px); border:none; border-radius:12px; position:relative; left:240px;';
         },
 
         replacePlayer(url) {
@@ -119,9 +178,12 @@
                 iframe = this.createIframe(url);
                 if (iframe) {
                     playerContainer.appendChild(iframe);
+                    this.initPlayer();
                 }
             }
+            // Ensure the iframe is on top of the player container
             this.bringToFront(CONSTANTS.IFRAME_ID);
+            this.addScrollListener();
         },
 
         bringToFront(elementId) {
@@ -140,34 +202,66 @@
             if (iframes.length > 1) {
                 Array.from(iframes).slice(1).forEach(iframe => iframe.remove());
             }
+        },
+
+        addScrollListener() {
+            window.addEventListener('scroll', this.handleScroll);
+        },
+
+        handleScroll() {
+            const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
+            if (!iframe) return;
+
+            const playerContainer = document.querySelector(SELECTORS.ERROR_SCREEN);
+            if (!playerContainer) return;
+
+            const rect = playerContainer.getBoundingClientRect();
+            if (rect.top < 0) {
+                iframe.style.position = 'fixed';
+                iframe.style.top = '0';
+                iframe.style.left = '240px';
+                iframe.style.width = 'calc(100% - 240px)';
+                iframe.style.height = 'calc(100vh - 56px)'; // Adjust height as needed
+            } else {
+                iframe.style.position = 'relative';
+                iframe.style.top = '0';
+                iframe.style.left = '240px';
+                iframe.style.width = 'calc(100% - 240px)';
+                iframe.style.height = '100%';
+            }
         }
     };
 
+    // Updated worker with error handling
     function createWorker() {
-        const workerBlob = new Blob([`
-            let checkInterval;
+        try {
+            const workerBlob = new Blob([`
+                let checkInterval;
+                self.onmessage = function(e) {
+                    try {
+                        if (e.data.type === 'startCheck') {
+                            if (checkInterval) clearInterval(checkInterval);
+                            checkInterval = setInterval(() => {
+                                self.postMessage({ type: 'check' });
+                            }, e.data.checkFrequency);
+                        } else if (e.data.type === 'stopCheck') {
+                            clearInterval(checkInterval);
+                        }
+                    } catch (error) {
+                        self.postMessage({ type: 'error', error: error.message });
+                    }
+                };
+            `], { type: 'text/javascript' });
 
-            self.onmessage = function(e) {
-                if (e.data.type === 'startCheck') {
-                    clearInterval(checkInterval);
-                    checkInterval = setInterval(() => {
-                        self.postMessage({ type: 'check' });
-                    }, e.data.checkFrequency);
-                } else if (e.data.type === 'stopCheck') {
-                    clearInterval(checkInterval);
-                }
+            const worker = new Worker(URL.createObjectURL(workerBlob));
+            worker.onerror = function (error) {
+                console.error('Worker error:', error);
             };
-        `], { type: 'text/javascript' });
-
-        const worker = new Worker(URL.createObjectURL(workerBlob));
-
-        worker.onmessage = function (e) {
-            if (e.data.type === 'check') {
-                checkAndLikeVideo();
-            }
-        };
-
-        return worker;
+            return worker;
+        } catch (error) {
+            console.error('Failed to create worker:', error);
+            return null;
+        }
     }
 
     function loadSettings() {
@@ -199,45 +293,45 @@
         const dialog = document.createElement('div');
         dialog.id = 'youtube-enchantments-settings';
         dialog.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #030d22;
-            padding: 20px;
-            border: 1px solid black;
-            z-index: 9999;
-            font-family: Arial, sans-serif;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        `;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: #030d22;
+                padding: 20px;
+                border: 1px solid black;
+                z-index: 9999;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            `;
 
         dialog.innerHTML = `
-            <h2 style="margin-top: 0; color: white; font-weight: bold;">YouTube Enchantments Settings</h2>
-            <ul style="list-style-type: none; padding: 0;">
-                ${Object.entries(settings).map(([setting, value]) =>
+                <h2 style="margin-top: 0; color: white; font-weight: bold;">YouTube Enchantments Settings</h2>
+                <ul style="list-style-type: none; padding: 0;">
+                    ${Object.entries(settings).map(([setting, value]) =>
             setting === 'watchThreshold'
                 ? `
-                            <li style="margin-bottom: 15px;">
-                                <label style="display: flex; align-items: center; color: white; font-weight: bold;">
-                                    <span style="margin-right: 10px;">${formatSettingName(setting)}:</span>
-                                    <input type="range" min="0" max="100" step="10" value="${value}" data-setting="${setting}" style="width: 200px;">
-                                    <span style="margin-left: 10px;" id="watchThresholdValue">${value}%</span>
-                                </label>
-                            </li>
-                        `
+                                <li style="margin-bottom: 15px;">
+                                    <label style="display: flex; align-items: center; color: white; font-weight: bold;">
+                                        <span style="margin-right: 10px;">${formatSettingName(setting)}:</span>
+                                        <input type="range" min="0" max="100" step="10" value="${value}" data-setting="${setting}" style="width: 200px;">
+                                        <span style="margin-left: 10px;" id="watchThresholdValue">${value}%</span>
+                                    </label>
+                                </li>
+                            `
                 : `
-                            <li style="margin-bottom: 15px;">
-                                <label style="cursor: pointer; display: flex; align-items: center; color: white; font-weight: bold;">
-                                    <input type="checkbox" ${value ? 'checked' : ''} data-setting="${setting}" style="margin-right: 10px;">
-                                    <span>${formatSettingName(setting)}</span>
-                                </label>
-                            </li>
-                        `
+                                <li style="margin-bottom: 15px;">
+                                    <label style="cursor: pointer; display: flex; align-items: center; color: white; font-weight: bold;">
+                                        <input type="checkbox" ${value ? 'checked' : ''} data-setting="${setting}" style="margin-right: 10px;">
+                                        <span>${setting === 'adBlockBanBypass' ? 'AdBlock Ban Bypass' : formatSettingName(setting)}</span>
+                                    </label>
+                                </li>
+                            `
         ).join('')}
-            </ul>
-            <button id="close-settings" style="background-color: #cc0000; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px;">Close</button>
-        `;
+                </ul>
+                <button id="close-settings" style="background-color: #cc0000; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px;">Close</button>
+            `;
 
         dialog.addEventListener('change', handleSettingChange);
         dialog.addEventListener('input', handleSliderInput);
@@ -264,8 +358,14 @@
             } else if (e.target.type === 'range') {
                 updateNumericSetting(e.target.dataset.setting, e.target.value);
             }
+
+            // Log the status of adBlockBypassEnabled if it is changed
+            if (e.target.dataset.setting === 'adBlockBypassEnabled') {
+                console.log(`AdBlock Ban Bypass is ${e.target.checked ? 'enabled' : 'disabled'}`);
+            }
         }
     }
+
 
     function handleSliderInput(e) {
         if (e.target.type === 'range') {
@@ -376,6 +476,11 @@
     }
 
     function handleAdBlockError() {
+        if (!settings.adBlockBypassEnabled) {
+            console.log('AdBlock bypass is disabled.');
+            return; // Do nothing if the AdBlock bypass is disabled
+        }
+
         const playabilityError = document.querySelector(SELECTORS.PLAYABILITY_ERROR);
         if (playabilityError) {
             playabilityError.remove();
@@ -385,6 +490,7 @@
             setTimeout(handleAdBlockError, CONSTANTS.DELAY);
         }
     }
+
 
     function handleKeyPress(event) {
         switch (event.key) {
@@ -434,19 +540,28 @@
         });
 
         document.addEventListener('yt-navigate-finish', () => {
+            console.log('yt-navigate-finish event triggered');
             const newUrl = window.location.href;
             if (newUrl !== currentPageUrl) {
+                console.log('URL changed:', newUrl);
                 if (newUrl.endsWith('.com/')) {
                     const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
-                    iframe?.remove();
+                    if (iframe) {
+                        console.log('Removing iframe');
+                        iframe.remove();
+                    }
                 } else {
+                    console.log('Handling ad block error');
                     handleAdBlockError();
                 }
                 currentPageUrl = newUrl;
             }
         });
 
-        document.addEventListener('keydown', handleKeyPress);
+        document.addEventListener('keydown', (event) => {
+            console.log('Key pressed:', event.key);
+            handleKeyPress(event);
+        });
 
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
@@ -454,6 +569,7 @@
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === Node.ELEMENT_NODE &&
                             node.matches(SELECTORS.PLAYABILITY_ERROR)) {
+                            console.log('Playability error detected');
                             handleAdBlockError();
                             return;
                         }
@@ -463,13 +579,38 @@
         });
         observer.observe(document.body, { childList: true, subtree: true });
 
-        setInterval(() => playerManager.removeDuplicates(), CONSTANTS.DUPLICATE_CHECK_INTERVAL);
+        setInterval(() => {
+            console.log('Checking for duplicate players');
+            playerManager.removeDuplicates();
+        }, CONSTANTS.DUPLICATE_CHECK_INTERVAL);
     }
 
-    function initScript() {
-        createSettingsMenu();
-        setupEventListeners();
-        startBackgroundCheck();
+    // Updated main initialization function
+    async function initScript() {
+        try {
+            console.log('Initializing script for Edge compatibility');
+            createSettingsMenu();
+            setupEventListeners();
+
+            const worker = createWorker();
+            if (worker) {
+                startBackgroundCheck(worker);
+            } else {
+                console.warn('Worker creation failed, falling back to interval');
+                setInterval(checkAndLikeVideo, settings.checkFrequency);
+            }
+
+            // Check browser compatibility
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes("Edg/")) {
+                console.log('Edge detected, applying specific optimizations');
+                CONSTANTS.DELAY = 300; // Specific adjustment for Edge
+                CONSTANTS.MAX_TRIES = 150;
+            }
+
+        } catch (error) {
+            console.error('Script initialization failed:', error);
+        }
     }
 
     initScript();
