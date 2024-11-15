@@ -1,6 +1,7 @@
 # Twitch Enhancements
 
-This user script enhances your Twitch and Amazon Gaming experience by automatically claiming channel points, enabling theater mode, claiming prime rewards on [https://gaming.amazon.com/](https://gaming.amazon.com/), add a Redeem On GOG button https://gaming.amazon.com/home next to the Claim Code and a Redeem On Legacy Games Button next to the Copy Code.
+This user script enhances your Twitch and Amazon Gaming experience by providing multiple automated features for claiming rewards and managing your viewing experience.
+
 ## Installation
 
 1. Make sure you have a user script manager installed in your browser, such as Tampermonkey.
@@ -10,38 +11,33 @@ This user script enhances your Twitch and Amazon Gaming experience by automatica
 ## Features
 
 ### Auto Claim Channel Points
-
-Automatically claims channel points whenever they are available. This feature is designed to enhance your Twitch viewing experience by maximizing your channel points.
+Automatically claims channel points whenever they are available, with visual confirmation in the console when points are claimed.
 
 ### Theater Mode
-
-Enables theater mode on the Twitch video player for a more immersive viewing experience. Theater mode removes distractions and provides a cleaner interface.
+Automatically enables theater mode when viewing streams and closes unnecessary menus for a cleaner viewing experience.
 
 ### Auto Claim Prime Rewards
+Automatically claims prime rewards on [gaming.amazon.com](https://gaming.amazon.com/). Also includes a "Claim All" button for batch claiming multiple games.
 
-To claim prime rewards, make sure to open the reward page on [https://gaming.amazon.com/](https://gaming.amazon.com/). The script will then automatically click the "Get in-game content" button.
+### Auto Claim Drops
+Automatically claims Twitch drops when available and refreshes the drops inventory page every 15 minutes to ensure timely claiming.
 
 ### Redeem Codes on GOG
+Adds a "Redeem on GOG" button next to claimed codes on Amazon Gaming. Clicking the button copies the code and redirects to GOG's redemption page, where the code is automatically pasted and submitted.
 
-Automatically redeems codes on [https://www.gog.com/en/redeem](https://www.gog.com/en/redeem) from Amazon Gaming pages when you click the Redeem On GOG button.
-
-### Redeem Code on Legacy Games
-Automatically redeems codes on [https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/](https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/) from Amazon Gaming pages when you click the Redeem On Legacy Games button.
+### Redeem Codes on Legacy Games
+Adds a "Redeem on Legacy Games" button for compatible games. Saves your email address for faster redemption and automatically fills in the redemption form.
 
 ## Usage
-
-Once the script is installed and activated, the features will automatically run in the background. There's no need for manual intervention.
+The script runs automatically after installation. For the GOG and Legacy Games redemption features, just click the respective buttons that appear next to claim codes on Amazon Gaming.
 
 ## Author
-
 JJJ
 
 ## Version
-
-0.5
+0.5.1
 
 ## License
-
 This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
 
 ![Twitch Icon](https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0)
