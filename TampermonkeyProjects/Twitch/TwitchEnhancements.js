@@ -27,6 +27,7 @@
     const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
     const CLAIM_DROPS_SELECTOR = 'button.ScCoreButton-sc-ocjdkq-0.cgOGyD';
     const PRIME_REWARD_SELECTOR = 'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]';
+    const PRIME_REWARD_SELECTOR_2 = 'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Get game"]';
 
     // Redeem on GOG Constants
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
@@ -116,7 +117,7 @@
 
     // Function to claim prime rewards
     function claimPrimeReward() {
-        const element = document.querySelector(PRIME_REWARD_SELECTOR);
+        const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
         if (element) {
             element.click();
         }
@@ -169,11 +170,22 @@
                 style.innerHTML = `
                     .claim-button-wrapper {
                         display: flex;
-                        justify-content: space-between;
+                        flex-direction: column;
+                        margin-top: 15px;
                     }
                     .claim-button,
                     .gog-redeem-button {
-                        margin: 0 5px;
+                        margin: 5px 0;
+                    }
+                    .tw-mg-l-1 {
+                        margin-top: 10px;
+                    }
+                    .claimable-item {
+                        flex-direction: column !important;
+                        gap: 15px;
+                    }
+                    .tw-flex-grow-1 {
+                        width: 100%;
                     }
                 `;
                 document.head.appendChild(style);
@@ -258,11 +270,22 @@
                 style.innerHTML = `
                     .copy-button-wrapper {
                         display: flex;
-                        justify-content: space-between;
+                        flex-direction: column;
+                        margin-top: 15px;
                     }
                     .copy-button,
                     .legacy-games-redeem-button {
-                        margin: 0 5px;
+                        margin: 5px 0;
+                    }
+                    .tw-mg-l-1 {
+                        margin-top: 10px;
+                    }
+                    .claimable-item {
+                        flex-direction: column !important;
+                        gap: 15px;
+                    }
+                    .tw-flex-grow-1 {
+                        width: 100%;
                     }
                 `;
                 document.head.appendChild(style);
