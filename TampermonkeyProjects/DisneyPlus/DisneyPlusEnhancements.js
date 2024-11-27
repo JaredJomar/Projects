@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Disney Plus Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.6.2
+// @version      0.6.1
 // @description  Enhancements for Disney Plus video player: auto fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
