@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.4.1
+// @version      0.4.2
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
@@ -14,7 +14,9 @@
 // ==/UserScript==
 
 (function () {
-  const config = {
+  'use strict';
+
+  const CONFIG = {
     enableSkipRecap: GM_getValue('enableSkipRecap', true),
     enableSkipIntro: GM_getValue('enableSkipIntro', true),
     enableSkipOutro: GM_getValue('enableSkipOutro', true),
@@ -22,7 +24,7 @@
     hideGames: GM_getValue('hideGames', true),
   };
 
-  const selectors = {
+  const SELECTORS = {
     skipRecapButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
     skipIntroButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
     skipOutroButton: '.color-primary.hasLabel.hasIcon.ltr-1jtux27',
@@ -30,66 +32,160 @@
     gamesSection: '.lolomoRow[data-list-context="popularGames"]',
   };
 
-  function showSettingsDialog() {
+  function createSettingsDialog() {
     const dialogHTML = `
-      <div id="netflixEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white; width: 300px;">
-        <h3 style="margin-top: 0; font-size: 1.2em;">Netflix Enchantments</h3>
-        <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip episode recaps">
-          <input type="checkbox" id="enableSkipRecap" ${config.enableSkipRecap ? 'checked' : ''}>
-          <span style="color: white;">Skip Recap</span>
-        </label>
-        <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the intro of episodes">
-          <input type="checkbox" id="enableSkipIntro" ${config.enableSkipIntro ? 'checked' : ''}>
-          <span style="color: white;">Skip Intro</span>
-        </label>
-        <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the outro of episodes">
-          <input type="checkbox" id="enableSkipOutro" ${config.enableSkipOutro ? 'checked' : ''}>
-          <span style="color: white;">Skip Outro</span>
-        </label>
-        <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically exit fullscreen mode">
-          <input type="checkbox" id="cancelFullscreen" ${config.cancelFullscreen ? 'checked' : ''}>
-          <span style="color: white;">Cancel Fullscreen</span>
-        </label>
-        <br>
-        <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Hide the games section">
-          <input type="checkbox" id="hideGames" ${config.hideGames ? 'checked' : ''}>
-          <span style="color: white;">Hide Games</span>
-        </label>
-        <br>
-        <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer; font-size: 1em;">Save</button>
-        <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px; font-size: 1em;">Cancel</button>
+      <div id="netflixEnchantmentsDialog" class="dpe-dialog">
+        <h3>Netflix Enchantments</h3>
+        ${createToggle('enableSkipRecap', 'Skip Recap', 'Automatically skip episode recaps')}
+        ${createToggle('enableSkipIntro', 'Skip Intro', 'Automatically skip the intro of episodes')}
+        ${createToggle('enableSkipOutro', 'Skip Outro', 'Automatically skip the outro of episodes')}
+        ${createToggle('cancelFullscreen', 'Cancel Fullscreen', 'Automatically exit fullscreen mode')}
+        ${createToggle('hideGames', 'Hide Games', 'Hide the games section')}
+        <div class="dpe-button-container">
+          <button id="saveSettingsButton" class="dpe-button dpe-button-save">Save</button>
+          <button id="cancelSettingsButton" class="dpe-button dpe-button-cancel">Cancel</button>
+        </div>
       </div>
     `;
 
+    const styleSheet = `
+      <style>
+        .dpe-dialog {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid #444;
+          border-radius: 8px;
+          padding: 20px;
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+          z-index: 9999;
+          color: white;
+          width: 300px;
+          font-family: Arial, sans-serif;
+        }
+        .dpe-dialog h3 {
+          margin-top: 0;
+          font-size: 1.4em;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .dpe-checkbox-container {
+          display: flex;
+          align-items: center;
+          margin-bottom: 15px;
+        }
+        .dpe-checkbox-container input[type="checkbox"] {
+          margin-right: 10px;
+        }
+        .dpe-button-container {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 20px;
+        }
+        .dpe-button {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 1em;
+          transition: background-color 0.3s;
+        }
+        .dpe-button-save {
+          background-color: #0078d4;
+          color: white;
+        }
+        .dpe-button-save:hover {
+          background-color: #005a9e;
+        }
+        .dpe-button-cancel {
+          background-color: #d41a1a;
+          color: white;
+        }
+        .dpe-button-cancel:hover {
+          background-color: #a61515;
+        }
+        .dpe-toggle-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 15px;
+        }
+        .dpe-toggle-label {
+          flex-grow: 1;
+        }
+        .dpe-toggle {
+          position: relative;
+          display: inline-block;
+          width: 50px;
+          height: 24px;
+        }
+        .dpe-toggle input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .dpe-toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 24px;
+        }
+        .dpe-toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        .dpe-toggle input:checked + .dpe-toggle-slider {
+          background-color: #0078d4;
+        }
+        .dpe-toggle input:checked + .dpe-toggle-slider:before {
+          transform: translateX(26px);
+        }
+      </style>
+    `;
+
     const dialogWrapper = document.createElement('div');
-    dialogWrapper.innerHTML = dialogHTML;
+    dialogWrapper.innerHTML = styleSheet + dialogHTML;
     document.body.appendChild(dialogWrapper);
 
-    const saveSettingsButton = document.getElementById('saveSettingsButton');
-    const cancelSettingsButton = document.getElementById('cancelSettingsButton');
-
-    saveSettingsButton.addEventListener('click', () => {
-      console.log('Save button clicked');
-      config.enableSkipRecap = document.getElementById('enableSkipRecap').checked;
-      config.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
-      config.enableSkipOutro = document.getElementById('enableSkipOutro').checked;
-      config.cancelFullscreen = document.getElementById('cancelFullscreen').checked;
-      config.hideGames = document.getElementById('hideGames').checked;
-      saveSettings();
-      closeSettingsDialog();
-    });
-
-    cancelSettingsButton.addEventListener('click', () => {
-      console.log('Cancel button clicked');
-      closeSettingsDialog();
-    });
+    document.getElementById('saveSettingsButton').addEventListener('click', saveAndCloseDialog);
+    document.getElementById('cancelSettingsButton').addEventListener('click', closeDialog);
   }
 
-  function closeSettingsDialog() {
+  function createToggle(id, label, title) {
+    return `
+      <div class="dpe-toggle-container" title="${title}">
+        <label for="${id}" class="dpe-toggle-label">${label}</label>
+        <div class="dpe-toggle">
+          <input type="checkbox" id="${id}" ${CONFIG[id] ? 'checked' : ''}>
+          <span class="dpe-toggle-slider"></span>
+        </div>
+      </div>
+    `;
+  }
+
+  function saveAndCloseDialog() {
+    Object.keys(CONFIG).forEach(key => {
+      CONFIG[key] = document.getElementById(key).checked;
+      GM_setValue(key, CONFIG[key]);
+    });
+    closeDialog();
+  }
+
+  function closeDialog() {
     const dialog = document.getElementById('netflixEnchantmentsDialog');
     if (dialog) {
       dialog.remove();
@@ -97,14 +193,6 @@
         document.exitFullscreen();
       }
     }
-  }
-
-  function saveSettings() {
-    GM_setValue('enableSkipRecap', config.enableSkipRecap);
-    GM_setValue('enableSkipIntro', config.enableSkipIntro);
-    GM_setValue('enableSkipOutro', config.enableSkipOutro);
-    GM_setValue('cancelFullscreen', config.cancelFullscreen);
-    GM_setValue('hideGames', config.hideGames);
   }
 
   function clickButton(selector) {
@@ -127,7 +215,7 @@
   }
 
   function hideGamesSection() {
-    const gamesSection = document.querySelector(selectors.gamesSection);
+    const gamesSection = document.querySelector(SELECTORS.gamesSection);
     if (gamesSection) {
       gamesSection.style.display = 'none';
     }
@@ -135,27 +223,27 @@
 
   function handleSkipActions() {
     try {
-      if (config.enableSkipRecap) {
-        clickButton(selectors.skipRecapButton);
+      if (CONFIG.enableSkipRecap) {
+        clickButton(SELECTORS.skipRecapButton);
       }
 
-      if (config.enableSkipIntro) {
-        clickButton(selectors.skipIntroButton);
+      if (CONFIG.enableSkipIntro) {
+        clickButton(SELECTORS.skipIntroButton);
       }
 
-      if (config.enableSkipOutro) {
-        clickButton(selectors.skipOutroButton);
+      if (CONFIG.enableSkipOutro) {
+        clickButton(SELECTORS.skipOutroButton);
       }
 
-      if (document.querySelector(selectors.fullscreenView)) {
+      if (document.querySelector(SELECTORS.fullscreenView)) {
         enterFullscreen();
       }
 
-      if (config.cancelFullscreen && document.fullscreenElement) {
+      if (CONFIG.cancelFullscreen && document.fullscreenElement) {
         exitFullscreen();
       }
 
-      if (config.hideGames) {
+      if (CONFIG.hideGames) {
         hideGamesSection();
       }
     } catch (error) {
@@ -166,16 +254,16 @@
   const observer = new MutationObserver(handleSkipActions);
   observer.observe(document.body, { childList: true, subtree: true });
 
-  GM_registerMenuCommand('Netflix Enchantments', showSettingsDialog);
+  GM_registerMenuCommand('Netflix Enchantments Settings', createSettingsDialog);
 
   let isSettingsDialogOpen = false;
 
   function toggleSettingsDialog() {
     if (isSettingsDialogOpen) {
-      closeSettingsDialog();
+      closeDialog();
       isSettingsDialogOpen = false;
     } else {
-      showSettingsDialog();
+      createSettingsDialog();
       isSettingsDialogOpen = true;
     }
   }
@@ -185,6 +273,7 @@
       toggleSettingsDialog();
     } else if (event.key === 'Escape') {
       exitFullscreen();
+      closeDialog();
     }
   });
 
