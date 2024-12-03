@@ -123,9 +123,12 @@
                   height: 24px;
               }
               .dpe-toggle input {
+                  position: absolute;
+                  width: 100%;
+                  height: 100%;
                   opacity: 0;
-                  width: 0;
-                  height: 0;
+                  cursor: pointer;
+                  margin: 0;
               }
               .dpe-toggle-slider {
                   position: absolute;
@@ -169,11 +172,11 @@
   function createToggle(id, label, title) {
     return `
           <div class="dpe-toggle-container" title="${title}">
-              <label for="${id}" class="dpe-toggle-label">${label}</label>
-              <div class="dpe-toggle">
+              <label class="dpe-toggle">
                   <input type="checkbox" id="${id}" ${CONFIG[id] ? 'checked' : ''}>
                   <span class="dpe-toggle-slider"></span>
-              </div>
+              </label>
+              <label for="${id}" class="dpe-toggle-label">${label}</label>
           </div>
       `;
   }

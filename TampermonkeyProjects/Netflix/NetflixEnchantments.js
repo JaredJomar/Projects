@@ -122,9 +122,12 @@
           height: 24px;
         }
         .dpe-toggle input {
+          position: absolute;
+          width: 100%;
+          height: 100%;
           opacity: 0;
-          width: 0;
-          height: 0;
+          cursor: pointer;
+          margin: 0;
         }
         .dpe-toggle-slider {
           position: absolute;
@@ -161,6 +164,15 @@
     dialogWrapper.innerHTML = styleSheet + dialogHTML;
     document.body.appendChild(dialogWrapper);
 
+    // Add event listeners to toggles
+    document.querySelectorAll('.dpe-toggle input').forEach(toggle => {
+      toggle.addEventListener('change', (event) => {
+        const { id, checked } = event.target;
+        CONFIG[id] = checked; // Update the CONFIG object with the new value
+      });
+    });
+
+    // Add event listeners to buttons
     document.getElementById('saveSettingsButton').addEventListener('click', saveAndCloseDialog);
     document.getElementById('cancelSettingsButton').addEventListener('click', closeDialog);
   }
@@ -168,11 +180,11 @@
   function createToggle(id, label, title) {
     return `
       <div class="dpe-toggle-container" title="${title}">
-        <label for="${id}" class="dpe-toggle-label">${label}</label>
-        <div class="dpe-toggle">
+        <label class="dpe-toggle">
           <input type="checkbox" id="${id}" ${CONFIG[id] ? 'checked' : ''}>
           <span class="dpe-toggle-slider"></span>
-        </div>
+        </label>
+        <label for="${id}" class="dpe-toggle-label">${label}</label>
       </div>
     `;
   }
@@ -259,12 +271,11 @@
   let isSettingsDialogOpen = false;
 
   function toggleSettingsDialog() {
-    if (isSettingsDialogOpen) {
-      closeDialog();
-      isSettingsDialogOpen = false;
+    const dialog = document.getElementById('netflixEnchantmentsDialog');
+    if (dialog) {
+      dialog.remove();
     } else {
       createSettingsDialog();
-      isSettingsDialogOpen = true;
     }
   }
 
