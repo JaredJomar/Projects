@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Close Ads
 // @namespace    https://www.lookmovie2.to/
-// @version      0.6.1
+// @version      0.6.2
 // @description  Closes ads on LookMovie and removes specific reCAPTCHA, banner ads from the page
 // @author       JJJ
 // @match        https://www.lookmovie2.to/*
@@ -14,7 +14,7 @@
     'use strict';
 
     const config = {
-        closePlayerAdSelector: '#PlayerZone > section > a.close-icon.player-ads-summer-2024--close',
+        closePlayerAdSelector: '.pre-init-ads--close',
         IPreferAdsSelector: 'button.no.stay-free[data-notify-html="buttonStayFree"]',
         notifyDivSelector: 'div.notifyjs-corner',
         bannerAdSelector: '.banner-become-affiliate',
