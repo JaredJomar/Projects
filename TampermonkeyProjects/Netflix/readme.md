@@ -1,43 +1,70 @@
-# Netflix Enchantments 
+
+---
+
+# **Netflix Enchantments**
 
 Enhance your Netflix experience with Netflix Enchantments! This script adds new features to the Netflix video player.
 
-## Installation
+---
+
+## **Installation**
 
 1. Install a user script manager in your browser, such as Tampermonkey.
 2. Create a new script in Tampermonkey and paste the provided script into the editor.
 3. Save the script.
 
-## Features
+---
 
-- Automatically skips recaps, intros, and outros on Netflix.
-- Provides an option to cancel fullscreen mode.
-- Automatically enables fullscreen mode when a video starts.
-- Provides an option to hide the games section.
-- Press F2 to open the settings.
+## **Features**
 
-## Usage
+- **Skip Recaps, Intros, and Outros:** Automatically skips recaps, intros, and outros on Netflix.
+- **Fullscreen Management:** Automatically enters fullscreen mode when a video starts and cancels it when requested.
+- **Hide Games Section:** Removes the games section from the Netflix homepage.
+- **Customizable Settings:** Access a settings dialog via the F2 key or Tampermonkey menu to toggle features on or off.
+- **Keyboard Shortcuts:**
+  - Press **F2** to open the settings dialog.
+  - Press **ESC** to exit fullscreen mode.
 
-- The script will automatically skip recaps, intros, and outros if the corresponding settings are enabled.
-- You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu.
-- The script will automatically enable fullscreen mode when a video starts.
-- The script will hide the games section if the corresponding setting is enabled.
+---
 
-## Keyboard Shortcuts
+## **Usage**
 
-- Press F2 to open the settings.
-- Press ESC to exit fullscreen mode.
+- Once installed, the script runs in the background and automates actions like skipping or fullscreen management.
+- Open the settings dialog to enable or disable specific features, such as:
+  - **Skip Recap**
+  - **Skip Intro**
+  - **Skip Outro**
+  - **Cancel Fullscreen**
+  - **Hide Games**
 
-## Author
+---
 
-JJJ
+## **Changelog**
 
-## Version
+### **v0.4.3**
+- Fixed selectors for Netflix buttons (e.g., Skip Intro) to ensure compatibility with the latest Netflix UI updates.
+- Enhanced the ability to hide games by generalizing the games section selector.
+- Minor improvements to settings dialog design.
+---
 
-0.4.2
+## **Keyboard Shortcuts**
 
-## License
+- **F2**: Open the settings dialog to adjust preferences.
+- **ESC**: Close the settings dialog and exit fullscreen mode.
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+---
+
+## **Author & License**
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+## **Version**
+
+- **Current Version**: v0.4.3
 
 ![Netflix Logo](https://www.google.com/s2/favicons?sz=64&domain=netflix.com)
+
+---
