@@ -1,66 +1,119 @@
-# Fast Search Userscript
 
-Fast Search is a userscript that allows you to quickly search across various sites using custom shortcuts. This script enhances your browsing experience by providing a fast and efficient way to search your favorite websites without having to navigate to them first.
+---
 
-## Features
+# **Fast Search**
 
-- **Quick Search**: Enter a shortcut and query to search on various platforms.
-- **Default Behavior**: If no shortcut is provided, performs a Google search with the query.
-- **Activation Key**: Press `INS` to activate the search functionality.
-- **Multiple Gaming Platforms Search**: Use the `sg` shortcut to search across g2a and cdkeys.
+Enhance your browsing experience with Fast Search! This script provides quick search shortcuts across multiple platforms.
 
-### Available Shortcuts
+---
 
-#### Search
-- `g` - Google: `https://www.google.com/search?q=`
-- `b` - Bing: `https://www.bing.com/search?q=`
-- `d` - DuckDuckGo: `https://duckduckgo.com/?q=`
-- `gs` - Google Scholar: `https://scholar.google.com/scholar?q=`
-- `ar` - Archive.org: `https://archive.org/search.php?query=`
-- `way` - Wayback Machine: `https://web.archive.org/web/*/`
-- `w` - Wikipedia: `https://en.wikipedia.org/w/index.php?search=`
-- `p` - Perplexity: `https://www.perplexity.ai/?q=`
+## **Installation**
 
-#### Coding
-- `gf` - GreasyFork: `https://greasyfork.org/en/scripts?q=`
-- `gh` - GitHub: `https://github.com/search?q=`
-- `so` - Stack Overflow: `https://stackoverflow.com/search?q=`
+1. Install a user script manager in your browser, such as Tampermonkey.
+2. Create a new script in Tampermonkey and paste the provided script into the editor.
+3. Save the script.
 
-#### Social
-- `r` - Reddit: `https://www.reddit.com/search/?q=`
-- `li` - LinkedIn: `https://www.linkedin.com/search/results/all/?keywords=`
-- `t` - Twitch: `https://www.twitch.tv/search?term=`
-- `x` - Twitter: `https://twitter.com/search?q=`
-- `f` - Facebook: `https://www.facebook.com/search/top/?q=`
-- `i` - Instagram: `https://www.instagram.com/explore/tags/`
-- `pi` - Pinterest: `https://www.pinterest.com/search/pins/?q=`
-- `tu` - Tumblr: `https://www.tumblr.com/search/`
-- `q` - Quora: `https://www.quora.com/search?q=`
-- `sc` - SoundCloud: `https://soundcloud.com/search?q=`
-- `y` - YouTube: `https://www.youtube.com/results?search_query=`
-- `tk` - TikTok: `https://www.tiktok.com/search?q=`
-- `fi` - FindThatMeme: `https://findthatmeme.com/?search=`
+---
 
-#### Gaming
-- `steam` - Steam: `https://store.steampowered.com/search/?term=`
-- `epic` - Epic Games: `https://store.epicgames.com/en-US/browse?q=`
-- `gog` - GOG: `https://www.gog.com/games?search=`
-- `ubi` - Ubisoft: `https://store.ubi.com/us/search?q=`
-- `g2` - G2A: `https://www.g2a.com/search?query=`
-- `cd` - CDKeys: `https://www.cdkeys.com/catalogsearch/result/?q=`
-- `ori` - Origin: `https://www.origin.com/search?searchString=`
-- `bat` - Battle.net: `https://shop.battle.net/search?q=`
+## **Features**
 
-## Author
+- **Search Across Platforms:** Use customizable shortcuts to search directly on popular sites.
+- **React-Based UI:** Modern, user-friendly interface with auto-suggestions.
+- **Multi-Search for Gaming:** Search multiple gaming stores simultaneously.
+- **Quick Access:** Access via Insert key from any webpage.
+- **Keyboard Shortcuts:**
+  - Press **Insert** to open the search interface.
+  - Press **ESC** to close the interface.
 
-JJJ
+---
 
-## Version
+## **Usage**
 
-0.1.5
+- Use the **Insert** key to open the search interface from any webpage.
+- Type your shortcut followed by your search query (e.g., 'g netflix' to search Google for Netflix).
+- The matched search engine name appears as you type.
 
-## License
+---
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+## **Shortcuts**
 
-![Script Icon](https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn)
+### **Search**
+- `a` → Amazon
+- `g` → Google
+- `b` → Bing
+- `d` → DuckDuckGo
+- `gs` → Google Scholar
+- `gi` → Google Images
+- `ar` → Internet Archive
+- `way` → Wayback Machine
+- `w` → Wikipedia
+- `p` → Perplexity
+
+### **Coding**
+- `gh` → GitHub
+- `so` → Stack Overflow
+- `gf` → Greasy Fork
+
+### **Social**
+- `r` → Reddit
+- `li` → LinkedIn
+- `t` → Twitch
+- `x` → Twitter
+- `f` → Facebook
+- `i` → Instagram
+- `pi` → Pinterest
+- `tu` → Tumblr
+- `q` → Quora
+- `sc` → SoundCloud
+- `y` → YouTube
+- `tk` → TikTok
+- `fi` → Find That Meme
+
+### **Gaming**
+- `steam` → Steam
+- `epic` → Epic Games
+- `gog` → GOG
+- `ubi` → Ubisoft
+- `g2` → G2A
+- `cd` → CDKeys
+- `ori` → Origin
+- `bat` → Battle.net
+
+### **Movies and TV Shows**
+- `c` → Cuevana
+- `lm` → LookMovie (Movies)
+- `ls` → LookMovie (Shows)
+
+---
+
+## **Changelog**
+
+### **v0.1.6**
+- Introduced a React-based search interface for enhanced usability.
+- Added auto-suggestions for search engines.
+- Improved multi-platform gaming search functionality.
+- Polished the UI with Tailwind-inspired styles for better appearance.
+
+---
+
+## **Keyboard Shortcuts**
+
+- **Insert**: Open the search interface
+- **ESC**: Close the search interface
+
+---
+
+## **Author & License**
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+## **Version**
+
+- **Current Version**: v0.1.6
+
+![Search Icon](https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn)
+
+---
