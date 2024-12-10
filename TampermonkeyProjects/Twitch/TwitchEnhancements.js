@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.5.1
+// @version      0.5.2
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, claim drops, and add redeem buttons for GOG and Legacy Games on Twitch and Amazon Gaming websites.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
@@ -25,7 +25,7 @@
     const CLOSE_MODAL_BUTTON_SELECTOR = 'button[aria-label="Close modal"]';
     const THEATER_MODE_CLASS = 'theatre-mode';
     const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
-    const CLAIM_DROPS_SELECTOR = 'button.ScCoreButton-sc-ocjdkq-0.cgOGyD';
+    const CLAIM_DROPS_SELECTOR = 'button.ScCoreButton-sc-ocjdkq-0.eWlfQB';
     const PRIME_REWARD_SELECTOR = 'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]';
     const PRIME_REWARD_SELECTOR_2 = 'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Get game"]';
 
