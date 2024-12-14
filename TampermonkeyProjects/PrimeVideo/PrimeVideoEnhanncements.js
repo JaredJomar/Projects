@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Prime Video Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.2.1
+// @version      0.2.2
 // @description  Enhancements for Prime Video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.amazon.com/gp/video/*
@@ -36,31 +36,142 @@
 
     function showSettingsDialog() {
         const dialogHTML = `
-        <div id="primeVideoEnchantmentsDialog" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: black; border: 1px solid #ccc; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); z-index: 9999; color: white; width: 300px;">
-          <h3 style="margin-top: 0; font-size: 1.2em;">Prime Video Enchantments</h3>
-          <br>
-          <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip episode recaps">
-            <input type="checkbox" id="enableSkipRecap" ${config.enableSkipRecap ? 'checked' : ''}>
-            <span style="color: white;">Skip Recap</span>
-          </label>
-          <br>
-          <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically skip the intro of episodes">
-            <input type="checkbox" id="enableSkipIntro" ${config.enableSkipIntro ? 'checked' : ''}>
-            <span style="color: white;">Skip Intro</span>
-          </label>
-          <br>
-          <label style="display: block; margin-bottom: 10px; color: white; font-size: 1em;" title="Automatically enter fullscreen mode">
-            <input type="checkbox" id="enableAutoFullscreen" ${config.enableAutoFullscreen ? 'checked' : ''}>
-            <span style="color: white;">Auto Fullscreen</span>
-          </label>
-          <br>
-          <button id="saveSettingsButton" style="padding: 8px 12px; background-color: #0078d4; color: white; border: none; cursor: pointer; font-size: 1em;">Save</button>
-          <button id="cancelSettingsButton" style="padding: 8px 12px; background-color: #d41a1a; color: white; border: none; cursor: pointer; margin-left: 10px; font-size: 1em;">Cancel</button>
+        <div id="primeVideoEnchantmentsDialog" class="dpe-dialog">
+            <h3>Prime Video Enchantments</h3>
+            <div class="dpe-toggle-container" title="Automatically skip episode recaps">
+                <label class="dpe-toggle">
+                    <input type="checkbox" id="enableSkipRecap" ${config.enableSkipRecap ? 'checked' : ''}>
+                    <span class="dpe-toggle-slider"></span>
+                </label>
+                <label for="enableSkipRecap" class="dpe-toggle-label">Skip Recap</label>
+            </div>
+            <div class="dpe-toggle-container" title="Automatically skip the intro of episodes">
+                <label class="dpe-toggle">
+                    <input type="checkbox" id="enableSkipIntro" ${config.enableSkipIntro ? 'checked' : ''}>
+                    <span class="dpe-toggle-slider"></span>
+                </label>
+                <label for="enableSkipIntro" class="dpe-toggle-label">Skip Intro</label>
+            </div>
+            <div class="dpe-toggle-container" title="Automatically enter fullscreen mode">
+                <label class="dpe-toggle">
+                    <input type="checkbox" id="enableAutoFullscreen" ${config.enableAutoFullscreen ? 'checked' : ''}>
+                    <span class="dpe-toggle-slider"></span>
+                </label>
+                <label for="enableAutoFullscreen" class="dpe-toggle-label">Auto Fullscreen</label>
+            </div>
+            <div class="dpe-button-container">
+                <button id="saveSettingsButton" class="dpe-button dpe-button-save">Save</button>
+                <button id="cancelSettingsButton" class="dpe-button dpe-button-cancel">Cancel</button>
+            </div>
         </div>
-      `;
+    `;
+
+        const styleSheet = `
+        <style>
+            .dpe-dialog {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.8);
+                border: 1px solid #444;
+                border-radius: 8px;
+                padding: 20px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+                z-index: 9999;
+                color: white;
+                width: 300px;
+                font-family: Arial, sans-serif;
+            }
+            .dpe-dialog h3 {
+                margin-top: 0;
+                font-size: 1.4em;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .dpe-toggle-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            .dpe-toggle-label {
+                flex-grow: 1;
+            }
+            .dpe-toggle {
+                position: relative;
+                display: inline-block;
+                width: 50px;
+                height: 24px;
+            }
+            .dpe-toggle input {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                cursor: pointer;
+                margin: 0;
+            }
+            .dpe-toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: .4s;
+                border-radius: 24px;
+            }
+            .dpe-toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+            .dpe-toggle input:checked + .dpe-toggle-slider {
+                background-color: #0078d4;
+            }
+            .dpe-toggle input:checked + .dpe-toggle-slider:before {
+                transform: translateX(26px);
+            }
+            .dpe-button-container {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 20px;
+            }
+            .dpe-button {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 1em;
+                transition: background-color 0.3s;
+            }
+            .dpe-button-save {
+                background-color: #0078d4;
+                color: white;
+            }
+            .dpe-button-save:hover {
+                background-color: #005a9e;
+            }
+            .dpe-button-cancel {
+                background-color: #d41a1a;
+                color: white;
+            }
+            .dpe-button-cancel:hover {
+                background-color: #a61515;
+            }
+        </style>
+    `;
 
         const dialogWrapper = document.createElement('div');
-        dialogWrapper.innerHTML = dialogHTML;
+        dialogWrapper.innerHTML = styleSheet + dialogHTML;
         document.body.appendChild(dialogWrapper);
 
         document.getElementById('saveSettingsButton').addEventListener('click', saveAndCloseSettings);
