@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Close Ads
 // @namespace    https://www.lookmovie2.to/
-// @version      0.6.2
+// @version      0.6.3
 // @description  Closes ads on LookMovie and removes specific reCAPTCHA, banner ads from the page
 // @author       JJJ
 // @match        https://www.lookmovie2.to/*
@@ -12,6 +12,12 @@
 
 (function () {
     'use strict';
+
+    // Exclude specific URL path
+    if (window.location.href.includes('/threat-protection/')) {
+        console.log('Ad closer script is disabled on this page.');
+        return;
+    }
 
     const config = {
         closePlayerAdSelector: '.pre-init-ads--close',
