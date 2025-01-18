@@ -1,13 +1,16 @@
 // ==UserScript==
 // @name         AnimeFLV Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.3
-// @description  Select video provider option automatically and add a Page Up button to scroll to the top of the page.
+// @version      0.3.1
+// @description  Select video provider option automatically and add a Page Up button
 // @author       JJJ
-// @match        https://www3.animeflv.net/ver/*
+// @match        *://*.animeflv.net/anime/*
+// @match        *://*.animeflv.net/ver/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=animeflv.net
-// @grant        GM_addStyle
-// @grant        GM_registerMenuCommand
+// @grant        GM.addStyle
+// @grant        GM.registerMenuCommand
+// @grant        window.onurlchange
+// @run-at       document-end
 // @license      MIT
 // ==/UserScript==
 
@@ -17,6 +20,8 @@
     // Constants
     const CLASS_SELECTOR = '.CapiTnv.nav.nav-pills > li';
     const STORAGE_KEY = 'selectedOption';
+    let initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 10;
 
     // CSS styles for the custom menu and Page Up button
     const menuStyles = `
@@ -28,7 +33,26 @@
             background-color: white;
             border: 1px solid black;
             padding: 10px;
-            z-index: 9999;
+            z-index: 999999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            display: none;
+        }
+
+        #optionDropdown {
+            margin-bottom: 10px;
+            padding: 5px;
+            width: 200px;
+        }
+
+        #confirmButton {
+            padding: 5px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            width: 100%;
         }
 
         .button-85 {
@@ -102,15 +126,62 @@
         }
     `;
 
+    // Function to safely add styles
+    async function addStyles(css) {
+        try {
+            if (typeof GM.addStyle === 'function') {
+                await GM.addStyle(css);
+            } else {
+                const style = document.createElement('style');
+                style.textContent = css;
+                document.head.appendChild(style);
+            }
+        } catch (error) {
+            console.error('Error adding styles:', error);
+            const style = document.createElement('style');
+            style.textContent = css;
+            document.head.appendChild(style);
+        }
+    }
+
+    // Function to wait for element
+    function waitForElement(selector, timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                return resolve(element);
+            }
+
+            const observer = new MutationObserver((mutations, obs) => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    obs.disconnect();
+                    resolve(element);
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`Element ${selector} not found`));
+            }, timeout);
+        });
+    }
+
     // Function to create the dropdown menu
     function createDropdownMenu(options) {
         const dropdownMenu = document.createElement('select');
         dropdownMenu.id = 'optionDropdown';
 
-        options.forEach((option) => {
+        Array.from(options).forEach((option) => {
             const dropdownOption = document.createElement('option');
-            dropdownOption.value = option.getAttribute('title') || option.textContent.trim();
-            dropdownOption.textContent = option.getAttribute('title') || option.textContent.trim();
+            const optionText = option.getAttribute('title') || option.textContent.trim();
+            dropdownOption.value = optionText;
+            dropdownOption.textContent = optionText;
             dropdownMenu.appendChild(dropdownOption);
         });
 
@@ -119,72 +190,95 @@
 
     // Function to toggle the menu visibility
     function toggleMenu() {
-        console.log('toggleMenu called');
         const menu = document.getElementById('customMenu');
-        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
     }
 
     // Function to handle option selection
-    function handleOptionSelection() {
-        const selectedOptionValue = document.getElementById('optionDropdown').value;
-        const options = document.querySelectorAll(CLASS_SELECTOR);
+    async function handleOptionSelection() {
+        const dropdown = document.getElementById('optionDropdown');
+        if (!dropdown) return;
 
-        options.forEach((option) => {
+        const selectedOptionValue = dropdown.value;
+        localStorage.setItem(STORAGE_KEY, selectedOptionValue);
+
+        const options = document.querySelectorAll(CLASS_SELECTOR);
+        for (const option of options) {
             if ((option.getAttribute('title') || option.textContent.trim()) === selectedOptionValue) {
-                option.click();
-                localStorage.setItem(STORAGE_KEY, selectedOptionValue);
-                toggleMenu();
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    option.click();
+                    toggleMenu();
+                    break;
+                } catch (error) {
+                    console.error('Error clicking option:', error);
+                }
             }
-        });
+        }
     }
 
     // Function to create the custom menu
     function createCustomMenu() {
+        if (document.getElementById('customMenu')) return;
+
         const options = document.querySelectorAll(CLASS_SELECTOR);
-        console.log('Options found:', options.length);
+        if (options.length === 0) return;
+
+        const customMenu = document.createElement('div');
+        customMenu.id = 'customMenu';
 
         const dropdownMenu = createDropdownMenu(options);
         const selectedOptionValue = localStorage.getItem(STORAGE_KEY);
-        if (selectedOptionValue !== null) {
+        if (selectedOptionValue) {
             dropdownMenu.value = selectedOptionValue;
         }
 
         const confirmButton = document.createElement('button');
-        confirmButton.textContent = 'Confirm';
+        confirmButton.id = 'confirmButton';
+        confirmButton.textContent = 'Confirmar';
         confirmButton.addEventListener('click', handleOptionSelection);
 
-        const customMenu = document.createElement('div');
-        customMenu.id = 'customMenu';
-        customMenu.style.display = 'none';
         customMenu.appendChild(dropdownMenu);
         customMenu.appendChild(confirmButton);
-
         document.body.appendChild(customMenu);
-        console.log('Custom menu created');
     }
 
     // Function to automatically select the saved option
-    function autoSelectOption() {
+    async function autoSelectOption() {
         const selectedOptionValue = localStorage.getItem(STORAGE_KEY);
-        if (selectedOptionValue !== null) {
+        if (!selectedOptionValue) return;
+
+        try {
+            await waitForElement(CLASS_SELECTOR);
             const options = document.querySelectorAll(CLASS_SELECTOR);
-            options.forEach((option) => {
+
+            for (const option of options) {
                 if ((option.getAttribute('title') || option.textContent.trim()) === selectedOptionValue) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     option.click();
+                    break;
                 }
-            });
+            }
+        } catch (error) {
+            console.error('Error in autoSelectOption:', error);
         }
     }
 
     // Function to create the Page Up button
     function createPageUpButton() {
-        const button = document.createElement("button");
-        button.innerHTML = "Page Up";
-        button.className = "button-85";
-        button.addEventListener("click", function () {
-            window.scrollTo(0, 0);
-        });
+        if (document.querySelector('.button-85')) return;
 
+        const button = document.createElement('button');
+        button.innerHTML = 'Page Up';
+        button.className = 'button-85';
+        button.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
         document.body.appendChild(button);
     }
 
@@ -192,30 +286,40 @@
     function togglePageUpButton() {
         const button = document.querySelector('.button-85');
         if (button) {
-            button.style.display = window.scrollY > 0 ? 'block' : 'none';
+            button.style.display = window.scrollY > 100 ? 'block' : 'none';
         }
     }
 
     // Function to initialize the script
-    function init() {
-        GM_addStyle(menuStyles);
-        createCustomMenu();
-        createPageUpButton();
+    async function init() {
+        try {
+            await addStyles(menuStyles);
+            createPageUpButton();
 
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'F2') {
-                console.log('F2 key pressed');
-                toggleMenu();
+            await waitForElement(CLASS_SELECTOR);
+            createCustomMenu();
+            await autoSelectOption();
+
+            window.addEventListener('scroll', togglePageUpButton);
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'F2') {
+                    toggleMenu();
+                }
+            });
+
+        } catch (error) {
+            console.error('Init error:', error);
+            initAttempts++;
+            if (initAttempts < MAX_INIT_ATTEMPTS) {
+                setTimeout(init, 1000);
             }
-        });
-
-        window.addEventListener('scroll', togglePageUpButton);
-
-        setTimeout(autoSelectOption, 100); // Delay execution to allow page load
-
-        GM_registerMenuCommand('AnimeFLV Enhancements', toggleMenu);
+        }
     }
 
-    // Run the script
-    init();
+    // Start the script
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1000));
+    } else {
+        setTimeout(init, 1000);
+    }
 })();

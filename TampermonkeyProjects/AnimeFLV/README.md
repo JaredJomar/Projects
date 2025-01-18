@@ -1,39 +1,79 @@
-# AnimeFLV Enhancements
 
-This user script enhances the AnimeFLV experience by automating the selection of the video provider and adding a button to return to the top of the page.
+---
 
-## Installation
+# **AnimeFLV Enhancements**
 
-1. Make sure you have a user script manager installed in your browser, such as Tampermonkey.
-2. Copy the script code.
-3. Create a new script in Tampermonkey and paste the copied code.
-4. Save the script.
+Enhance your AnimeFLV experience with automatic video provider selection and improved navigation features.
 
-## Features
+---
 
-- Automatic selection of the video provider based on the saved preference.
-- Custom menu to choose the preferred video provider (activated with F2).
-- "Page Up" button to quickly return to the top of the page.
-- Custom styles to improve the appearance of the added elements.
+## **Installation**
 
-## Usage
+1. Install a user script manager in your browser, such as Tampermonkey
+2. Copy the script code
+3. Create a new script in Tampermonkey and paste the copied code
+4. Save the script
 
-- The script runs automatically on AnimeFLV playback pages.
-- Press F2 to open the video provider selection menu.
-- The "Page Up" button appears when scrolling down the page.
+---
 
-## Keyboard Shortcuts
+## **Features**
 
-- F2: Open/close the video provider selection menu.
+- **Automatic Provider Selection:**
+  - Remembers your preferred video provider
+  - Applies selection automatically on page load
+- **Custom Provider Menu:**
+  - Quick access with F2 hotkey
+  - Clean and modern interface
+  - Persistent settings across sessions
+- **Navigation Enhancements:**
+  - Floating "Page Up" button
+  - Animated glow effects
+  - Smooth scroll to top
+- **Technical Features:**
+  - Responsive design
+  - Error-resilient initialization
+  - Cross-browser compatibility
 
-## Author
+---
 
-JJJ
+## **Usage**
 
-## Version
+- Script runs automatically on AnimeFLV playback pages
+- Press **F2** to access the provider selection menu
+- Select provider and click "Confirmar" to save
+- Use the glowing Page Up button for quick navigation
 
-0.3
+---
 
-## License
+## **Requirements**
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+- Tampermonkey browser extension
+- Modern web browser (Chrome, Firefox, Edge, etc.)
+- AnimeFLV access
+
+---
+
+## **Changelog**
+
+### **v0.3.1**
+- Enhanced error handling
+- Improved initialization process
+- Added responsive design elements
+- Updated menu styling
+
+---
+
+## **Version**
+
+- **Current Version**: v0.3.1
+
+---
+
+## **Author & License**
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+![AnimeFLV Icon](https://www.google.com/s2/favicons?sz=64&domain=animeflv.net)
+
+---
