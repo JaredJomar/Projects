@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      http://tampermonkey.net/
-// @version        0.8.1
+// @version        0.8.2
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -61,7 +61,8 @@
         likeIfNotSubscribed: false,
         watchThreshold: 0,
         checkFrequency: 5000,
-        adBlockBypassEnabled: false
+        adBlockBypassEnabled: false,
+        scrollSpeed: 50
     };
 
     let settings = loadSettings();
@@ -306,6 +307,12 @@
                            value="${settings.watchThreshold}">
                     <span id="watchThresholdValue">${settings.watchThreshold}%</span>
                 </div>
+                <div class="dpe-slider-container" title="Speed of auto-scroll (pixels per interval)">
+                    <label for="scrollSpeed">Scroll Speed</label>
+                    <input type="range" id="scrollSpeed" data-setting="scrollSpeed" min="10" max="100" step="5" 
+                           value="${settings.scrollSpeed}">
+                    <span id="scrollSpeedValue">${settings.scrollSpeed}px</span>
+                </div>
                 <div class="dpe-button-container">
                     <button id="saveSettingsButton" class="dpe-button dpe-button-save">Save</button>
                     <button id="closeSettingsButton" class="dpe-button dpe-button-cancel">Cancel</button>
@@ -484,6 +491,7 @@
         });
 
         dialog.querySelector('#watchThreshold').addEventListener('input', handleSliderInput);
+        dialog.querySelector('#scrollSpeed').addEventListener('input', handleSliderInput);
 
         return dialog;
     }
@@ -530,7 +538,11 @@
     function handleSliderInput(e) {
         if (e.target.type === 'range') {
             const value = e.target.value;
-            document.getElementById('watchThresholdValue').textContent = `${value}%`;
+            if (e.target.id === 'watchThreshold') {
+                document.getElementById('watchThresholdValue').textContent = `${value}%`;
+            } else if (e.target.id === 'scrollSpeed') {
+                document.getElementById('scrollSpeedValue').textContent = `${value}px`;
+            }
             updateNumericSetting(e.target.dataset.setting, value);
         }
     }
@@ -681,7 +693,7 @@
             isScrolling = false;
         } else {
             isScrolling = true;
-            scrollInterval = setInterval(() => window.scrollBy(0, 50), 20);
+            scrollInterval = setInterval(() => window.scrollBy(0, settings.scrollSpeed), 20);
         }
     }
 

@@ -1,50 +1,56 @@
-# HTML5 Video Player Speed Control 
 
-Enhance your HTML5 video watching experience by controlling the playback speed with keyboard shortcuts.
+---
+# HTML5 Video Player Speed Control
 
-## Installation
-
-1. Make sure you have a user script manager installed in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and copy the provided script into the editor.
-3. Save the script.
+Enhance HTML5 video playback with customizable speed controls and visual indicators.
 
 ## Features
 
-- Control the playback speed of HTML5 video players.
-- Use keyboard shortcuts for quick adjustments.
+### ⚡ Speed Controls
+- Incremental speed adjustments
+- Quick preset speeds
+- Previous speed memory
+- Speed indicator display
 
-## Usage
+### ⌨️ Keyboard Shortcuts
 
-- Press `d` to increase playback speed by 0.1x.
-- Press `s` to decrease playback speed by 0.1x.
-- Press `g` to set playback speed to 1.5x.
-- Press `h` to set playback speed to 1.8x.
-- Press `r` to reset playback speed to normal or toggle between current and previous speed.
-- Press `v` to toggle the visibility of the speed indicator.
+| Key | Function |
+|-----|----------|
+| d | Increase speed by 0.1x |
+| s | Decrease speed by 0.1x |
+| g | Set speed to 1.5x |
+| h | Set speed to 1.8x |
+| r | Reset speed or toggle previous |
+| v | Toggle speed indicator |
 
-## Speed Indicator
+### 🎯 Visual Feedback
+- Current speed display
+- Fullscreen compatibility
+- Position adjustment
+- Toggle visibility
 
-A speed indicator displays the current playback speed in the top-left corner of the video. It automatically adjusts its position based on fullscreen status.
+## Installation
 
-## Keyboard Shortcuts
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Ready to use immediately after installation
 
-- **d**: Speed up
-- **s**: Slow down
-- **g**: Set to 1.5x speed
-- **h**: Set to 1.8x speed
-- **r**: Reset to normal or toggle previous speed
-- **v**: Toggle speed indicator visibility
+## Version History
 
-## Author
+### v0.1
+- Initial release with speed controls
+- Keyboard shortcuts implementation
+- Visual indicator system
 
-JJJ
+## Technical Details
 
-## Version
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
-0.1
+---
 
-## License
+<div align="center">
+<img src="https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png" alt="HTML5 Logo" width="64">
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
-
-![HTML5 Logo](https://logos-download.com/wp-content/uploads/2017/07/HTML5_logo.png)
+**Current Version: 0.1**
+</div>

@@ -1,68 +1,60 @@
 
 ---
+# LookMovie Enhancements
 
-# **Close Ads**
+Enhance your LookMovie experience with automatic ad removal and smart reCAPTCHA management.
 
-This user script automatically closes ads on LookMovie, removes specific reCAPTCHA divs except on the threat protection page, and removes banner ads.
+## Features
 
----
+### 🛡️ Ad Protection
+- Automatic player ad closure
+- Banner advertisement removal
+- "I Prefer Ads" dialog handling
+- Real-time ad detection
 
-## **Installation**
+### 🤖 reCAPTCHA Manager
+- Smart reCAPTCHA handling
+- Threat protection compatibility
+- Selective div removal
+- Safe mode operations
 
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+### ⚡ Performance
+- Debounced operations
+- Configurable retry attempts
+- Continuous monitoring
+- Resource-efficient
 
----
+## Installation
 
-## **Features**
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Script runs automatically on LookMovie
 
-- **Automatic Ad Closing:**
-  - Closes player ads automatically
-  - Removes banner advertisements
-  - Handles "I Prefer Ads" dialogs
-- **Smart reCAPTCHA Management:**
-  - Removes specific reCAPTCHA divs
-  - Preserves functionality on threat protection page
-- **Performance Optimized:**
-  - Debounced ad handling
-  - Configurable maximum attempts
-  - Continuous checking option
-- **Safety Features:**
-  - Auto-disable on threat protection pages
-  - Configurable settings
+## Settings
 
----
+The script automatically:
+- Closes player advertisements
+- Removes banner ads
+- Manages reCAPTCHA elements
+- Preserves threat protection
 
-## **Usage**
+## Version History
 
-- Script runs automatically on LookMovie
-- Handles ads and popups in real-time
-- Configurable through script settings
-- Automatically disabled on threat protection pages
-
----
-
-## **Changelog**
-
-### **v0.6.3**
-- Added threat protection page exclusion
-- Enhanced ad detection reliability
+### v0.6.3
+- Added threat protection exclusions
+- Enhanced ad detection system
 - Improved performance handling
+- Updated security features
 
----
-
-## **Author & License**
+## Technical Details
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
 ---
 
-## **Version**
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to" alt="LookMovie Icon">
 
-- **Current Version**: v0.6.3
-
-![LookMovie Icon](https://www.google.com/s2/favicons?sz=64&domain=lookmovie2.to)
-
----
+**Current Version: 0.6.3**
+</div>

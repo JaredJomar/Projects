@@ -1,65 +1,66 @@
 
 ---
 
-# **YouTube Playlist Dialog Enhancer**
+# YouTube Playlist Dialog Enhancer
 
-Enhance your YouTube playlist management with a modern search interface and improved dialog layout!
-
----
-
-## **Installation**
-
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+Enhance YouTube's playlist management with modern search and improved dialog layout.
 
 ---
 
-## **Features**
+## Features
 
-- **Smart Search Bar:** Instantly filter playlists as you type
-- **Auto Channel Search:** Automatically populates search with channel name
-- **Enhanced Dialog Layout:**
-  - Centered on screen
-  - Fixed dimensions (700x500px)
-  - Improved scrolling behavior
-- **Visual Improvements:**
-  - Modern color scheme
-  - Hover and focus effects
-  - Clean playlist organization
+### 🔍 Smart Search
+- Instant playlist filtering
+- Auto-populate channel names
+- Search history support
 
----
+### 📱 Modern Interface
+- Centered dialog (700x500px)
+- Improved scrolling behavior
+- Clean visual organization
 
-## **Usage**
-
-- Click "Save to Playlist" on any video to open the enhanced dialog
-- Use the search bar to quickly find playlists
-- Playlists filter automatically as you type
-- Scroll through results with improved visibility
+### ⚡ Quick Actions
+- One-click playlist creation
+- Instant playlist filtering
+- Keyboard shortcuts support
 
 ---
 
-## **Changelog**
+## Installation
 
-### **v0.1**
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure settings using the Tampermonkey menu
+
+---
+
+## Settings
+
+Access the settings through Tampermonkey menu to customize:
+- Dialog dimensions
+- Search behavior
+- Visual preferences
+
+---
+
+## Version History
+
+### v0.1
 - Initial release with search functionality
 - Centered dialog implementation
 - Auto-population of channel names
-- Custom styling and hover effects
 
 ---
 
-## **Author & License**
+## Technical Details
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
 ---
 
-## **Version**
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-- **Current Version**: v0.1
-
-![YouTube Icon](https://www.google.com/s2/favicons?sz=64&domain=youtube.com)
-
----
+**Current Version: 0.1**
+</div>

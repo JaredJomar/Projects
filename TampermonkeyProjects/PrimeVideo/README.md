@@ -1,69 +1,67 @@
 
 ---
+# Prime Video Enhancements
 
-# **Prime Video Enchantments**
+Enhance your Prime Video experience with automatic intro skipping, ad management, and smart fullscreen features.
 
-Enhance your Prime Video experience with Prime Video Enchantments! This script adds new features to the Prime Video player.
+## Features
 
----
+### ⏭️ Auto Skip
+- Automatic recap skipping
+- Smart intro detection
+- Ad skip automation
+- Seamless viewing experience
 
-## **Installation**
+### 🎬 Playback Control
+- Auto fullscreen mode
+- Smart screen management
+- ESC key functionality
+- Consistent settings
 
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+### ⚙️ Smart Settings
+- F2 hotkey for quick access
+- Easy toggle controls
+- Persistent preferences
+- Netflix-style interface
 
----
+## Installation
 
-## **Features**
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure settings using the F2 key
 
-- **Skip Recaps and Intros:** Automatically skips recaps and intros on Prime Video.
-- **Fullscreen Management:** Automatically enters fullscreen mode when a video starts.
-- **Ad Skipper:** Automatically detects and skips ads when possible.
-- **Customizable Settings:** Access a settings dialog via the F2 key or Tampermonkey menu to toggle features on or off.
-- **Keyboard Shortcuts:**
-  - Press **F2** to open the settings dialog.
-  - Press **ESC** to exit fullscreen mode.
+## Keyboard Controls
 
----
+| Key | Function |
+|-----|----------|
+| F2 | Open/close settings |
+| ESC | Exit fullscreen |
 
-## **Usage**
+## Settings
 
-- Once installed, the script runs in the background and automates actions like skipping or fullscreen management.
-- Open the settings dialog to enable or disable specific features, such as:
-  - **Skip Recap**
-  - **Skip Intro**
-  - **Auto Fullscreen**
-  - **Ad Skipper**
+Access the settings panel (F2) to customize:
+- Recap/intro skip behavior
+- Ad skip preferences
+- Fullscreen options
+- Playback settings
 
----
+## Version History
 
-## **Changelog**
+### v0.2.2
+- Updated settings UI to Netflix style
+- Enhanced toggle switch design
+- Improved user experience
+- Refined interface elements
 
-### **v0.2.2**
-- Updated settings dialog UI to match Netflix's style
-- Enhanced toggle switches for better user experience
-
----
-
-## **Keyboard Shortcuts**
-
-- **F2**: Open the settings dialog to adjust preferences.
-- **ESC**: Close the settings dialog and exit fullscreen mode.
-
----
-
-## **Author & License**
+## Technical Details
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
 ---
 
-## **Version**
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=amazon.com" alt="Prime Video Icon">
 
-- **Current Version**: v0.2.2
-
-![Prime Video Logo](https://www.google.com/s2/favicons?sz=64&domain=amazon.com)
-
----
+**Current Version: 0.2.2**
+</div>

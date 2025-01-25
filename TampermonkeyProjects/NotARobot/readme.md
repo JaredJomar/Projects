@@ -1,36 +1,68 @@
+
+---
 # Auto Click "I'm not a robot"
 
-This user script automatically clicks the "I'm not a robot" checkbox on various captcha systems.
-
-## Installation
-
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+Automate captcha verification across various websites with smart detection and automatic clicks.
 
 ## Features
 
-- Automatically clicks the "I'm not a robot" checkbox on reCaptcha V2, reCaptcha V2 Enterprise, and hCaptcha.
-- Uses MutationObserver to detect changes in the DOM and solve captchas dynamically.
-- Periodically attempts to solve captchas every second.
-- Compatibility check for supported browsers (Chrome, Edge, Brave, Firefox).
+### 🤖 Auto Verification
+- Automatic checkbox clicking
+- Multiple captcha system support
+- Smart detection system
+- Cross-platform compatibility
 
-## Usage
+### 🔄 Dynamic Detection
+- MutationObserver integration
+- Real-time DOM monitoring
+- Periodic verification checks
+- Intelligent retry system
 
-- The script will automatically click the "I'm not a robot" checkbox if it is visible and not already checked.
-- The script uses a MutationObserver to detect changes in the DOM and solve captchas dynamically.
-- The script periodically attempts to solve captchas every second.
+### ⚡ Smart Performance
+- Browser compatibility checks
+- Resource-efficient operation
+- Seamless integration
+- Error prevention system
 
-## Author
+## Installation
 
-JJJ
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Script runs automatically on supported sites
 
-## Version
+## Supported Systems
 
-0.9
+| System | Support |
+|--------|---------|
+| reCaptcha V2 | ✅ |
+| reCaptcha V2 Enterprise | ✅ |
+| hCaptcha | ✅ |
 
-## License
+## Settings
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+The script automatically:
+- Detects captcha presence
+- Clicks verification checkbox
+- Monitors DOM changes
+- Handles multiple captcha types
 
-![Robot Icon](https://pngimg.com/uploads/robot/robot_PNG96.png)
+## Version History
+
+### v0.9.0
+- Added enterprise captcha support
+- Enhanced detection system
+- Improved cross-browser compatibility
+- Optimized performance
+
+## Technical Details
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+<div align="center">
+<img src="https://pngimg.com/uploads/robot/robot_PNG96.png" alt="Robot Icon" width="64">
+
+**Current Version: 0.9.0**
+</div>

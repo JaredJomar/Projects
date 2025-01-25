@@ -1,76 +1,69 @@
 
 ---
-
-# **Outlook Smart Email Filter Manager**
+# Outlook Smart Email Filter
 
 Enhance your Outlook Web App experience with quick email filter management through an elegant popup interface.
 
----
+## Features
 
-## **Installation**
+### 📨 Filter Management
+- Quick filter selection popup
+- Instant filter application
+- Persistent filter preferences
+- Modern interface design
 
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+### 🔍 Smart Filters
+- Unread messages filter
+- Flagged items tracking
+- Attachment filtering
+- Mentions detection
 
----
+### ⚡ Quick Access
+- F2 hotkey activation
+- Clean popup interface
+- Auto-save preferences
+- Cross-browser support
 
-## **Features**
+## Installation
 
-- **Quick Filter Access:** Instant popup interface for filter selection
-- **Persistent Preferences:** Automatically saves your last filter choice
-- **Supported Filters:**
-  - **Unread Messages**
-  - **All Messages**
-  - **Flagged Items**
-  - **Direct Messages**
-  - **Attachments**
-  - **Mentions**
-- **Clean Interface:** Modern and intuitive design
-- **Automatic Application:** Filters apply instantly on selection
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure filters using the F2 key
 
----
+## Keyboard Controls
 
-## **Usage**
+| Key | Function |
+|-----|----------|
+| F2 | Open/close filter menu |
+| ESC | Close filter menu |
 
-- Press **F2** to open the filter selection popup
-- Click your desired filter option
-- Filter applies automatically
-- Your selection persists between sessions
+## Settings
 
----
+Access the filter menu (F2) to select:
+- Unread Messages
+- All Messages
+- Flagged Items
+- Direct Messages
+- Attachments
+- Mentions
 
-## **Requirements**
+## Version History
 
-- Tampermonkey browser extension
-- Microsoft Outlook Web App access
-- Modern web browser (Chrome, Firefox, Edge, etc.)
+### v0.1.0
+- Initial release with filter popup
+- Added keyboard shortcuts
+- Implemented persistent settings
+- Created modern interface
 
----
-
-## **Changelog**
-
-### **v0.1.0**
-- Initial release
-- Implemented filter selection popup
-- Added keyboard shortcut (F2)
-- Added persistent filter selection
-- Created modern UI with hover effects
-- Implemented automatic filter application
-
----
-
-## **Version**
-
-- **Current Version**: v0.1.0
-
----
-
-## **Author & License**
+## Technical Details
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
-![Outlook Icon](https://www.google.com/s2/favicons?sz=64&domain=office.com)
-
 ---
+
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=office.com" alt="Outlook Icon">
+
+**Current Version: 0.1.0**
+</div>

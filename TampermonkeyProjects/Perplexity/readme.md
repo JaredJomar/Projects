@@ -1,41 +1,52 @@
-# Delete Thread
 
-This script allows you to delete threads on Perplexity by pressing the Delete key and confirming with Enter.
+---
+# Delete Thread for Perplexity
 
-## Installation
-
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+Simple and efficient thread deletion for Perplexity through keyboard shortcuts.
 
 ## Features
 
-- Delete threads on Perplexity by pressing the Delete key.
-- Confirm deletion by pressing the Enter key.
-- Cancel deletion by pressing the ESC key.
+### ⌨️ Keyboard Controls
+| Key | Function |
+|-----|----------|
+| Delete | Start deletion process |
+| Enter | Confirm deletion |
+| ESC | Cancel deletion |
 
-## Usage
+### 🔄 Process Flow
+- Press Delete to initiate
+- Confirm with Enter
+- Cancel with ESC anytime
+- Visual confirmation prompt
 
-- The script will automatically trigger the deletion process when the Delete key is pressed on a Perplexity page.
-- Press Enter to confirm the deletion.
-- Press Backspace to cancel the deletion.
+### ⚡ Quick Actions
+- Single key activation
+- No mouse required
+- Instant response
+- Safe confirmation step
 
-## Keyboard Shortcuts
+## Installation
 
-- Delete: Trigger the deletion process.
-- Enter: Confirm the deletion.
-- ESC: Cancel the deletion.
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Ready to use on any Perplexity page
 
-## Author
+## Version History
 
-JJJ
+### v0.1.1
+- Added deletion confirmation prompt
+- Enhanced keyboard input handling
+- Added ESC key cancellation
 
-## Version
+## Technical Details
 
-0.1.1
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
-## License
+---
 
-This project is licensed under the MIT License.
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=perplexity.ai" alt="Perplexity Icon">
 
-<img alt="Perplexity Icon" src="https://www.google.com/s2/favicons?sz=64&amp;domain=perplexity.ai">
+**Current Version: 0.1.1**
+</div>

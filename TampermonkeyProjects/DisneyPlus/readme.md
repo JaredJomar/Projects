@@ -1,43 +1,67 @@
+
+---
 # Disney Plus Enhancements
 
-Enhance your Disney Plus experience with Disney Plus Enhancements! This script adds new features to the Disney Plus video player.
-
-## Installation
-
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+Enhance your Disney Plus experience with automatic intro skipping, next episode playback, and smart fullscreen features.
 
 ## Features
 
-- Automatically skips intros or recaps if the button is present and visible.
-- Automatically plays the next episode if the button is present and visible.
-- Automatically enables fullscreen mode when a video starts.
-- Press F2 to open the settings dialog.
-- Press Escape to exit fullscreen mode.
+### ⏭️ Auto Skip
+- Automatically skips intros and recaps
+- Smart detection of skip buttons
+- Configurable skip behavior
+- Seamless viewing experience
 
-## Usage
+### 🎬 Playback Control
+- Auto-play next episode
+- Automatic fullscreen mode
+- Smart continuation system
+- Consistent playback settings
 
-- The script will automatically skip intros and recaps if the corresponding settings are enabled.
-- You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu or by pressing F2.
-- The script will automatically play the next episode if the corresponding settings are enabled.
-- The script will automatically enable fullscreen mode when a video starts.
+### ⚙️ Smart Settings
+- F2 hotkey for quick access
+- Easy toggle controls
+- Persistent preferences
+- Customizable behavior
 
-## Keyboard Shortcuts
+## Installation
 
-- Press F2 to open the settings dialog.
-- Press Escape to exit fullscreen mode.
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure settings using the F2 key
 
-## Author
+## Keyboard Controls
 
-JJJ
+| Key | Function |
+|-----|----------|
+| F2 | Open/close settings |
+| Escape | Exit fullscreen |
 
-## Version
+## Settings
 
-0.6.1
+Access the settings panel (F2) to customize:
+- Intro/recap skip behavior
+- Auto-play preferences
+- Fullscreen options
+- Playback settings
 
-## License
+## Version History
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+### v0.6.1
+- Enhanced skip detection
+- Improved fullscreen handling
+- Added persistent settings
+- Updated interface elements
 
-![Disney Plus Logo](https://www.google.com/s2/favicons?sz=64&domain=disneyplus.com)
+## Technical Details
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=disneyplus.com" alt="Disney Plus Icon">
+
+**Current Version: 0.6.1**
+</div>

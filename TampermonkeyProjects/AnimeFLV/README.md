@@ -1,79 +1,66 @@
 
 ---
-
-# **AnimeFLV Enhancements**
+# AnimeFLV Enhancements
 
 Enhance your AnimeFLV experience with automatic video provider selection and improved navigation features.
 
----
+## Features
 
-## **Installation**
+### 🎦 Provider Selection
+- Automatically selects your preferred video provider
+- Remembers settings across sessions
+- Quick access provider menu
+- Responsive and modern interface
 
-1. Install a user script manager in your browser, such as Tampermonkey
-2. Copy the script code
-3. Create a new script in Tampermonkey and paste the copied code
-4. Save the script
+### 📱 Navigation Controls
+- Floating "Page Up" button
+- Smooth scroll functionality
+- Animated visual feedback
+- Cross-browser compatibility
 
----
+### ⚙️ Smart Settings
+- F2 hotkey for quick access
+- Clean and modern interface
+- Persistent preferences
+- Error-resilient system
 
-## **Features**
+## Installation
 
-- **Automatic Provider Selection:**
-  - Remembers your preferred video provider
-  - Applies selection automatically on page load
-- **Custom Provider Menu:**
-  - Quick access with F2 hotkey
-  - Clean and modern interface
-  - Persistent settings across sessions
-- **Navigation Enhancements:**
-  - Floating "Page Up" button
-  - Animated glow effects
-  - Smooth scroll to top
-- **Technical Features:**
-  - Responsive design
-  - Error-resilient initialization
-  - Cross-browser compatibility
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure settings using the F2 key
 
----
+## Keyboard Controls
 
-## **Usage**
+| Key | Function |
+|-----|----------|
+| F2 | Open/close settings |
+| Page Up | Scroll to top |
 
-- Script runs automatically on AnimeFLV playback pages
-- Press **F2** to access the provider selection menu
-- Select provider and click "Confirmar" to save
-- Use the glowing Page Up button for quick navigation
+## Settings
 
----
+Access the settings panel (F2) to customize:
+- Default video provider
+- Navigation preferences
+- Interface options
 
-## **Requirements**
+## Version History
 
-- Tampermonkey browser extension
-- Modern web browser (Chrome, Firefox, Edge, etc.)
-- AnimeFLV access
-
----
-
-## **Changelog**
-
-### **v0.3.1**
-- Enhanced error handling
+### v0.3.1
+- Enhanced error handling system
 - Improved initialization process
 - Added responsive design elements
 - Updated menu styling
 
----
-
-## **Version**
-
-- **Current Version**: v0.3.1
-
----
-
-## **Author & License**
+## Technical Details
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 
-![AnimeFLV Icon](https://www.google.com/s2/favicons?sz=64&domain=animeflv.net)
-
 ---
+
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=animeflv.net" alt="AnimeFLV Icon">
+
+**Current Version: 0.3.1**
+</div>

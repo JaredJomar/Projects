@@ -1,38 +1,66 @@
+
+---
 # Serieslan Enhancements
 
-Enhance your Serieslan experience with Serieslan Enhancements! This script automatically selects the video provider option and changes the background color of the page to improve visibility and reduce eye strain.
-
-## Installation
-
-1. Install a user script manager in your browser, such as Tampermonkey.
-2. Create a new script in Tampermonkey and paste the provided script into the editor.
-3. Save the script.
+Enhance your Serieslan experience with automatic provider selection and improved visual comfort features.
 
 ## Features
 
-- Automatically selects the video provider option.
-- Changes the background color of the page to #2F353A to improve visibility and reduce eye strain.
-- Changes the text color to white for better readability.
+### 🎦 Provider Selection
+- Automatic video provider selection
+- Smart provider preferences
+- Instant application
+- Cross-browser support
 
-## Usage
+### 🎨 Visual Comfort
+- Dark theme background (#2F353A)
+- Enhanced text readability
+- Reduced eye strain
+- Consistent styling
 
-- The script will automatically select the video provider option and change the background color when you visit Serieslan.
-- You can enable or disable these features through the settings dialog, which can be accessed from the Tampermonkey menu.
+### ⚙️ Smart Settings
+- F2 hotkey for quick access
+- Easy toggle controls
+- Persistent preferences
+- Real-time updates
 
-## Keyboard Shortcuts
+## Installation
 
-- Press F2 to open the settings dialog.
+1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
+2. Click [here](#) to install the script (link coming soon)
+3. Configure settings using the F2 key
 
-## Author
+## Keyboard Controls
 
-JJJ
+| Key | Function |
+|-----|----------|
+| F2 | Open/close settings |
 
-## Version
+## Settings
 
-0.1
+Access the settings panel (F2) to customize:
+- Provider preferences
+- Visual theme options
+- Background color
+- Text visibility
 
-## License
+## Version History
 
-This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit/).
+### v0.1.0
+- Initial release
+- Added provider auto-selection
+- Implemented dark theme
+- Enhanced text visibility
 
-![Serieslan Logo](https://www.google.com/s2/favicons?sz=64&domain=serieslan.com)
+## Technical Details
+
+- **Author**: JJJ
+- **License**: [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+<div align="center">
+<img src="https://www.google.com/s2/favicons?sz=64&domain=serieslan.com" alt="Serieslan Icon">
+
+**Current Version: 0.1.0**
+</div>
