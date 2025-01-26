@@ -1,52 +1,135 @@
-/* Main chat container */
+/* Main container - Reset container dimensions and spacing */
 .chat-container {
     width: 100%;
     max-width: 100%;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
 }
 
-/* Text and messages area */
+/* Message display area - Ensure full width and proper spacing */
 .message-area {
     width: 100%;
     box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
-/* Chat input */
+/* Fixed input container at bottom of viewport */
 .chat-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     width: 100%;
     box-sizing: border-box;
+    padding: 1rem;
+    background-color: var(--background, #fff);
+    border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+    z-index: 1000;
 }
 
-/* Ensure text content uses full width */
+/* Center input container contents with max width */
+.chat-input>div {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Grid layout for input area - textarea and action buttons */
+.chat-input-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+/* Textarea styling - Adjustable height with limits */
+.chat-input textarea {
+    width: 100%;
+    max-width: 100%;
+    resize: none;
+    overflow-y: auto;
+    min-height: 48px;
+    height: auto !important;
+    max-height: 45vh !important;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+/* Message content - Text wrapping and full width */
 .message-content {
     width: 100%;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    box-sizing: border-box;
 }
 
-/* Responsive adjustments */
-@media (min-width: 768px) {
-    .chat-container {
-        padding: 0 1rem;
-    }
-
-    .message-area {
-        max-width: none;
-        width: 100%;
-    }
+/* Message container - Full width block layout */
+.message-wrapper {
+    display: block;
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
 }
 
-/* Remove maximum width restrictions */
+/* Override default width restrictions */
 .max-w-threadWidth,
 .max-w-full {
     max-width: none !important;
     width: 100% !important;
 }
 
-/* Ensure message container uses all available space */
-.message-wrapper {
-    display: block;
+/* Theme variables for consistent styling */
+:root {
+    --background: #fff;
+    --border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Grid row layout - Content and buttons */
+.grid-rows-1fr-auto {
+    grid-template-rows: minmax(0, 1fr) auto;
     width: 100%;
-    margin: 0;
+}
+
+/* Three-column grid layout */
+.grid-cols-3 {
+    width: 100%;
+}
+
+/* Full width column spanning */
+.col-start-1.col-end-4 {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Button row spacing adjustment */
+.row-start-2 {
+    margin-top: 8px;
+}
+
+/* Container height limit for scrollable content */
+.overflow-hidden {
+    max-height: 45vh;
+}
+
+/* Desktop and tablet layout adjustments */
+@media (min-width: 768px) {
+
+    /* Main container - Reset container dimensions and spacing */
+    .chat-container {
+        padding: 0;
+    }
+
+    /* Message display area - Ensure full width and proper spacing */
+    .message-area {
+        width: 100%;
+        max-width: none;
+    }
+
+    /* Fixed input container at bottom of viewport */
+    .chat-input {
+        padding: 1rem 2rem;
+    }
 }
