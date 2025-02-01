@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1.7
+// @version      0.1.8
 // @description  Quickly search various sites using custom shortcuts with an improved UI.
 // @author       JJJ
 // @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
@@ -88,15 +88,14 @@
         return baseUrl;
     };
 
-    const openNewTab = (url) => {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    };
+    // Remove or ignore the old openNewTab
+    // const openNewTab = (url) => { ... };
 
     const searchMultipleGamingPlatforms = (query) => {
         const platforms = ['g2', 'cd'];
         platforms.forEach(platform => {
             const searchUrl = constructSearchUrl(platform, query);
-            openNewTab(searchUrl);
+            openSearch(searchUrl);
         });
     };
 
@@ -105,7 +104,18 @@
         const [input, setInput] = React.useState('');
         const [results, setResults] = React.useState([]);
         const [currentEngine, setCurrentEngine] = React.useState(null);
+        // New state for opening in current tab
+        const [useCurrentTab, setUseCurrentTab] = React.useState(false);
         const inputRef = React.useRef(null);
+
+        // New helper that opens URL based on setting.
+        const openSearch = (url) => {
+            if (useCurrentTab) {
+                window.location.href = url;
+            } else {
+                window.open(url, 'newwindow', 'width=800,height=600,noopener,noreferrer');
+            }
+        };
 
         React.useEffect(() => {
             if (inputRef.current) {
@@ -142,11 +152,11 @@
                 const searchUrl = constructSearchUrl(shortcut, query || '');
                 const siteName = SEARCH_ENGINES[shortcut].name;
                 newResults.push({ type: 'link', url: searchUrl, message: `Searching ${siteName} for "${query}"` });
-                openNewTab(searchUrl);
+                openSearch(searchUrl);
             } else {
                 const searchUrl = SEARCH_ENGINES.g.url + encodeURIComponent(input);
                 newResults.push({ type: 'link', url: searchUrl, message: `Searching Google for "${input}"` });
-                openNewTab(searchUrl);
+                openSearch(searchUrl);
             }
 
             setResults(prevResults => [...newResults, ...prevResults]);
@@ -167,25 +177,40 @@
                         className: 'text-gray-400 hover:text-gray-200'
                     }, '×')
                 ),
-                React.createElement('div', { className: 'flex gap-2 mb-4 relative' },
-                    React.createElement('div', { className: 'flex-1 relative' },
-                        currentEngine && React.createElement('div', {
-                            className: 'absolute right-2 top-0 transform -translate-y-6 bg-blue-600 text-white text-xs px-2 py-1 rounded'
-                        }, currentEngine.name),
+                React.createElement('div', { className: 'flex gap-2 mb-4 items-center' },
+                    currentEngine && React.createElement('div', {
+                        className: 'bg-blue-600 text-white text-sm px-2 py-1 rounded'
+                    }, currentEngine.name),
+                    React.createElement('input', {
+                        ref: inputRef,
+                        type: 'text',
+                        value: input,
+                        onChange: (e) => setInput(e.target.value),
+                        onKeyPress: (e) => e.key === 'Enter' && handleSearch(),
+                        placeholder: 'Enter search command...',
+                        className: 'flex-1 px-3 py-2 bg-custom-darker border-0 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    })
+                ),
+                // New checkbox toggle for search target
+                React.createElement('div', { className: 'mb-4 flex items-center' },
+                    React.createElement('div', { className: 'toggle-switch' },
                         React.createElement('input', {
-                            ref: inputRef,
-                            type: 'text',
-                            value: input,
-                            onChange: (e) => setInput(e.target.value),
-                            onKeyPress: (e) => e.key === 'Enter' && handleSearch(),
-                            placeholder: 'Enter search command...',
-                            className: 'w-full px-3 py-2 bg-custom-darker border-0 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        })
+                            type: 'checkbox',
+                            id: 'useCurrentTab',
+                            checked: useCurrentTab,
+                            onChange: (e) => setUseCurrentTab(e.target.checked),
+                            className: 'toggle-checkbox'
+                        }),
+                        React.createElement('label', {
+                            htmlFor: 'useCurrentTab',
+                            className: 'toggle-label'
+                        },
+                            React.createElement('span', { className: 'toggle-button' })
+                        )
                     ),
-                    React.createElement('button', {
-                        onClick: handleSearch,
-                        className: 'min-w-[80px] px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 whitespace-nowrap flex-shrink-0'
-                    }, 'Search')
+                    React.createElement('span', { className: 'ml-2 text-gray-300 text-sm' },
+                        useCurrentTab ? 'Open in current tab' : 'Open in new window'
+                    )
                 ),
                 React.createElement('div', { className: 'space-y-2' },
                     results.map((result, index) =>
@@ -296,6 +321,44 @@
         .rounded-md { border-radius: 0.375rem; }
         .min-w-\\[80px\\] { min-width: 80px; }
         .-translate-y-6 { --tw-translate-y: -1.5rem; }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .toggle-checkbox {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-label {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .toggle-label .toggle-button {
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #2563eb;
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-button {
+            transform: translateX(20px);
+        }
     `);
 
     // Start the script

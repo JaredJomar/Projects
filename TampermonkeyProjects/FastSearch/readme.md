@@ -82,6 +82,10 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 
 ## Version History
 
+### v0.1.8
+- Added toggle switch to choose between opening in the current tab and a new window.
+- Improved UI accessibility and quick closure with the ESC key.
+
 ### v0.1.7
 - Added smart homepage navigation
 - Type shortcut without query to visit main site
