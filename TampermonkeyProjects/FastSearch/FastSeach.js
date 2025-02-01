@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1.6
+// @version      0.1.7
 // @description  Quickly search various sites using custom shortcuts with an improved UI.
 // @author       JJJ
-// @icon         https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn
+// @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
 // @match        *://*/*
 // @grant        GM_addStyle
 // @grant        window.focus
@@ -74,6 +74,11 @@
 
     const constructSearchUrl = (shortcut, query) => {
         const engine = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES.g;
+        if (!query.trim()) {
+            // Extract base domain using regex
+            const match = engine.url.match(/^https?:\/\/([\w.-]+\.[a-z]{2,})/);
+            return match ? `https://${match[1]}/` : engine.url;
+        }
         let baseUrl = engine.url;
         if (shortcut === 'epic') {
             baseUrl += `${encodeURIComponent(query)}&sortBy=relevancy&sortDir=DESC&count=40`;

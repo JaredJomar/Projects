@@ -8,6 +8,7 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 
 ### 🔍 Quick Search
 - Search across multiple platforms instantly
+- Type shortcut only to visit site homepage
 - Smart auto-suggestions
 - React-based modern interface
 - Keyboard-driven navigation
@@ -81,6 +82,12 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 
 ## Version History
 
+### v0.1.7
+- Added smart homepage navigation
+- Type shortcut without query to visit main site
+- Improved URL parsing and handling
+- Bug fixes and performance improvements
+
 ### v0.1.6
 - Added React-based search interface
 - Implemented auto-suggestions
@@ -95,7 +102,7 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 ---
 
 <div align="center">
-<img src="https://th.bing.com/th/id/OIG4.Zgw8Ep_gbQoBnQO33DyS?pid=ImgGn" alt="Search Icon" width="64">
+<img src="https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain" alt="Search Icon" width="64">
 
-**Current Version: 0.1.6**
+**Current Version: 0.1.7**
 </div>
