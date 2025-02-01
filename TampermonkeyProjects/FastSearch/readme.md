@@ -86,7 +86,6 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 - Added React-based search interface with Tailwind-inspired styling
 - Implemented smart homepage navigation and auto-suggestions
 - Added toggle switch for opening in current tab or new window
-- Enhanced gaming search functionality
 - Improved UI accessibility and quick closure with ESC key
 - Type shortcut without query to visit main site
 - Improved URL parsing and handling
