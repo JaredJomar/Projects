@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1.8
+// @version      0.1.5
 // @description  Quickly search various sites using custom shortcuts with an improved UI.
 // @author       JJJ
 // @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
