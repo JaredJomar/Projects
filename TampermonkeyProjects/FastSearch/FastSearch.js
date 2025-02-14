@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fast Search
 // @namespace    fast-search
-// @version      0.1.5
+// @version      0.1.6
 // @description  Quickly search various sites using custom shortcuts with an improved UI.
 // @author       JJJ
 // @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
@@ -49,6 +49,7 @@
         y: { name: "YouTube", url: "https://www.youtube.com/results?search_query=" },
         tk: { name: "TikTok", url: "https://www.tiktok.com/search?q=" },
         fi: { name: "Find That Meme", url: "https://findthatmeme.com/?search=" },
+        sp: { name: "Spotify", url: "https://open.spotify.com/search/" },
 
         // Gaming
         steam: { name: "Steam", url: "https://store.steampowered.com/search/?term=" },

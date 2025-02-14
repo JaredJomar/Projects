@@ -68,6 +68,7 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 | | `y` | YouTube |
 | | `tk` | TikTok |
 | | `fi` | Find That Meme |
+| | `sp` | Spotify |
 | **Gaming** | `steam` | Steam |
 | | `epic` | Epic Games |
 | | `gog` | GOG |
@@ -81,6 +82,9 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 | | `ls` | LookMovie (Shows) |
 
 ## Version History
+
+### v0.1.6
+- Added Spotify search integration
 
 ### v0.1.5
 - Added React-based search interface with Tailwind-inspired styling
