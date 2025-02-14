@@ -19,10 +19,10 @@ Enhance your Outlook Web App experience with quick email filter management throu
 - Mentions detection
 
 ### ⚡ Quick Access
-- F2 hotkey activation
+- F2 hotkey for filter menu
+- Left/Right arrows for email navigation
 - Clean popup interface
 - Auto-save preferences
-- Cross-browser support
 
 ## Installation
 
@@ -35,19 +35,26 @@ Enhance your Outlook Web App experience with quick email filter management throu
 | Key | Function |
 |-----|----------|
 | F2 | Open/close filter menu |
+| ← | Previous email |
+| → | Next email |
 | ESC | Close filter menu |
 
-## Settings
+## Available Filters
 
-Access the filter menu (F2) to select:
-- Unread Messages
-- All Messages
-- Flagged Items
-- Direct Messages
-- Attachments
-- Mentions
+- Unread
+- All
+- Flagged
+- To me
+- Has files
+- Mentions me
 
 ## Version History
+
+### v0.1.1
+- Added email navigation with arrow keys
+- Improved filter detection
+- Fixed route handling
+- Better error handling
 
 ### v0.1.0
 - Initial release with filter popup
@@ -59,11 +66,10 @@ Access the filter menu (F2) to select:
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
+- **Version**: 0.1.1
 
 ---
 
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=office.com" alt="Outlook Icon">
-
-**Current Version: 0.1.0**
 </div>
