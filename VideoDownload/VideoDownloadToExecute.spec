@@ -1,6 +1,11 @@
-# VideoDownloadToExecute: 
-# pyinstaller VideoDownloadToExecute.spec 
+import os
+import sys
+from pathlib import Path
+
 block_cipher = None
+
+# Use Windows-style path for icon
+icon_path = 'icons\\app_icon.ico'
 
 a = Analysis(
     ['main.py'],
@@ -12,7 +17,7 @@ a = Analysis(
         ('main_window.py', '.'),
         ('settings_window.py', '.'),
         ('settings.json', '.'),
-        ('icons/app_icon.ico', '.')
+        ('icons', 'icons'),
     ],
     hiddenimports=['PyQt5', 'yt_dlp'],
     hookspath=[],
@@ -38,11 +43,13 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icons/app_icon.ico'
+    icon=icon_path,
 )
