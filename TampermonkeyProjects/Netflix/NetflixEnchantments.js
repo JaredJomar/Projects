@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.4.3
+// @version      0.4.4
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
@@ -25,7 +25,7 @@
   };
 
   const SELECTORS = {
-    skipRecapButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.default-ltr-cache-1mjzmhv',
+    skipRecapButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.ltr-1mjzmhv[data-uia="player-skip-recap"]',
     skipIntroButton: '.button-primary.watch-video--skip-content-button.medium.hasLabel.ltr-1mjzmhv[data-uia="player-skip-intro"]',
     skipOutroButton: '.color-primary.hasLabel.hasIcon.ltr-1jtux27',
     fullscreenView: '.watch-video--player-view',
