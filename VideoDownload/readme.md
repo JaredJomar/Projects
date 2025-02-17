@@ -39,7 +39,7 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 ## 📥 Installation
 
 ### 💿 Method 1: Using the Executable
-1. ⬇️ Download [VideoDownload.exe](https://github.com/JaredJomar/Projects/raw/main/VideoDownload/dist/VideoDownload.exe)
+1. ⬇️ Download the latest [VideoDownload.exe](VideoDownload/VideoDownload.exe)
 2. 🏃 Run the application
 3. ⚙️ Go to the Settings tab
 4. 🔧 Use the installation buttons to install required dependencies:
