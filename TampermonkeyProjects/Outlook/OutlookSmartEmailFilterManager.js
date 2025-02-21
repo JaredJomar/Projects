@@ -8,6 +8,7 @@
 //               - Automatic filter application
 // @author       JJJ
 // @match        https://outlook.office.com/mail/*
+// @match        https://outlook.live.com/mail/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=office.com
 // @grant        none
 // @license      MIT
