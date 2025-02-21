@@ -85,6 +85,7 @@ Enhance your browsing experience with quick search shortcuts across multiple pla
 
 ### v0.1.6
 - Added Spotify search integration
+- Added help button  (❔)
 
 ### v0.1.5
 - Added React-based search interface with Tailwind-inspired styling

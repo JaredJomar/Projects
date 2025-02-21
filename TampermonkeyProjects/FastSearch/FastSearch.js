@@ -7,6 +7,8 @@
 // @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
 // @match        *://*/*
 // @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        window.focus
 // @run-at       document-end
 // @require      https://unpkg.com/react@17/umd/react.production.min.js
@@ -101,20 +103,29 @@
     };
 
     // React components
+    // Add localStorage support to the BotInterface component
     const BotInterface = ({ onClose }) => {
         const [input, setInput] = React.useState('');
         const [results, setResults] = React.useState([]);
         const [currentEngine, setCurrentEngine] = React.useState(null);
-        // New state for opening in current tab
-        const [useCurrentTab, setUseCurrentTab] = React.useState(false);
+        // Update openMode to use GM_getValue/setValue
+        const [openMode, setOpenMode] = React.useState(() => {
+            return GM_getValue('fastsearch_openmode', 'newwindow');
+        });
+        const [showHelp, setShowHelp] = React.useState(false);
         const inputRef = React.useRef(null);
 
-        // New helper that opens URL based on setting.
+        // Add effect to save openMode changes
+        React.useEffect(() => {
+            GM_setValue('fastsearch_openmode', openMode);
+        }, [openMode]);
+
+        // Update the openSearch function to handle only two modes
         const openSearch = (url) => {
-            if (useCurrentTab) {
+            if (openMode === 'currenttab') {
                 window.location.href = url;
             } else {
-                window.open(url, 'newwindow', 'width=800,height=600,noopener,noreferrer');
+                window.open(url, '', 'width=800,height=600,noopener');
             }
         };
 
@@ -170,7 +181,7 @@
         };
 
         return React.createElement('div', { className: 'fixed top-4 right-4 min-w-[20rem] max-w-[30rem] w-[90vw] bg-custom-dark shadow-lg rounded-lg overflow-hidden' },
-            React.createElement('div', { className: 'p-4' },
+            React.createElement('div', { className: 'p-4 relative' },
                 React.createElement('div', { className: 'flex justify-between items-center mb-4' },
                     React.createElement('h2', { className: 'text-lg font-bold text-white' }, 'Fast Search'),
                     React.createElement('button', {
@@ -192,26 +203,25 @@
                         className: 'flex-1 px-3 py-2 bg-custom-darker border-0 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
                     })
                 ),
-                // New checkbox toggle for search target
-                React.createElement('div', { className: 'mb-4 flex items-center' },
-                    React.createElement('div', { className: 'toggle-switch' },
-                        React.createElement('input', {
-                            type: 'checkbox',
-                            id: 'useCurrentTab',
-                            checked: useCurrentTab,
-                            onChange: (e) => setUseCurrentTab(e.target.checked),
-                            className: 'toggle-checkbox'
-                        }),
-                        React.createElement('label', {
-                            htmlFor: 'useCurrentTab',
-                            className: 'toggle-label'
+                // Replace the toggle section with a button toggle
+                React.createElement('div', { className: 'mb-4 flex items-center justify-between' },
+                    React.createElement('div', { className: 'flex items-center gap-3' },
+                        React.createElement('button', {
+                            onClick: () => setOpenMode(openMode === 'currenttab' ? 'newwindow' : 'currenttab'),
+                            className: 'toggle-button-switch flex items-center justify-start'
                         },
-                            React.createElement('span', { className: 'toggle-button' })
+                            React.createElement('div', {
+                                className: `toggle-slider ${openMode === 'currenttab' ? 'active' : ''}`
+                            })
+                        ),
+                        React.createElement('span', { className: 'text-gray-300 text-sm leading-none' },
+                            openMode === 'newwindow' ? 'New Window' : 'Current Tab'
                         )
                     ),
-                    React.createElement('span', { className: 'ml-2 text-gray-300 text-sm' },
-                        useCurrentTab ? 'Open in current tab' : 'Open in new window'
-                    )
+                    React.createElement('button', {
+                        onClick: () => setShowHelp(true),
+                        className: 'bg-custom-darker text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors'
+                    }, '❔')
                 ),
                 React.createElement('div', { className: 'space-y-2' },
                     results.map((result, index) =>
@@ -226,6 +236,87 @@
                                 : React.createElement('span', {
                                     className: 'text-gray-300'
                                 }, result.message)
+                        )
+                    )
+                ),
+                // Replace the help modal section:
+                showHelp && React.createElement('div', {
+                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2147483647]',
+                    onClick: () => setShowHelp(false)
+                },
+                    React.createElement('div', {
+                        className: 'bg-custom-dark p-6 rounded-lg max-w-4xl max-h-[80vh] overflow-y-auto text-white w-full mx-4',
+                        onClick: e => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                            React.createElement('h3', { className: 'text-lg font-bold' }, 'Fast Search Help'),
+                            React.createElement('button', {
+                                onClick: () => setShowHelp(false),
+                                className: 'text-gray-400 hover:text-white text-xl'
+                            }, '×')
+                        ),
+                        React.createElement('div', { className: 'grid grid-cols-2 gap-6' },
+                            // Left column - Shortcuts
+                            React.createElement('div', null,
+                                React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Search Shortcuts'),
+                                Object.entries({
+                                    'Search': ['a', 'g', 'b', 'd', 'gs', 'gi', 'ar', 'way', 'w', 'p'],
+                                    'Coding': ['gf', 'gh', 'so'],
+                                    'Social': ['r', 'li', 't', 'x', 'f', 'i', 'pi', 'tu', 'q', 'sc', 'y', 'tk', 'fi', 'sp'],
+                                    'Gaming': ['steam', 'epic', 'gog', 'ubi', 'g2', 'cd', 'ori', 'bat'],
+                                    'Movies and TV Shows': ['c', 'lm', 'ls']
+                                }).map(([category, shortcuts]) =>
+                                    React.createElement('div', { key: category, className: 'mb-4' },
+                                        React.createElement('h5', { className: 'text-gray-300 font-bold mb-2 text-sm' }, category),
+                                        React.createElement('ul', { className: 'space-y-1' },
+                                            shortcuts.map(shortcut =>
+                                                React.createElement('li', { key: shortcut, className: 'text-sm' },
+                                                    React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, shortcut),
+                                                    ': ',
+                                                    SEARCH_ENGINES[shortcut].name
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            ),
+                            // Right column - Usage & Options
+                            React.createElement('div', null,
+                                React.createElement('div', { className: 'mb-6' },
+                                    React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Opening Options'),
+                                    React.createElement('div', { className: 'bg-custom-darker p-4 rounded-lg' },
+                                        React.createElement('ul', { className: 'space-y-3' },
+                                            React.createElement('li', { className: 'text-sm' },
+                                                React.createElement('span', { className: 'text-blue-400 font-bold' }, 'New Window: '),
+                                                'Opens search in a popup window'
+                                            ),
+                                            React.createElement('li', { className: 'text-sm' },
+                                                React.createElement('span', { className: 'text-blue-400 font-bold' }, 'Current Tab: '),
+                                                'Replaces current page with search'
+                                            )
+                                        )
+                                    )
+                                ),
+                                React.createElement('div', { className: 'mb-6' },
+                                    React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Usage Tips'),
+                                    React.createElement('ul', { className: 'space-y-2 text-sm' },
+                                        React.createElement('li', null, '• Press ',
+                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Insert'),
+                                            ' to open Fast Search'
+                                        ),
+                                        React.createElement('li', null, '• Type shortcut followed by search terms'),
+                                        React.createElement('li', null, '• Press ',
+                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Enter'),
+                                            ' to search'
+                                        ),
+                                        React.createElement('li', null, '• Press ',
+                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Esc'),
+                                            ' to close'
+                                        ),
+                                        React.createElement('li', null, '• Type shortcut only to visit site homepage')
+                                    )
+                                )
+                            )
                         )
                     )
                 )
@@ -325,8 +416,8 @@
         .toggle-switch {
             position: relative;
             display: inline-block;
-            width: 40px;
-            height: 20px;
+            width: 50px;
+            height: 24px;
         }
         .toggle-checkbox {
             opacity: 0;
@@ -335,30 +426,66 @@
         }
         .toggle-label {
             position: absolute;
+            cursor: pointer;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            background-color: #15132a;
+            transition: .4s;
+            border-radius: 24px;
         }
-        .toggle-label .toggle-button {
+        .toggle-button {
             position: absolute;
-            height: 16px;
-            width: 16px;
+            height: 20px;
+            width: 20px;
             left: 2px;
             bottom: 2px;
-            background-color: white;
-            border-radius: 50%;
-            transition: transform 0.2s;
-        }
-        .toggle-checkbox:checked + .toggle-label {
             background-color: #2563eb;
+            transition: .4s;
+            border-radius: 50%;
         }
         .toggle-checkbox:checked + .toggle-label .toggle-button {
-            transform: translateX(20px);
+            transform: translateX(26px);
+        }
+        .grid { display: grid; }
+        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .gap-6 { gap: 1.5rem; }
+        .bg-custom-darker { background-color: #15132a; }
+        .p-6 { padding: 1.5rem; }
+        .max-w-4xl { max-width: 56rem; }
+        .max-h-\\[80vh\\] { max-height: 80vh; }
+        .overflow-y-auto { overflow-y: auto; }
+        .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+        .toggle-button-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background-color: #15132a;
+            border-radius: 24px;
+            padding: 2px;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+        }
+        .toggle-slider {
+            position: absolute;
+            height: 20px;
+            width: 20px;
+            background-color: #2563eb;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .toggle-slider.active {
+            transform: translateX(26px);
+        }
+        .gap-3 {
+            gap: 0.75rem;
+        }
+        .leading-none {
+            line-height: 1;
         }
     `);
 
