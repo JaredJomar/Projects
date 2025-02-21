@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.5.2
+// @version      0.5.3
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, claim drops, and add redeem buttons for GOG and Legacy Games on Twitch and Amazon Gaming websites.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
 // @match        https://gaming.amazon.com/*
 // @match        https://www.twitch.tv/drops/inventory*
 // @match        https://www.gog.com/en/redeem
-// @match        https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/
+// @match        https://promo.legacygames.com/*
 // @icon         https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -35,11 +35,12 @@
     const GOG_FINAL_REDEEM_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Redeem the code"]';
 
     // Redeem on Legacy Games Constants
-    const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/i-love-finding-cats-and-pups-ce-prime-deal/';
+    const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/royal-romances-cursed-hearts-ce-prime-deal/';
     const LEGACY_GAMES_CODE_INPUT_SELECTOR = '#primedeal_game_code';
     const LEGACY_GAMES_EMAIL_INPUT_SELECTOR = '#primedeal_email';
     const LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR = '#primedeal_email_validate';
     const LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR = '#submitbutton';
+    const LEGACY_GAMES_NEWSLETTER_CHECKBOX_SELECTOR = '#primedeal_newsletter';
 
     let claiming = false;
 
@@ -293,36 +294,59 @@
         }
     }
 
-    // Function to redeem code on Legacy Games
+    // Fuction to redeem code on Legacy Games
     function redeemCodeOnLegacyGames() {
-        navigator.clipboard.readText().then(function (code) {
-            const codeInput = document.querySelector(LEGACY_GAMES_CODE_INPUT_SELECTOR);
-            const emailInput = document.querySelector(LEGACY_GAMES_EMAIL_INPUT_SELECTOR);
-            const emailValidateInput = document.querySelector(LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR);
-            const email = GM_getValue('legacyGamesEmail', null);
+        const maxAttempts = 10;
+        let attempts = 0;
 
-            if (codeInput && emailInput && emailValidateInput && email) {
-                codeInput.value = code;
-                emailInput.value = email;
-                emailValidateInput.value = email;
+        const tryRedeem = () => {
+            if (attempts >= maxAttempts) return;
+            attempts++;
 
-                // Simulate input event to ensure any listeners are triggered
-                const inputEvent = new Event('input', { bubbles: true });
-                codeInput.dispatchEvent(inputEvent);
-                emailInput.dispatchEvent(inputEvent);
-                emailValidateInput.dispatchEvent(inputEvent);
+            navigator.clipboard.readText().then(function (code) {
+                const codeInput = document.querySelector(LEGACY_GAMES_CODE_INPUT_SELECTOR);
+                const emailInput = document.querySelector(LEGACY_GAMES_EMAIL_INPUT_SELECTOR);
+                const emailValidateInput = document.querySelector(LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR);
+                const submitButton = document.querySelector(LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR);
+                const newsletterCheckbox = document.querySelector(LEGACY_GAMES_NEWSLETTER_CHECKBOX_SELECTOR);
+                const email = GM_getValue('legacyGamesEmail', null);
 
-                // Click the submit button after a short delay
-                setTimeout(() => {
-                    const submitButton = document.querySelector(LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR);
-                    if (submitButton) {
-                        submitButton.click();
+                if (!codeInput || !emailInput || !emailValidateInput || !submitButton) {
+                    console.log('Waiting for elements to load...');
+                    setTimeout(tryRedeem, 1000);
+                    return;
+                }
+
+                if (email && code) {
+                    // Fill in the form
+                    codeInput.value = code;
+                    emailInput.value = email;
+                    emailValidateInput.value = email;
+
+                    // Ensure newsletter checkbox is unchecked
+                    if (newsletterCheckbox) {
+                        newsletterCheckbox.checked = false;
                     }
-                }, 500); // Adjust the delay as needed
-            }
-        }).catch(function (err) {
-            console.error('Failed to read clipboard contents: ', err);
-        });
+
+                    // Trigger input events
+                    [codeInput, emailInput, emailValidateInput].forEach(input => {
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+
+                    // Submit the form
+                    setTimeout(() => {
+                        submitButton.click();
+                        console.log('Form submitted with code:', code, 'and email:', email);
+                    }, 500);
+                }
+            }).catch(function (err) {
+                console.error('Failed to read clipboard contents: ', err);
+            });
+        };
+
+        // Start the redemption process
+        setTimeout(tryRedeem, 2000);
     }
 
     // Function to open all "Claim Game" buttons in new tabs
@@ -361,7 +385,7 @@
         window.addEventListener('load', redeemCodeOnGOG);
     }
 
-    if (window.location.hostname === 'promo.legacygames.com' && window.location.pathname === '/i-love-finding-cats-and-pups-ce-prime-deal/') {
+    if (window.location.hostname === 'promo.legacygames.com') {
         window.addEventListener('load', redeemCodeOnLegacyGames);
     }
 

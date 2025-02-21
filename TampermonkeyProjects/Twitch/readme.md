@@ -51,6 +51,13 @@ The script automatically:
 
 ## Version History
 
+### v0.5.3
+- Updated Legacy Games form integration with correct selectors
+- Added newsletter checkbox handling (defaults to unchecked)
+- Improved form submission reliability
+- Enhanced input event triggering
+- Optimized redemption process timing
+
 ### v0.5.2
 - Updated `CLAIM_DROPS_SELECTOR` for latest Twitch UI
 - Enhanced code reliability and performance
@@ -67,5 +74,5 @@ The script automatically:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=twitch.tv" alt="Twitch Icon">
 
-**Current Version: 0.5.2**
+**Current Version: 0.5.3**
 </div>
