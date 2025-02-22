@@ -116,12 +116,29 @@
         }
     }
 
-    // Function to claim prime rewards
+    // Function to claim prime rewards with retry
     function claimPrimeReward() {
-        const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
-        if (element) {
-            element.click();
-        }
+        const maxAttempts = 5;
+        let attempts = 0;
+
+        const tryClaim = () => {
+            if (attempts >= maxAttempts) {
+                console.log('Max attempts reached for claiming prime reward');
+                return;
+            }
+            attempts++;
+
+            const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
+            if (element) {
+                element.click();
+                console.log('Prime reward claimed');
+            } else {
+                console.log(`Attempt ${attempts}/${maxAttempts}: Waiting for prime reward button...`);
+                setTimeout(tryClaim, 1000);
+            }
+        };
+
+        setTimeout(tryClaim, 2000);
     }
 
     // Function to claim drops
@@ -294,9 +311,9 @@
         }
     }
 
-    // Fuction to redeem code on Legacy Games
+    // Function to redeem code on Legacy Games
     function redeemCodeOnLegacyGames() {
-        const maxAttempts = 10;
+        const maxAttempts = 5;
         let attempts = 0;
 
         const tryRedeem = () => {
