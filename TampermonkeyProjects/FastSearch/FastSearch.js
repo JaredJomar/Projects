@@ -6,6 +6,7 @@
 // @author       JJJ
 // @icon         https://th.bing.com/th/id/OUG.FC606EBD21BF6D1E0D5ABF01EACD594E?rs=1&pid=ImgDetMain
 // @match        *://*/*
+// @exclude      https://www.youtube.com/*/videos
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
