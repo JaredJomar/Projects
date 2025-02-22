@@ -114,7 +114,7 @@ const Features = {
             }
         },
 
-        // Function to handle option selection
+        // Updated handleOptionSelection method
         handleOptionSelection: async () => {
             const dropdown = document.getElementById('optionDropdown');
             if (!dropdown) return;
@@ -122,18 +122,23 @@ const Features = {
             const selectedOptionValue = dropdown.value;
             chrome.storage.local.set({ [CONFIG.storage.selectedOption]: selectedOptionValue });
 
-            const options = document.querySelectorAll(CONFIG.selectors.episodeList);
-            for (const option of options) {
-                if ((option.getAttribute('title') || option.textContent.trim()) === selectedOptionValue) {
-                    try {
+            try {
+                // Look for the provider button
+                const providerButtons = document.querySelectorAll('.CapiTnv.nav.nav-pills > li');
+                for (const button of providerButtons) {
+                    const buttonText = button.getAttribute('title') || button.textContent.trim();
+                    if (buttonText === selectedOptionValue) {
+                        // Force a small delay before clicking
                         await new Promise(resolve => setTimeout(resolve, CONFIG.delays.click));
-                        option.click();
+                        // Trigger a direct click on the button
+                        button.querySelector('a')?.click();
                         Features.OptionSelector.toggleMenu();
+                        console.log('Provider selected:', selectedOptionValue);
                         break;
-                    } catch (error) {
-                        console.error('Error clicking option:', error);
                     }
                 }
+            } catch (error) {
+                console.error('Error selecting provider:', error);
             }
         },
 
