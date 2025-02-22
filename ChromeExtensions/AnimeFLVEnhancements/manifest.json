@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "AnimeFLV Enhancements",
+    "version": "0.0.1",
+    "description": "Enhanced anime viewing experience with automatic sorting, download management, and navigation improvements",
+    "permissions": [
+        "storage",
+        "clipboardWrite"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.animeflv.net/anime/*",
+                "*://*.animeflv.net/ver/*"
+            ],
+            "css": [
+                "styles.css"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "icons": {
+        "48": "icon.png",
+        "128": "icon.png"
+    }
+}
