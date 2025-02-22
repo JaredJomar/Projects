@@ -162,6 +162,28 @@ const Features = {
             customMenu.appendChild(dropdownMenu);
             customMenu.appendChild(confirmButton);
             document.body.appendChild(customMenu);
+        },
+
+        // Add new method for auto-selecting provider
+        autoSelectProvider: async () => {
+            try {
+                const result = await new Promise(resolve => {
+                    chrome.storage.local.get([CONFIG.storage.selectedOption], resolve);
+                });
+
+                if (result[CONFIG.storage.selectedOption]) {
+                    const options = document.querySelectorAll(CONFIG.selectors.episodeList);
+                    for (const option of options) {
+                        if ((option.getAttribute('title') || option.textContent.trim()) === result[CONFIG.storage.selectedOption]) {
+                            await new Promise(resolve => setTimeout(resolve, CONFIG.delays.click));
+                            option.click();
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error auto-selecting provider:', error);
+            }
         }
     },
 
@@ -239,6 +261,8 @@ class AppInitializer {
 
             console.log('Successfully found element:', element);
             Features.OptionSelector.createCustomMenu();
+            // Add auto-select after menu creation
+            await Features.OptionSelector.autoSelectProvider();
             this.setupEventListeners();
 
         } catch (error) {
