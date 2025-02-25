@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "AnimeFLV Enhancements",
     "version": "0.0.1",
-    "description": "Enhanced anime viewing experience with automatic sorting, download management, and navigation improvements",
+    "description": "Enhancements for AnimeFLV - Automatic provider selection, Page Up button and Sort Episodes Ascending",
     "permissions": [
         "storage",
         "clipboardWrite"
