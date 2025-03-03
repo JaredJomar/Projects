@@ -1,1 +1,8 @@
+PyQt6
 PyPDF2
+PyMuPDF
+pdf2docx
+tabula-py
+python-pptx
+pdfplumber
+pandas

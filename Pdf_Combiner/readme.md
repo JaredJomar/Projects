@@ -1,64 +1,87 @@
-# PDF Tool
+# 📑 PDF Tool
+A powerful and modern PDF utility tool built with Python and PyQt6, offering comprehensive PDF manipulation features through an intuitive dark-themed interface.
 
-This program is a simple PDF utility tool that provides functionality to combine multiple PDF files into one, split a PDF file into individual pages, and extract specific pages from a PDF file. The tool is built using Python and the Tkinter library for the graphical user interface.
+![PDF Tool Interface](main.png)
 
-## Features
+## ✨ Features
 
-1. **Combine PDFs:**
-   - Click the "Combine PDFs" button to select multiple PDF files.
-   - Choose the output location and filename for the combined PDF.
-   - The tool will merge the selected PDFs into a single PDF file.
+### 📁 File Management
+- 🔍 Select multiple PDF files via browse dialog
+- 🖱️ Drag and drop PDF files directly into the application
+- 🔄 Drag and drop support for reordering files
+- ☑️ File list with checkboxes for selective operations
+- 👀 Real-time PDF preview with page navigation
+- 📌 "Select All" function for batch operations
+- 🗂️ Remember last used directory
 
-2. **Split PDF:**
-   - Click the "Split PDF" button to choose a PDF file for splitting.
-   - Select a directory where individual pages will be saved as separate PDF files.
-   - The tool will create a PDF file for each page of the original PDF.
+### 📄 PDF Operations
+- 🔗 Combine multiple PDFs into a single file
+- ✂️ Split PDFs into individual pages (with organized folder)
+- 📑 Extract specific pages (supports ranges like "1,3,5-10")
+- 🔄 Rotate PDF pages (90°, 180°, 270°)
+- 🗜️ Compress PDFs to reduce file size
+- 🔄 Convert PDFs to other formats:
+  - 📝 Word (.docx)
+  - 📊 Excel (.xlsx)
+  - 📎 PowerPoint (.pptx)
+  - 📄 Text (.txt)
 
-3. **Extract Pages:**
-   - Click the "Extract Pages" button to select a PDF file.
-   - Enter page numbers (comma-separated) to extract specific pages.
-   - Choose a directory to save the extracted pages as a new PDF file.
+### 🎨 User Interface
+- 🌙 Modern dark theme interface
+- 👀 Real-time PDF preview
+- ⬅️➡️ Page navigation controls
+- 📊 Status bar for operation feedback
+- 📏 Resizable split-view layout
 
-## Usage
+## 🚀 Usage
 
-1. **Combine PDFs:**
-   - Run the program.
-   - Click "Combine PDFs" and select multiple PDF files.
-   - Choose an output location and filename for the combined PDF.
-   - Click "Save" to complete the process.
+### 📁 File Selection
+1. Click "Browse PDF Files" or drag and drop PDFs
+2. Use checkboxes to select files for operations
+3. Reorder files using drag and drop or arrow buttons
+4. Set output directory to save results
 
-2. **Split PDF:**
-   - Run the program.
-   - Click "Split PDF" and select a PDF file.
-   - Choose a directory to save individual pages as separate PDF files.
-   - Click "Save" to complete the process.
+### 📄 PDF Operations
+- **🔗 Combine:** Select multiple PDFs and click "Merge Selected PDFs"
+- **✂️ Split:** Select a PDF and click "Split PDF" (creates a folder with all pages)
+- **📑 Extract:** Enter page numbers and click "Extract Pages"
+- **🔄 Rotate:** Enter rotation angle and click "Rotate PDF"
+- **🗜️ Compress:** Select a PDF and click "Compress PDF"
+- **🔄 Convert:** Choose output format and click "Convert PDF"
 
-3. **Extract Pages:**
-   - Run the program.
-   - Click "Extract Pages" and select a PDF file.
-   - Enter page numbers to extract (comma-separated).
-   - Choose a directory to save the extracted pages as a new PDF file.
-   - Click "Save" to complete the process.
+### 👀 Preview
+- Click any file to preview its contents
+- Use navigation buttons or enter page numbers
+- Preview updates automatically when selecting different files
 
-## Additional Information
+## 📋 Requirements
 
-- The program remembers the last used directory for file operations.
-- The GUI is designed with a simple and intuitive layout.
-- The window is positioned at the center of the screen for convenience.
+- 🐍 Python 3.x
+- 🖼️ PyQt6 (GUI framework)
+- 📄 PyPDF2 (basic PDF manipulation)
+- 📊 PyMuPDF (advanced PDF rendering and manipulation)
+- 🔄 Additional libraries for conversion features:
+  - 📝 pdf2docx (Word conversion)
+  - 📊 tabula-py (Excel conversion)
+  - 📎 python-pptx (PowerPoint conversion)
+  - 📄 pdfplumber (text extraction)
 
-## Requirements
-
-- Python 3.x
-- PyPDF2 library
-- Tkinter library
-
-## Installation
+## 🔧 Installation
 
 1. Install Python: [Python Official Website](https://www.python.org/downloads/)
 2. Install required libraries:
    ```bash
-   pip install -r requirements.txt
+  pip install -r requirements.txt
+   ```
 
-## License
+## ⚠️ Notes
+
+- ☕ Java is required for Excel conversion (using tabula-py)
+- ⏳ Some operations may take longer for large PDF files
+- 🗄️ Splitting a PDF creates a folder with all individual pages
+- 💾 The program remembers last used directory
+- 🛠️ Processed files are named with descriptive suffixes (_compressed, _rotated, etc.)
+
+## 📄 License
 
 [MIT](https://choosealicense.com/licenses/mit/)
