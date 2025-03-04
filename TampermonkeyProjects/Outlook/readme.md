@@ -78,8 +78,6 @@ Enhance your Outlook Web App experience with quick email filter management and a
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
 - **Version**: 0.0.3
-- **Last Updated**: 2024
-
 ---
 
 <div align="center">
