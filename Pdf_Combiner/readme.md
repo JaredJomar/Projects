@@ -71,7 +71,7 @@ A powerful and modern PDF utility tool built with Python and PyQt6, offering com
 1. Install Python: [Python Official Website](https://www.python.org/downloads/)
 2. Install required libraries:
    ```bash
-  pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
 
 ## ⚠️ Notes
