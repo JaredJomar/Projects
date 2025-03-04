@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook Smart Email Filter Manager
 // @namespace    http://tampermonkey.net/
-// @version      0.1.1
+// @version      0.0.3
 // @description  Manage Outlook Web App email filters with a popup. Features:
 //               - Press F2 to open filter selection
 //               - Left/Right arrows to navigate between emails
@@ -50,6 +50,17 @@
         ],
         // Add mail ID pattern
         MAIL_ID_PATTERN: /\/id\/[A-Za-z0-9%]+/
+    };
+
+    // Update the SELECTORS constant with better targeting
+    const SELECTORS = {
+        ACCOUNT_BUTTON: 'button[id="mectrl_main_trigger"]',
+        ACCOUNT_LIST: [
+            '.mectrl_accountList .mectrl_accountItem a.switchTo',  // Regular account switch links
+            '.mectrl_accountList li a[id*="switch"]',              // Alternative switch links
+            '.mectrl_accountList .mectrl_accountItem a.signIn',    // "Sign in with different account" option
+            '.mectrl_accountList .mectrl_accountItem a'            // Any account link as last resort
+        ]
     };
 
     let currentRoute = '';
@@ -249,6 +260,12 @@
             case "ArrowRight":
                 clickNavigationButton("next");
                 break;
+            case "s":
+                if (e.altKey) {
+                    e.preventDefault();
+                    switchToNextAccount();
+                }
+                break;
         }
     }
 
@@ -316,6 +333,131 @@
         }
     }
 
+    /**
+     * Switches to the next account in the account list
+     */
+    function switchToNextAccount() {
+        // Find the main account trigger button
+        const accountButton = document.querySelector(SELECTORS.ACCOUNT_BUTTON);
+        if (!accountButton) {
+            console.log("Account button not found, searching by alternative selectors");
+            // Try alternative selector
+            const altButton = document.querySelector('[aria-label*="Account manager"]');
+            if (altButton) {
+                console.log("Found alternative account button:", altButton.getAttribute('aria-label'));
+                altButton.click();
+            } else {
+                console.log("No account button found");
+                return;
+            }
+        } else {
+            console.log("Found account button with ID:", accountButton.id);
+            accountButton.click();
+        }
+
+        // Add debug information
+        console.log("Account button clicked, waiting for menu to open");
+
+        setTimeout(() => {
+            // Dump HTML for debugging
+            console.log("Menu HTML:", document.querySelector('.mectrl_accountList_container')?.outerHTML || "Not found");
+
+            // Try each selector in order until we find accounts
+            let accountFound = false;
+
+            for (const selector of SELECTORS.ACCOUNT_LIST) {
+                const accounts = document.querySelectorAll(selector);
+                const accountArray = Array.from(accounts);
+
+                console.log(`Trying selector "${selector}": Found ${accountArray.length} items`);
+
+                if (accountArray.length > 0) {
+                    // Check if this is a "Sign in with different account" link
+                    const isSignInLink = accountArray[0].classList.contains('signIn') ||
+                        accountArray[0].id === 'mectrl_signInItem';
+
+                    if (isSignInLink) {
+                        console.log(`Found "Sign in with different account" link - clicking it`);
+                    } else {
+                        console.log(`Found account link: ${accountArray[0].getAttribute('aria-label') || 'Unnamed account'}`);
+                    }
+
+                    // Click the first account link we found
+                    accountArray[0].click();
+                    accountFound = true;
+                    break;
+                }
+            }
+
+            if (!accountFound) {
+                console.log("No account links found with any selector");
+                // Close the menu
+                setTimeout(() => {
+                    if (accountButton) accountButton.click();
+                }, 100);
+            }
+        }, 2000); // Increased timeout further to ensure menu is fully loaded
+    }
+
+    /**
+     * Removes the ad element from the page and sets up an observer to prevent it from reappearing
+     */
+    function removeAdElement() {
+        // Function to remove ads when found
+        const removeAds = () => {
+            // Target multiple potential selectors for the ad
+            const adSelectors = ['.GssDD', '.z0duZ', 'div[class*="OutlookLogo"]', 'div:has(span:contains("Ad-Free Outlook"))'];
+
+            // Try each selector
+            for (const selector of adSelectors) {
+                try {
+                    const elements = document.querySelectorAll(selector);
+                    if (elements.length > 0) {
+                        elements.forEach(el => {
+                            // For each ad element found, also try to remove its parent container
+                            try {
+                                const parent = el.closest('.GssDD') || el.parentElement;
+                                if (parent && parent !== document.body) {
+                                    parent.remove();
+                                    console.log(`Ad element with parent removed: ${selector}`);
+                                } else {
+                                    el.remove();
+                                    console.log(`Ad element removed: ${selector}`);
+                                }
+                            } catch (e) {
+                                console.log(`Error removing ad parent: ${e.message}`);
+                                el.remove();
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.log(`Error with selector ${selector}: ${e.message}`);
+                }
+            }
+        };
+
+        // Remove ads initially
+        removeAds();
+
+        // Set up an observer to watch for new ads
+        const adObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.addedNodes.length) {
+                    removeAds();
+                }
+            }
+        });
+
+        // Start observing the document for ad insertions
+        adObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Also check periodically for ads (backup solution)
+        setInterval(removeAds, 5000);
+    }
+
     // Enhance initialization
     function initialize() {
         popup = createFilterPopup();
@@ -334,6 +476,9 @@
             childList: true,
             characterData: false
         });
+
+        // Remove the ad element (with priority)
+        removeAdElement();
 
         // Initial check
         console.log("Outlook Filter Manager initialized");

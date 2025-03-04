@@ -2,7 +2,7 @@
 ---
 # Outlook Smart Email Filter
 
-Enhance your Outlook Web App experience with quick email filter management through an elegant popup interface.
+Enhance your Outlook Web App experience with quick email filter management and additional quality-of-life improvements.
 
 ## Features
 
@@ -12,17 +12,21 @@ Enhance your Outlook Web App experience with quick email filter management throu
 - Persistent filter preferences
 - Modern interface design
 
-### 🔍 Smart Filters
-- Unread messages filter
-- Flagged items tracking
-- Attachment filtering
-- Mentions detection
+### 🔄 Account Management
+- Quick account switching with Alt+S
+- Support for multiple Outlook accounts
+- Seamless account transitions
+
+### 🚫 Ad Management
+- Automatic ad removal
+- Continuous ad blocking
+- Clean interface maintenance
 
 ### ⚡ Quick Access
 - F2 hotkey for filter menu
 - Left/Right arrows for email navigation
+- Alt+S for account switching
 - Clean popup interface
-- Auto-save preferences
 
 ## Installation
 
@@ -37,6 +41,7 @@ Enhance your Outlook Web App experience with quick email filter management throu
 | F2 | Open/close filter menu |
 | ← | Previous email |
 | → | Next email |
+| Alt+S | Switch account |
 | ESC | Close filter menu |
 
 ## Available Filters
@@ -50,13 +55,19 @@ Enhance your Outlook Web App experience with quick email filter management throu
 
 ## Version History
 
-### v0.1.1
+### v0.0.3
+- Added account switching functionality
+- Implemented automatic ad removal
+- Enhanced route handling
+- Improved account detection
+
+### v0.0.2
 - Added email navigation with arrow keys
 - Improved filter detection
 - Fixed route handling
 - Better error handling
 
-### v0.1.0
+### v0.0.1
 - Initial release with filter popup
 - Added keyboard shortcuts
 - Implemented persistent settings
@@ -66,7 +77,8 @@ Enhance your Outlook Web App experience with quick email filter management throu
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
-- **Version**: 0.1.1
+- **Version**: 0.0.3
+- **Last Updated**: 2024
 
 ---
 
