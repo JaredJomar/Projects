@@ -18,6 +18,33 @@
 
 (function () {
     'use strict';
+
+    // Add logger configuration
+    const Logger = {
+        styles: {
+            info: 'color: #2196F3; font-weight: bold',
+            warning: 'color: #FFC107; font-weight: bold',
+            success: 'color: #4CAF50; font-weight: bold',
+            error: 'color: #F44336; font-weight: bold'
+        },
+        prefix: '[TwitchEnhancements]',
+        getTimestamp() {
+            return new Date().toISOString().split('T')[1].slice(0, -1);
+        },
+        info(msg) {
+            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.info);
+        },
+        warning(msg) {
+            console.warn(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.warning);
+        },
+        success(msg) {
+            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.success);
+        },
+        error(msg) {
+            console.error(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.error);
+        }
+    };
+
     // Twitch Constants
     const PLAYER_SELECTOR = '.video-player';
     const THEATER_MODE_BUTTON_SELECTOR = 'button[aria-label="Modo cine (alt+t)"], button[aria-label="Theatre Mode (alt+t)"]';
@@ -73,7 +100,7 @@
                 clickButton(THEATER_MODE_BUTTON_SELECTOR);
             }
         } else {
-            console.error('Player not found');
+            Logger.error('Player not found');
         }
     }
 
@@ -84,14 +111,14 @@
         if (globalMenu) {
             globalMenu.style.display = 'none';
         } else {
-            console.error('Global menu not found');
+            Logger.error('Global menu not found');
         }
     }
 
     // Function to automatically claim channel points
     function autoClaimBonus() {
         if (MutationObserver) {
-            console.log('Auto claimer is enabled.');
+            Logger.info('Auto claimer is enabled.');
 
             let observer = new MutationObserver(mutationsList => {
                 for (let mutation of mutationsList) {
@@ -102,7 +129,7 @@
                             let date = new Date();
                             claiming = true;
                             setTimeout(() => {
-                                console.log('Claimed at ' + date.toLocaleString());
+                                Logger.success('Claimed at ' + date.toLocaleString());
                                 claiming = false;
                             }, Math.random() * 1000 + 2000);
                         }
@@ -112,7 +139,7 @@
 
             observer.observe(document.body, { childList: true, subtree: true });
         } else {
-            console.log('MutationObserver is not supported in this browser.');
+            Logger.warning('MutationObserver is not supported in this browser.');
         }
     }
 
@@ -123,7 +150,7 @@
 
         const tryClaim = () => {
             if (attempts >= maxAttempts) {
-                console.log('Max attempts reached for claiming prime reward');
+                Logger.warning('Max attempts reached for claiming prime reward');
                 return;
             }
             attempts++;
@@ -131,9 +158,9 @@
             const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
             if (element) {
                 element.click();
-                console.log('Prime reward claimed');
+                Logger.success('Prime reward claimed');
             } else {
-                console.log(`Attempt ${attempts}/${maxAttempts}: Waiting for prime reward button...`);
+                Logger.info(`Attempt ${attempts}/${maxAttempts}: Waiting for prime reward button...`);
                 setTimeout(tryClaim, 1000);
             }
         };
@@ -240,7 +267,7 @@
                 }, 500); // Adjust the delay as needed
             }
         }).catch(function (err) {
-            console.error('Failed to read clipboard contents: ', err);
+            Logger.error('Failed to read clipboard contents: ' + err);
         });
     }
 
@@ -329,7 +356,7 @@
                 const email = GM_getValue('legacyGamesEmail', null);
 
                 if (!codeInput || !emailInput || !emailValidateInput || !submitButton) {
-                    console.log('Waiting for elements to load...');
+                    Logger.info('Waiting for elements to load...');
                     setTimeout(tryRedeem, 1000);
                     return;
                 }
@@ -354,11 +381,11 @@
                     // Submit the form
                     setTimeout(() => {
                         submitButton.click();
-                        console.log('Form submitted with code:', code, 'and email:', email);
+                        Logger.success('Form submitted with code: ' + code + ' and email: ' + email);
                     }, 500);
                 }
             }).catch(function (err) {
-                console.error('Failed to read clipboard contents: ', err);
+                Logger.error('Failed to read clipboard contents: ' + err);
             });
         };
 
@@ -423,12 +450,162 @@
     let o = new MutationObserver((m) => {
         let script = document.createElement("script");
         script.innerHTML = `
-        const openClaimGameTabs=()=>{const claimGameButtons=document.querySelectorAll('div[data-a-target="tw-core-button-label-text"].Layout-sc-1xcs6mc-0.bFxzAY');claimGameButtons.forEach(button=>{const parentButton=button.closest('a');if(parentButton){window.open(parentButton.href,'_blank');}});};
+        // Add logger configuration for client-side script
+        const Logger = {
+            styles: {
+                info: 'color: #2196F3; font-weight: bold',
+                warning: 'color: #FFC107; font-weight: bold',
+                success: 'color: #4CAF50; font-weight: bold',
+                error: 'color: #F44336; font-weight: bold'
+            },
+            prefix: '[TwitchEnhancements]',
+            getTimestamp() {
+                return new Date().toISOString().split('T')[1].slice(0, -1);
+            },
+            info(msg) {
+                console.log(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.info);
+            },
+            warning(msg) {
+                console.warn(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.warning);
+            },
+            success(msg) {
+                console.log(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.success);
+            },
+            error(msg) {
+                console.error(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.error);
+            }
+        };
+        
+        const openClaimGameTabs = () => {
+            // More specific selector targeting only prime offer buttons
+            const allButtonTexts = document.querySelectorAll('div[data-a-target="tw-core-button-label-text"]');
+            
+            // Filter buttons to only include those with text "Claim Game" or just "Claim"
+            const claimGameButtons = Array.from(allButtonTexts).filter(button => {
+                const text = button.textContent.trim();
+                return (text === "Claim Game" || text === "Claim") && 
+                       button.closest('a') && // Must be inside an anchor tag
+                       button.closest('.prime-offer'); // Must be inside a prime offer
+            });
+            
+            Logger.info(\`Found \${claimGameButtons.length} valid claim buttons\`);
+            
+            // Open each valid claim button in a new tab
+            claimGameButtons.forEach(button => {
+                const parentButton = button.closest('a');
+                if (parentButton && parentButton.href && 
+                    (parentButton.href.includes('gaming.amazon.com') || 
+                     parentButton.href.includes('?ingress=twch'))) {
+                    window.open(parentButton.href, '_blank');
+                }
+            });
+        };
+        
+        const removeClaimedItems = () => {
+            // Find ALL items in the list, not just claimed ones
+            const allItems = document.querySelectorAll('.prime-offer');
+            let dismissedCount = 0;
+            let dismissButtons = [];
+            
+            Logger.info(\`Found \${allItems.length} total items to dismiss\`);
+            
+            // First collect all dismiss buttons - use multiple methods to ensure we catch all
+            // Method 1: Find buttons by attribute and data target
+            document.querySelectorAll('button[aria-label="Dismiss"][data-a-target="prime-offer-dismiss-button"]').forEach(btn => {
+                dismissButtons.push(btn);
+            });
+            
+            // Method 2: Find buttons by test selector attribute as backup
+            document.querySelectorAll('button[data-test-selector="prime-offer-dismiss-button"]').forEach(btn => {
+                if (!dismissButtons.includes(btn)) {
+                    dismissButtons.push(btn);
+                }
+            });
+            
+            // Method 3: Find by class and structure if the above methods miss any
+            document.querySelectorAll('.prime-offer__dismiss button').forEach(btn => {
+                if (!dismissButtons.includes(btn)) {
+                    dismissButtons.push(btn);
+                }
+            });
+            
+            // Deduplicate just in case
+            dismissButtons = [...new Set(dismissButtons)];
+            
+            Logger.info(\`Found \${dismissButtons.length} dismiss buttons to click\`);
+            
+            // Process dismiss buttons with a delay to avoid UI lockups
+            if (dismissButtons.length > 0) {
+                const clickNextButton = (index) => {
+                    if (index < dismissButtons.length) {
+                        try {
+                            dismissButtons[index].click();
+                            dismissedCount++;
+                            
+                            // Show progress in console
+                            if (dismissedCount % 5 === 0 || dismissedCount === dismissButtons.length) {
+                                Logger.info(\`Dismissed \${dismissedCount} of \${dismissButtons.length} items...\`);
+                            }
+                        } catch (e) {
+                            Logger.error(\`Error clicking button \${index}: \` + e);
+                        }
+                        
+                        // Schedule next button click with a small delay
+                        setTimeout(() => clickNextButton(index + 1), 75);
+                    } else {
+                        Logger.success(\`Completed! Dismissed \${dismissedCount} items total.\`);
+                        
+                        // Look for any dismiss buttons that might have been missed
+                        const remainingButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
+                        if (remainingButtons.length > 0) {
+                            Logger.warning(\`Found \${remainingButtons.length} additional buttons to try\`);
+                            
+                            // Try to click any remaining dismiss buttons as a final pass
+                            remainingButtons.forEach(btn => {
+                                try {
+                                    btn.click();
+                                    dismissedCount++;
+                                } catch(e) {}
+                            });
+                            
+                            Logger.success(\`Final dismissal count: \${dismissedCount}\`);
+                        }
+                    }
+                };
+                
+                // Start the dismissal process
+                clickNextButton(0);
+            } else {
+                Logger.warning('No dismiss buttons found to click');
+                
+                // Last attempt fallback - try to find any button with "Dismiss" in aria-label
+                const fallbackButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
+                if (fallbackButtons.length > 0) {
+                    Logger.warning(\`Fallback: Found \${fallbackButtons.length} buttons with aria-label="Dismiss"\`);
+                    fallbackButtons.forEach(btn => {
+                        try {
+                            btn.click();
+                            dismissedCount++;
+                        } catch(e) {}
+                    });
+                    Logger.success(\`Fallback dismissal completed: \${dismissedCount} items dismissed\`);
+                }
+            }
+        };
     `;
         document.getElementById("PrimeOfferPopover-header").innerHTML = "";
         document.getElementById("PrimeOfferPopover-header").appendChild(script);
         document.getElementById("PrimeOfferPopover-header").innerHTML += `
-        <input type='button' style='border: none; background-color: #9147ff; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer;' class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-full-width tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative' value='Claim All' onclick='openClaimGameTabs();'>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type='button' style='border: none; background-color: #9147ff; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer; flex: 1;' 
+                class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative' 
+                value='Claim All' 
+                onclick='openClaimGameTabs();'>
+            <input type='button' style='border: none; background-color: #772ce8; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer; flex: 1;' 
+                class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative' 
+                value='Remove All' 
+                onclick='removeClaimedItems();'>
+        </div>
     `;
     });
 

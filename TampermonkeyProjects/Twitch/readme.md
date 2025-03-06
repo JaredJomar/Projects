@@ -10,6 +10,7 @@ Enhance your Twitch and Amazon Gaming experience with automated rewards claiming
 - Automatic channel points claiming with visual console confirmation
 - Auto-claim prime rewards on gaming.amazon.com
 - Batch claiming with "Claim All" button for multiple games
+- "Remove All" button to quickly dismiss all items
 - Automatic Twitch drops claiming with 15-minute refresh cycle
 
 ### 🎮 Platform Integration
@@ -45,13 +46,20 @@ The script automatically:
 | Platform | Features |
 |----------|-----------|
 | Twitch | Points Claiming, Drops Auto-Claim, Theater Mode |
-| Amazon Gaming | Prime Rewards, Batch Claims, "Claim All" Button |
+| Amazon Gaming | Prime Rewards, Batch Claims, "Claim All" & "Remove All" Buttons |
 | GOG | One-Click Code Redemption, Auto-Copy |
 | Legacy Games | Code Redemption, Email Save Feature |
 
 ## Version History
 
 ### v0.5.3
+- Added "Remove All" button to dismiss all items at once
+- Fixed "Claim All" button to target only valid game claim buttons
+- Improved button behaviors with sequential dismissal
+- Added progress indicators for bulk operations
+- Fixed issues with unwanted links being opened
+- Implemented structured Logger system with color-coded console messages
+- Added visual feedback with timestamp for script operations
 - Updated Legacy Games form integration with correct selectors
 - Added newsletter checkbox handling (defaults to unchecked)
 - Improved form submission reliability
@@ -74,5 +82,5 @@ The script automatically:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=twitch.tv" alt="Twitch Icon">
 
-**Current Version: 0.5.3**
+**Current Version: 0.5.3*
 </div>
