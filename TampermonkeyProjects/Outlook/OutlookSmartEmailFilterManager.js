@@ -358,45 +358,74 @@
         // Add debug information
         console.log("Account button clicked, waiting for menu to open");
 
-        setTimeout(() => {
-            // Dump HTML for debugging
-            console.log("Menu HTML:", document.querySelector('.mectrl_accountList_container')?.outerHTML || "Not found");
+        // Set up observer to wait for menu to appear
+        const menuObserver = new MutationObserver((mutations, observer) => {
+            // Check for account list container or any account items
+            const menuContainer = document.querySelector('.mectrl_accountList_container, .mectrl_accountList');
 
-            // Try each selector in order until we find accounts
-            let accountFound = false;
+            if (menuContainer) {
+                // Disconnect observer once we've found the menu
+                observer.disconnect();
+                console.log("Menu container found, waiting 3 seconds for accounts to fully load...");
 
-            for (const selector of SELECTORS.ACCOUNT_LIST) {
-                const accounts = document.querySelectorAll(selector);
-                const accountArray = Array.from(accounts);
+                // Wait 3 seconds to give time for all accounts to appear
+                setTimeout(() => {
+                    // Dump HTML for debugging
+                    console.log("Menu HTML:", menuContainer.outerHTML || "Not found");
 
-                console.log(`Trying selector "${selector}": Found ${accountArray.length} items`);
+                    // Try each selector in order until we find accounts
+                    let accountFound = false;
 
-                if (accountArray.length > 0) {
-                    // Check if this is a "Sign in with different account" link
-                    const isSignInLink = accountArray[0].classList.contains('signIn') ||
-                        accountArray[0].id === 'mectrl_signInItem';
+                    for (const selector of SELECTORS.ACCOUNT_LIST) {
+                        const accounts = document.querySelectorAll(selector);
+                        const accountArray = Array.from(accounts);
 
-                    if (isSignInLink) {
-                        console.log(`Found "Sign in with different account" link - clicking it`);
-                    } else {
-                        console.log(`Found account link: ${accountArray[0].getAttribute('aria-label') || 'Unnamed account'}`);
+                        console.log(`Trying selector "${selector}": Found ${accountArray.length} items`);
+
+                        if (accountArray.length > 0) {
+                            // Check if this is a "Sign in with different account" link
+                            const isSignInLink = accountArray[0].classList.contains('signIn') ||
+                                accountArray[0].id === 'mectrl_signInItem';
+
+                            if (isSignInLink) {
+                                console.log(`Found "Sign in with different account" link - clicking it`);
+                            } else {
+                                console.log(`Found account link: ${accountArray[0].getAttribute('aria-label') || 'Unnamed account'}`);
+                            }
+
+                            // Click the first account link we found
+                            accountArray[0].click();
+                            accountFound = true;
+                            break;
+                        }
                     }
 
-                    // Click the first account link we found
-                    accountArray[0].click();
-                    accountFound = true;
-                    break;
-                }
+                    if (!accountFound) {
+                        console.log("No account links found with any selector");
+                        // Close the menu
+                        setTimeout(() => {
+                            if (accountButton) accountButton.click();
+                        }, 100);
+                    }
+                }, 3000); // Wait 3 seconds for all accounts to appear
             }
+        });
 
-            if (!accountFound) {
-                console.log("No account links found with any selector");
-                // Close the menu
-                setTimeout(() => {
-                    if (accountButton) accountButton.click();
-                }, 100);
-            }
-        }, 2000); // Increased timeout further to ensure menu is fully loaded
+        // Start observing the document for when the menu appears
+        menuObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+
+        // Safety timeout to disconnect the observer if menu never appears
+        setTimeout(() => {
+            menuObserver.disconnect();
+            console.log("Observer timeout reached - menu may not have opened");
+
+            // Try to close the menu if it's stuck
+            if (accountButton) accountButton.click();
+        }, 5000);
     }
 
     /**
