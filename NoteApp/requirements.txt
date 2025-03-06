@@ -1,0 +1,10 @@
+PyQt6>=6.4.0
+PyQt6-QScintilla>=2.14.0
+pygments>=2.15.1
+PyQt5>=5.15.0
+# Different environments/platforms have different package names for QScintilla
+# Uncomment the one that works for your system:
+PyQtWebEngine>=5.15.0  # Needed for some QScintilla features
+QScintilla>=2.13.0
+# QScintilla>=2.13.0
+# python-qscintilla>=2.13.0

@@ -1,72 +1,91 @@
-# Note App
+# NoteApp
 
-Simple note-taking application using PyQt5.
+A modern, feature-rich text editor built with PyQt6, supporting multiple programming languages and advanced editing features. 🚀
 
 ## Features
 
-1. **Text Editing:**
-   - The application provides a text editor for creating and editing notes.
+### 📝 Advanced Editing
+- ✨ Syntax highlighting for multiple languages (Python, SQL, Java, C++, JavaScript, Markdown)
+- 📊 Line numbers with dark theme support
+- 📂 Code folding for better organization
+- 🎯 Smart brace matching
+- ⚡ Auto-indentation for clean code
+- 📏 Indentation guides
+- 💡 Intelligent auto-completion
+- 🔍 Current line highlighting
 
-2. **File Operations:**
-   - Open Folder: Allows the user to select a folder.
-   - Open File: Opens a file and displays its content in the text editor.
-   - Save: Saves the current content to a file.
-   - Save As: Saves the current content to a new file.
+### 📁 File Operations
+- 📄 New file creation
+- 📂 Open existing files
+- 💾 Save files
+- 📋 Save As functionality
+- 🔄 Recent files history
 
-3. **Keyboard Shortcuts:**
-   - Ctrl+Z: Undo.
-   - Ctrl+X: Cut.
-   - Ctrl+C: Copy.
-   - Ctrl+V: Paste.
-   - Ctrl+Y: Redo.
-   - Ctrl+A: Select All.
-   - Ctrl+F: Find Text.
-   - Ctrl+S: Save File.
-   - Ctrl+O: Open File.
+### 👁️ View Features
+- 🔍 Zoom In/Out capabilities
+- 🎯 Reset Zoom option
+- 📊 Status bar with:
+  - Line/column position
+  - File type detection
+  - UTF-8 encoding indicator
 
-## Usage
+### ✏️ Edit Operations
+- ↩️ Undo/Redo support
+- ✂️ Cut/Copy/Paste functionality
+- 📋 Select All capability
+- 🔍 Advanced Find Text
 
-1. **Open Folder:**
-   - Click on the "File" menu.
-   - Choose "Open Folder."
-   - Select the desired folder.
+### ⌨️ Keyboard Shortcuts
+| Shortcut | Function |
+|----------|----------|
+| Ctrl+N | New file |
+| Ctrl+O | Open file |
+| Ctrl+S | Save |
+| Ctrl+Shift+S | Save As |
+| Ctrl+Z | Undo |
+| Ctrl+Y | Redo |
+| Ctrl+X | Cut |
+| Ctrl+C | Copy |
+| Ctrl+V | Paste |
+| Ctrl+A | Select All |
+| Ctrl+F | Find Text |
+| Ctrl++ | Zoom In |
+| Ctrl+- | Zoom Out |
+| Ctrl+0 | Reset Zoom |
 
-2. **Open File:**
-   - Click on the "File" menu.
-   - Choose "Open File."
-   - Select the file to open.
+## 🛠️ Technical Details
 
-3. **Save:**
-   - Click on the "File" menu.
-   - Choose "Save" to save the current content to the last accessed folder.
+### Requirements
+- 🐍 Python 3
+- 🎨 PyQt6 >= 6.4.0
+- 📝 QScintilla >= 2.14.0
+- 🎯 pygments >= 2.15.1
 
-4. **Save As:**
-   - Click on the "File" menu.
-   - Choose "Save As" to save the current content to a new file.
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/JaredJomar/Projects.git
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the application:
+   ```bash
+   python NoteApp_PyQt6.py
+   ```
 
-5. **Keyboard Shortcuts:**
-   - Utilize various keyboard shortcuts for text editing and file operations.
+### 🔄 Legacy Version
+A PyQt5 version is available in `NoteApp_PyQt5.py`, but it lacks the advanced features of the PyQt6 version.
 
-6. **Find Text:**
-   - Click on the "Edit" menu.
-   - Choose "Find Text" to search for specific text in the document.
-
-## Additional Information
-
-- This application uses PyQt5 for the graphical user interface.
-- The settings, including window size and last accessed folder, are persisted between sessions.
-
-## Requirements
-
-- Python 3
-- PyQt5
-
-## Installation
-
-1. Clone the repository.
-2. Install the required dependencies: `pip install PyQt5`
-3. Run the application: `python note_app.py`
-
-## License
+## 📜 License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+---
+
+<div align="center">
+<img src="https://www.python.org/static/favicon.ico" alt="Python Icon">
+
+**Current Version: v0.0.1**
+</div>
