@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      http://tampermonkey.net/
-// @version        0.8.2
+// @version        0.8.3
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -18,9 +18,35 @@
 (() => {
     'use strict';
 
+    // Add logger configuration
+    const Logger = {
+        styles: {
+            info: 'color: #2196F3; font-weight: bold',
+            warning: 'color: #FFC107; font-weight: bold',
+            success: 'color: #4CAF50; font-weight: bold',
+            error: 'color: #F44336; font-weight: bold'
+        },
+        prefix: '[YouTubeEnchantments]',
+        getTimestamp() {
+            return new Date().toISOString().split('T')[1].slice(0, -1);
+        },
+        info(msg) {
+            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.info);
+        },
+        warning(msg) {
+            console.warn(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.warning);
+        },
+        success(msg) {
+            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.success);
+        },
+        error(msg) {
+            console.error(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.error);
+        }
+    };
+
     // Polyfill for Edge if necessary
     if (!window.Blob || !window.URL || !window.Worker) {
-        console.warn('Browser compatibility features missing');
+        Logger.warning('Browser compatibility features missing');
         return;
     }
 
@@ -44,7 +70,8 @@
         PLAYER_CONTAINER: '#player-container-outer',
         ERROR_SCREEN: '#error-screen',
         PLAYABILITY_ERROR: '.yt-playability-error-supported-renderers',
-        LIVE_BADGE: '.ytp-live-badge'
+        LIVE_BADGE: '.ytp-live-badge',
+        GAME_SECTION: 'ytd-rich-section-renderer, div#dismissible.style-scope.ytd-rich-shelf-renderer'
     };
 
     const CONSTANTS = {
@@ -52,7 +79,8 @@
         STORAGE_KEY: 'youtubeEnchantmentsSettings',
         DELAY: 300, // Increased delay for Edge
         MAX_TRIES: 150, // Increased max tries
-        DUPLICATE_CHECK_INTERVAL: 7000 // Increased interval
+        DUPLICATE_CHECK_INTERVAL: 7000, // Increased interval
+        GAME_CHECK_INTERVAL: 2000 // Interval to check for game sections
     };
 
     const defaultSettings = {
@@ -62,7 +90,8 @@
         watchThreshold: 0,
         checkFrequency: 5000,
         adBlockBypassEnabled: false,
-        scrollSpeed: 50
+        scrollSpeed: 50,
+        removeGamesEnabled: true
     };
 
     let settings = loadSettings();
@@ -119,25 +148,25 @@
                             'onReady': this.onPlayerReady.bind(this),
                             'onStateChange': this.onPlayerStateChange.bind(this),
                             'onError': (event) => {
-                                console.error('Player error:', event.data);
+                                Logger.error(`Player error: ${event.data}`);
                             }
                         }
                     });
                 }
             } catch (error) {
-                console.error('Failed to initialize player:', error);
+                Logger.error(`Failed to initialize player: ${error}`);
             }
         },
 
         onPlayerReady(event) {
-            console.log('Player is ready');
+            Logger.info('Player is ready');
         },
 
         onPlayerStateChange(event) {
             if (event.data === YT.PlayerState.AD_STARTED) {
-                console.log('Ad is playing, allowing ad to complete.');
+                Logger.info('Ad is playing, allowing ad to complete.');
             } else if (event.data === YT.PlayerState.ENDED || event.data === YT.PlayerState.PLAYING) {
-                console.log('Video is playing, ensuring it is tracked in history.');
+                Logger.info('Video is playing, ensuring it is tracked in history.');
             }
         },
 
@@ -155,7 +184,7 @@
                 this.setIframeAttributes(iframe, embedUrl);
                 return iframe;
             } catch (error) {
-                console.error('Failed to create iframe:', error);
+                Logger.error(`Failed to create iframe: ${error}`);
                 return null;
             }
         },
@@ -256,11 +285,11 @@
 
             const worker = new Worker(URL.createObjectURL(workerBlob));
             worker.onerror = function (error) {
-                console.error('Worker error:', error);
+                Logger.error(`Worker error: ${error}`);
             };
             return worker;
         } catch (error) {
-            console.error('Failed to create worker:', error);
+            Logger.error(`Failed to create worker: ${error}`);
             return null;
         }
     }
@@ -301,6 +330,7 @@
                 ${createToggle('autoLikeLiveStreams', 'Like Live Streams', 'Include live streams in auto-like feature')}
                 ${createToggle('likeIfNotSubscribed', 'Like All Videos', 'Like videos even if not subscribed')}
                 ${createToggle('adBlockBypassEnabled', 'AdBlock Bypass', 'Bypass AdBlock detection')}
+                ${createToggle('removeGamesEnabled', 'Remove Games', 'Hide game sections from YouTube homepage')}
                 <div class="dpe-slider-container" title="Percentage of video to watch before liking">
                     <label for="watchThreshold">Watch Threshold</label>
                     <input type="range" id="watchThreshold" min="0" max="100" step="10" 
@@ -529,7 +559,7 @@
 
             // Log the status of adBlockBypassEnabled if it is changed
             if (e.target.dataset.setting === 'adBlockBypassEnabled') {
-                console.log(`AdBlock Ban Bypass is ${e.target.checked ? 'enabled' : 'disabled'}`);
+                Logger.info(`AdBlock Ban Bypass is ${e.target.checked ? 'enabled' : 'disabled'}`);
             }
         }
     }
@@ -562,27 +592,27 @@
     }
 
     function checkAndLikeVideo() {
-        console.log('Checking if video should be liked...');
+        Logger.info('Checking if video should be liked...');
         if (watchThresholdReached()) {
-            console.log('Watch threshold reached.');
+            Logger.info('Watch threshold reached.');
             if (settings.autoLikeEnabled) {
-                console.log('Auto-like is enabled.');
+                Logger.info('Auto-like is enabled.');
                 if (settings.likeIfNotSubscribed || isSubscribed()) {
-                    console.log('User is subscribed or likeIfNotSubscribed is enabled.');
+                    Logger.info('User is subscribed or likeIfNotSubscribed is enabled.');
                     if (settings.autoLikeLiveStreams || !isLiveStream()) {
-                        console.log('Video is not a live stream or auto-like for live streams is enabled.');
+                        Logger.info('Video is not a live stream or auto-like for live streams is enabled.');
                         likeVideo();
                     } else {
-                        console.log('Video is a live stream and auto-like for live streams is disabled.');
+                        Logger.info('Video is a live stream and auto-like for live streams is disabled.');
                     }
                 } else {
-                    console.log('User is not subscribed and likeIfNotSubscribed is disabled.');
+                    Logger.info('User is not subscribed and likeIfNotSubscribed is disabled.');
                 }
             } else {
-                console.log('Auto-like is disabled.');
+                Logger.info('Auto-like is disabled.');
             }
         } else {
-            console.log('Watch threshold not reached.');
+            Logger.info('Watch threshold not reached.');
         }
     }
 
@@ -592,7 +622,7 @@
             const watched = player.getCurrentTime() / player.getDuration();
             const watchedTarget = settings.watchThreshold / 100;
             if (watched < watchedTarget) {
-                console.log(`Waiting until watch threshold reached (${watched.toFixed(2)}/${watchedTarget})...`);
+                Logger.info(`Waiting until watch threshold reached (${watched.toFixed(2)}/${watchedTarget})...`);
                 return false;
             }
         }
@@ -610,27 +640,27 @@
     }
 
     function likeVideo() {
-        console.log('Attempting to like the video...');
+        Logger.info('Attempting to like the video...');
         const likeButton = document.querySelector(SELECTORS.LIKE_BUTTON);
         const dislikeButton = document.querySelector(SELECTORS.DISLIKE_BUTTON);
         const videoId = getVideoId();
 
         if (!likeButton || !dislikeButton || !videoId) {
-            console.log('Like button, dislike button, or video ID not found.');
+            Logger.info('Like button, dislike button, or video ID not found.');
             return;
         }
 
         if (!isButtonPressed(likeButton) && !isButtonPressed(dislikeButton) && !autoLikedVideoIds.has(videoId)) {
-            console.log('Liking the video...');
+            Logger.info('Liking the video...');
             likeButton.click();
             if (isButtonPressed(likeButton)) {
-                console.log('Video liked successfully.');
+                Logger.success('Video liked successfully.');
                 autoLikedVideoIds.add(videoId);
             } else {
-                console.log('Failed to like the video.');
+                Logger.warning('Failed to like the video.');
             }
         } else {
-            console.log('Video already liked or disliked, or already auto-liked.');
+            Logger.info('Video already liked or disliked, or already auto-liked.');
         }
     }
 
@@ -649,7 +679,7 @@
 
     function handleAdBlockError() {
         if (!settings.adBlockBypassEnabled) {
-            console.log('AdBlock bypass is disabled.');
+            Logger.info('AdBlock bypass is disabled.');
             return; // Do nothing if the AdBlock bypass is disabled
         }
 
@@ -712,18 +742,18 @@
         });
 
         document.addEventListener('yt-navigate-finish', () => {
-            console.log('yt-navigate-finish event triggered');
+            Logger.info('yt-navigate-finish event triggered');
             const newUrl = window.location.href;
             if (newUrl !== currentPageUrl) {
-                console.log('URL changed:', newUrl);
+                Logger.info(`URL changed: ${newUrl}`);
                 if (newUrl.endsWith('.com/')) {
                     const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
                     if (iframe) {
-                        console.log('Removing iframe');
+                        Logger.info('Removing iframe');
                         iframe.remove();
                     }
                 } else {
-                    console.log('Handling ad block error');
+                    Logger.info('Handling ad block error');
                     handleAdBlockError();
                 }
                 currentPageUrl = newUrl;
@@ -731,7 +761,7 @@
         });
 
         document.addEventListener('keydown', (event) => {
-            console.log('Key pressed:', event.key);
+            Logger.info(`Key pressed: ${event.key}`);
             handleKeyPress(event);
         });
 
@@ -741,7 +771,7 @@
                     for (const node of mutation.addedNodes) {
                         if (node.nodeType === Node.ELEMENT_NODE &&
                             node.matches(SELECTORS.PLAYABILITY_ERROR)) {
-                            console.log('Playability error detected');
+                            Logger.info('Playability error detected');
                             handleAdBlockError();
                             return;
                         }
@@ -752,15 +782,87 @@
         observer.observe(document.body, { childList: true, subtree: true });
 
         setInterval(() => {
-            console.log('Checking for duplicate players');
+            Logger.info('Checking for duplicate players');
             playerManager.removeDuplicates();
         }, CONSTANTS.DUPLICATE_CHECK_INTERVAL);
+
+        // Add interval to check and hide game sections
+        setInterval(hideGameSections, CONSTANTS.GAME_CHECK_INTERVAL);
+    }
+
+    function hideGameSections() {
+        if (!settings.removeGamesEnabled) return;
+
+        const allSections = document.querySelectorAll(SELECTORS.GAME_SECTION);
+        if (allSections.length > 0) {
+            allSections.forEach(section => {
+                // Check if this is a game section using DOM traversal
+                if (isGameSection(section)) {
+                    section.style.display = 'none';
+                    Logger.success('Game section hidden');
+                }
+            });
+        }
+    }
+
+    function isGameSection(section) {
+        // Check for dismissible rich shelf renderer elements
+        const dismissibleElements = section.querySelectorAll('div#dismissible.style-scope.ytd-rich-shelf-renderer');
+        if (dismissibleElements.length > 0) {
+            return true;
+        }
+
+        // Check if this is a games/playables section using various indicators
+
+        // Check for "Jugables de YouTube" in the title
+        const titleElement = section.querySelector('#title-text span');
+        if (titleElement && titleElement.textContent.includes('Jugables')) {
+            return true;
+        }
+
+        // Check for playables links
+        const playablesLinks = section.querySelectorAll('a[href="/playables"], a[href*="/playables"]');
+        if (playablesLinks.length > 0) {
+            return true;
+        }
+
+        // Check for gaming links
+        const gamingLinks = section.querySelectorAll('a[href*="gaming"]');
+        if (gamingLinks.length > 0) {
+            return true;
+        }
+
+        // Check for game-related text in aria-labels
+        const richShelfElements = section.querySelectorAll('ytd-rich-shelf-renderer');
+        for (const element of richShelfElements) {
+            const ariaLabel = element.getAttribute('aria-label');
+            if (ariaLabel && (ariaLabel.toLowerCase().includes('game') || ariaLabel.toLowerCase().includes('juego'))) {
+                return true;
+            }
+        }
+
+        // Check for mini-game-card elements
+        const miniGameCards = section.querySelectorAll('ytd-mini-game-card-view-model');
+        if (miniGameCards.length > 0) {
+            return true;
+        }
+
+        // Check for content with specific game-related patterns
+        const gameGenres = ['Arcade', 'Carreras', 'Deportes', 'Acción', 'Puzles', 'Música'];
+        const genreSpans = section.querySelectorAll('.yt-mini-game-card-view-model__genre');
+        for (const span of genreSpans) {
+            if (gameGenres.some(genre => span.textContent.includes(genre))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Updated main initialization function
     async function initScript() {
         try {
-            console.log('Initializing script for Edge compatibility');
+            Logger.info('Initializing script for Edge compatibility');
             createSettingsMenu();
             setupEventListeners();
 
@@ -768,20 +870,23 @@
             if (worker) {
                 startBackgroundCheck(worker);
             } else {
-                console.warn('Worker creation failed, falling back to interval');
+                Logger.warning('Worker creation failed, falling back to interval');
                 setInterval(checkAndLikeVideo, settings.checkFrequency);
             }
+
+            // Initial check for game sections
+            hideGameSections();
 
             // Check browser compatibility
             const userAgent = navigator.userAgent;
             if (userAgent.includes("Edg/")) {
-                console.log('Edge detected, applying specific optimizations');
+                Logger.info('Edge detected, applying specific optimizations');
                 CONSTANTS.DELAY = 300; // Specific adjustment for Edge
                 CONSTANTS.MAX_TRIES = 150;
             }
 
         } catch (error) {
-            console.error('Script initialization failed:', error);
+            Logger.error(`Script initialization failed: ${error}`);
         }
     }
 

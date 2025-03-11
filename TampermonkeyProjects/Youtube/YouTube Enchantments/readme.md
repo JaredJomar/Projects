@@ -22,6 +22,17 @@ Enhance your YouTube experience with automatic likes, scroll controls, and AdBlo
 - Keyboard controls for navigation
 - Smooth auto-scroll functionality
 
+### 🎮 Game Elimination
+- Removes game sections from the YouTube homepage
+- Toggle to hide or show game-related content
+- Cleaner browsing experience without game distractions
+
+### 🔍 Advanced Logging
+- Color-coded console messages
+- Timestamped entries for easier debugging
+- Categorized logs (info, warning, success, error)
+- Better visibility for script activity monitoring
+
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
@@ -43,8 +54,14 @@ Access the settings panel (F2) to customize:
 - Watch threshold percentage
 - Scroll speed
 - AdBlock bypass toggle
+- Game section visibility toggle
 
 ## Version History
+
+### v0.8.3
+- Added game elimination toggle to remove game sections
+- Enhanced logging system with color-coded console messages
+- Enhanced settings panel with new game toggle option
 
 ### v0.8.2
 - Added configurable auto-scroll speed slider
@@ -60,11 +77,13 @@ Access the settings panel (F2) to customize:
 
 - **Author**: JJJ
 - **License**: [MIT](https://choosealicense.com/licenses/mit/)
+- **Logging**: Advanced console logging system with color-coded messages and timestamps
+- **Browser Support**: Chrome, Firefox, Edge (with compatibility optimizations)
 
 ---
 
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.8.2**
+**Current Version: 0.8.3**
 </div>
