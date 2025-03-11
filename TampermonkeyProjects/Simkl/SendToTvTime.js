@@ -4,7 +4,7 @@
 // @version      0.0.1
 // @description  Add TV Time button to Simkl movie pages
 // @author       JJJ
-// @match        https://simkl.com/movies/*
+// @match        https://simkl.com/*/*
 // @match        https://app.tvtime.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
@@ -23,9 +23,9 @@
                 setTimeout(() => {
                     navigator.clipboard.readText().then(text => {
                         searchInput.focus();
-                        // Simula el pegado usando execCommand
+                        // Try to paste using execCommand
                         if (!document.execCommand('insertText', false, text)) {
-                            // Fallback: asigna el valor directamente
+                            // Fallback: set value directly
                             searchInput.value = text;
                         }
                         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -77,34 +77,50 @@
         </table>
     `;
 
-    // Función para insertar o reinsertar el botón si no existe
+    // Function to insert or reinsert button if it doesn't exist
     function observeAndInsertTVTimeButton() {
         const observer = new MutationObserver((mutations, obs) => {
+            // Try all possible locations for various page types
             const imdbLink = document.querySelector('a[href*="imdb.com"]');
-            if (imdbLink) {
-                const imdbCell = imdbLink.closest('td[width="1"]');
-                if (imdbCell && !document.getElementById('tvTimeButton')) {
+            const malLink = document.querySelector('a[href*="myanimelist.net"]');
+            const ratingTable = document.querySelector('table[border="0"] tbody tr td[colspan="2"] table tbody tr');
+
+            // Handle both IMDB and MAL link cases
+            if ((imdbLink || malLink) && !document.getElementById('tvTimeButton')) {
+                const ratingCell = (imdbLink || malLink).closest('td[width="1"]');
+                if (ratingCell) {
                     const spacerCell = document.createElement('td');
                     spacerCell.innerHTML = '&nbsp;';
-                    imdbCell.parentNode.insertBefore(spacerCell, imdbCell.nextSibling);
-                    imdbCell.parentNode.insertBefore(tvTimeCell, spacerCell.nextSibling);
+                    ratingCell.parentNode.insertBefore(spacerCell, ratingCell.nextSibling);
+                    ratingCell.parentNode.insertBefore(tvTimeCell.cloneNode(true), spacerCell.nextSibling);
+                }
+            }
+
+            if (ratingTable && !document.getElementById('tvTimeButton')) {
+                const lastCell = ratingTable.querySelector('td:last-child');
+                if (lastCell) {
+                    const spacerCell = document.createElement('td');
+                    spacerCell.innerHTML = '&nbsp;';
+                    ratingTable.insertBefore(spacerCell, lastCell.nextSibling);
+                    ratingTable.insertBefore(tvTimeCell.cloneNode(true), spacerCell.nextSibling);
                 }
             }
         });
+
         observer.observe(document.body, {
             childList: true,
             subtree: true
         });
     }
 
-    // Inicia el observador desde DOMContentLoaded para páginas dinámicas
+    // Start observer from DOMContentLoaded for dynamic pages
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', observeAndInsertTVTimeButton);
     } else {
         observeAndInsertTVTimeButton();
     }
 
-    // Reemplaza el click handler directo con delegación de eventos
+    // Replace direct click handler with event delegation
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('#tvTimeButton');
         if (btn) {
