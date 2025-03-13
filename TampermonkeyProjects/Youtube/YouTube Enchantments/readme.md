@@ -33,12 +33,6 @@ Enhance your YouTube experience with automatic likes, scroll controls, and AdBlo
 - Categorized logs (info, warning, success, error)
 - Better visibility for script activity monitoring
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure settings using the F2 key or Tampermonkey menu
-
 ## Keyboard Controls
 
 | Key | Function |
@@ -58,12 +52,10 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
-### v0.8.3
+### v0.8.2
 - Added game elimination toggle to remove game sections
 - Enhanced logging system with color-coded console messages
 - Enhanced settings panel with new game toggle option
-
-### v0.8.2
 - Added configurable auto-scroll speed slider
 - Fine-tuned scroll behavior and controls
 - Improved scroll settings persistence
@@ -85,5 +77,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.8.3**
+**Current Version: 0.8.2**
 </div>
