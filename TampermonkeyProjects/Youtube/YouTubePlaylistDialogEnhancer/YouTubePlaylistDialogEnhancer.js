@@ -2,7 +2,7 @@
 // @name         YouTube Playlist Dialog Enhancer
 // @namespace    http://tampermonkey.net/
 // @author       JJJ
-// @version      0.1
+// @version      0.0.1
 // @description  Adds a styled search bar to the YouTube playlist dialog and centers it on the screen
 // @match        https://www.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -37,6 +37,7 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             width: 100%;
             box-sizing: border-box;
+            position: relative;
         `;
 
         // Create search bar
@@ -56,7 +57,44 @@
             line-height: 20px;
             outline: none;
             box-sizing: border-box;
+            padding-right: 40px; /* Make room for the clear button */
         `;
+
+        // Create clear button (X)
+        const clearButton = document.createElement('button');
+        clearButton.innerHTML = '✕';
+        clearButton.style.cssText = `
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 8px;
+            display: none;
+            z-index: 10;
+        `;
+
+        // Add hover effect to clear button
+        clearButton.addEventListener('mouseover', () => {
+            clearButton.style.color = '#fff';
+        });
+
+        clearButton.addEventListener('mouseout', () => {
+            clearButton.style.color = '#aaa';
+        });
+
+        // Clear search when button is clicked
+        clearButton.addEventListener('click', () => {
+            searchBar.value = '';
+            clearButton.style.display = 'none';
+            searchBar.focus();
+            // Trigger input event to update playlist filtering
+            searchBar.dispatchEvent(new Event('input'));
+        });
 
         // Add focus and hover effects
         searchBar.addEventListener('focus', () => {
@@ -76,8 +114,14 @@
             }
         });
 
-        // Append search bar to container
+        // Show/hide clear button based on search content
+        searchBar.addEventListener('input', function () {
+            clearButton.style.display = this.value ? 'block' : 'none';
+        });
+
+        // Append search bar and clear button to container
         searchContainer.appendChild(searchBar);
+        searchContainer.appendChild(clearButton);
 
         // Insert search container at the top of the dialog
         playlistDialog.insertBefore(searchContainer, playlistDialog.firstChild);
@@ -121,13 +165,118 @@
         }
     }
 
-    // Observe for changes in the DOM to detect when the playlist dialog appears
+    function populateNewPlaylistTitle() {
+        // Find the new playlist dialog
+        const createPlaylistDialog = document.querySelector('yt-create-playlist-dialog-form-view-model');
+        if (!createPlaylistDialog) return;
+
+        // Get the title field
+        const titleTextarea = createPlaylistDialog.querySelector('textarea.ytStandardsTextareaShapeTextarea');
+        if (!titleTextarea) return;
+
+        // Get the title field container to position our clear button
+        const titleContainer = titleTextarea.closest('.ytStandardsTextareaShapeTextareaContainer');
+        if (!titleContainer) return;
+
+        // Create clear button (X) if it doesn't already exist
+        let clearButton = titleContainer.querySelector('.playlist-title-clear-button');
+        if (!clearButton) {
+            clearButton = document.createElement('button');
+            clearButton.className = 'playlist-title-clear-button';
+            clearButton.innerHTML = '✕';
+            clearButton.style.cssText = `
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                color: #aaa;
+                font-size: 16px;
+                cursor: pointer;
+                padding: 4px 8px;
+                z-index: 10;
+            `;
+
+            // Position the container as relative to allow absolute positioning of the clear button
+            titleContainer.style.position = 'relative';
+
+            // Add hover effect to clear button
+            clearButton.addEventListener('mouseover', () => {
+                clearButton.style.color = '#fff';
+            });
+
+            clearButton.addEventListener('mouseout', () => {
+                clearButton.style.color = '#aaa';
+            });
+
+            // Clear title when button is clicked
+            clearButton.addEventListener('click', () => {
+                titleTextarea.value = '';
+                clearButton.style.display = 'none';
+                titleTextarea.focus();
+
+                // Show the placeholder
+                const placeholder = titleContainer.querySelector('.ytStandardsTextareaShapePlaceholder');
+                if (placeholder) {
+                    placeholder.classList.add('ytStandardsTextareaShapePlaceholderVisible');
+                }
+
+                // Trigger input event to update validation
+                titleTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+
+            // Add the clear button to the container
+            titleContainer.appendChild(clearButton);
+
+            // Show/hide clear button based on title content
+            titleTextarea.addEventListener('input', function () {
+                clearButton.style.display = this.value ? 'block' : 'none';
+            });
+        }
+
+        // Get the channel name
+        const channelNameElement = document.querySelector('ytd-video-owner-renderer yt-formatted-string#text');
+        if (channelNameElement) {
+            const channelName = channelNameElement.textContent.trim();
+
+            // Set the title in the input field
+            titleTextarea.value = channelName;
+
+            // Show the clear button
+            clearButton.style.display = 'block';
+
+            // Dispatch input event to trigger validation and enable the create button
+            titleTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Hide the placeholder
+            const placeholder = createPlaylistDialog.querySelector('.ytStandardsTextareaShapePlaceholder');
+            if (placeholder) {
+                placeholder.classList.remove('ytStandardsTextareaShapePlaceholderVisible');
+            }
+
+            // Focus on the title field for easy editing if needed
+            titleTextarea.focus();
+        }
+    }
+
+    // Observe for changes in the DOM to detect when dialogs appear
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.addedNodes && mutation.addedNodes.length > 0) {
                 for (let node of mutation.addedNodes) {
-                    if (node.nodeType === Node.ELEMENT_NODE && node.matches('ytd-add-to-playlist-renderer')) {
-                        setTimeout(addSearchBar, 0);
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check for add to playlist dialog
+                        if (node.matches('ytd-add-to-playlist-renderer')) {
+                            setTimeout(addSearchBar, 0);
+                        }
+
+                        // Check for create playlist dialog
+                        if (node.tagName &&
+                            (node.tagName.toLowerCase() === 'yt-dialog-view-model' ||
+                                node.querySelector('yt-create-playlist-dialog-form-view-model'))) {
+                            setTimeout(populateNewPlaylistTitle, 100); // Small delay to ensure DOM is ready
+                        }
                     }
                 }
             }

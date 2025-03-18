@@ -3,52 +3,51 @@
 
 # YouTube Playlist Dialog Enhancer
 
-Enhance YouTube's playlist management with modern search and improved dialog layout.
+Enhances the YouTube playlist dialog with search functionality and improved layout.
 
 ---
 
 ## Features
 
-### 🔍 Smart Search
-- Instant playlist filtering
-- Auto-populate channel names
-- Search history support
+### 🔍 Playlist Search
+- Instant playlist filtering as you type
+- Auto-populates with channel name
+- Clear search with one click
 
-### 📱 Modern Interface
-- Centered dialog (700x500px)
-- Improved scrolling behavior
-- Clean visual organization
+### 📱 Improved Dialog Interface
+- Centered dialog with fixed dimensions (700x500px)
+- Enhanced scrolling behavior
+- Cleaner visual organization
 
-### ⚡ Quick Actions
-- One-click playlist creation
-- Instant playlist filtering
-- Keyboard shortcuts support
+### ⚡ Smart Playlist Creation
+- Auto-populates new playlist title with channel name
+- One-click title clearing
+- Streamlined playlist management
 
 ---
 
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure settings using the Tampermonkey menu
+2. Create a new script in Tampermonkey and paste the code
+3. Save and enable the script
 
 ---
 
-## Settings
+## How It Works
 
-Access the settings through Tampermonkey menu to customize:
-- Dialog dimensions
-- Search behavior
-- Visual preferences
+- **Search Bar**: Filters your playlists as you type
+- **Dialog Positioning**: Centers the playlist dialog on screen for better visibility
+- **Auto-population**: Uses the current video's channel name to pre-fill fields
 
 ---
 
 ## Version History
 
-### v0.1
+### v0.0.1
 - Initial release with search functionality
 - Centered dialog implementation
-- Auto-population of channel names
+- Auto-population of channel names in search and new playlist dialogs
 
 ---
 
@@ -62,5 +61,5 @@ Access the settings through Tampermonkey menu to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.1**
+**Current Version: 0.0.1**
 </div>
