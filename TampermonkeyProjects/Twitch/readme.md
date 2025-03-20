@@ -34,8 +34,10 @@ Enhance your Twitch and Amazon Gaming experience with automated rewards claiming
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Script runs automatically on supported platforms
+2. Open the Tampermonkey dashboard, click the "+" tab to create a new script
+3. Copy the entire script code from the repository and paste it into the editor
+4. Click "File" > "Save" or press Ctrl+S
+5. Script runs automatically on supported platforms
 
 ## Automated Features
 
@@ -100,5 +102,5 @@ The script automatically:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=twitch.tv" alt="Twitch Icon">
 
-**Current Version: 0.6.0**
+**Current Version: 0.5.4**
 </div>
