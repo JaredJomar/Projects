@@ -25,6 +25,12 @@ Enhance your Twitch and Amazon Gaming experience with automated rewards claiming
 - Seamless platform transitions
 - Enhanced viewing experience
 
+### ⚙️ Settings Dialog
+- User-friendly settings popup (press F2 to open)
+- Toggle individual features on/off
+- Settings automatically saved between sessions
+- Accessible via Tampermonkey menu
+
 ## Installation
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
@@ -51,6 +57,18 @@ The script automatically:
 | Legacy Games | Code Redemption, Email Save Feature |
 
 ## Version History
+
+### v0.5.4
+- Added comprehensive settings dialog with toggle switches
+- Implemented customizable hotkey for settings (default: F2)
+- Enhanced Logger system with color-coded messages and timestamps
+- Improved dynamic application of settings without page reload
+- Added better targeting for claim buttons on Amazon Gaming
+- Enhanced "Remove All" button with sequential dismissal and progress tracking
+- Improved button behavior with better error handling
+- Added cleanup of unused elements when features are disabled
+- Optimized observer reconnection for better performance
+- Fixed issues with newsletter checkbox handling on Legacy Games
 
 ### v0.5.3
 - Added "Remove All" button to dismiss all items at once
@@ -82,5 +100,5 @@ The script automatically:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=twitch.tv" alt="Twitch Icon">
 
-**Current Version: 0.5.3*
+**Current Version: 0.6.0**
 </div>
