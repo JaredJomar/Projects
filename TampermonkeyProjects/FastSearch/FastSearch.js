@@ -10,6 +10,7 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @grant        window.focus
 // @run-at       document-end
 // @require      https://unpkg.com/react@17/umd/react.production.min.js
@@ -20,6 +21,9 @@
 (function () {
     'use strict';
 
+    // ===================================================
+    // CONFIGURATION
+    // ===================================================
     const SEARCH_ENGINES = {
         // Search
         a: { name: "Amazon", url: "https://www.amazon.com/s?k=" },
@@ -70,71 +74,431 @@
         ls: { name: "LookMovie (Shows)", url: "https://www.lookmovie2.to/shows/search/?q=" },
     };
 
-    // Utility functions
-    const isFocusInEditable = () => {
-        const el = document.activeElement;
-        return el.isContentEditable || ['input', 'textarea'].includes(el.tagName.toLowerCase());
-    };
+    // ===================================================
+    // UTILITY FUNCTIONS
+    // ===================================================
+    const Utils = {
+        /**
+         * Check if the focus is in an editable element
+         * @returns {boolean} True if focus is in editable element
+         */
+        isFocusInEditable: () => {
+            const el = document.activeElement;
+            return el.isContentEditable || ['input', 'textarea'].includes(el.tagName.toLowerCase());
+        },
 
-    const constructSearchUrl = (shortcut, query) => {
-        const engine = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES.g;
-        if (!query.trim()) {
-            // Extract base domain using regex
-            const match = engine.url.match(/^https?:\/\/([\w.-]+\.[a-z]{2,})/);
-            return match ? `https://${match[1]}/` : engine.url;
+        /**
+         * Construct search URL from shortcut and query
+         * @param {string} shortcut - The search engine shortcut
+         * @param {string} query - The search query
+         * @returns {string} The constructed search URL
+         */
+        constructSearchUrl: (shortcut, query) => {
+            const engine = SEARCH_ENGINES[shortcut] || SEARCH_ENGINES.g;
+            if (!query.trim()) {
+                // Extract base domain using regex
+                const match = engine.url.match(/^https?:\/\/([\w.-]+\.[a-z]{2,})/);
+                return match ? `https://${match[1]}/` : engine.url;
+            }
+            let baseUrl = engine.url;
+            if (shortcut === 'epic') {
+                baseUrl += `${encodeURIComponent(query)}&sortBy=relevancy&sortDir=DESC&count=40`;
+            } else {
+                baseUrl += encodeURIComponent(query);
+            }
+            return baseUrl;
+        },
+
+        /**
+         * Get selected text from the page
+         * @returns {string} The currently selected text
+         */
+        getSelectedText: () => {
+            return window.getSelection().toString().trim();
+        },
+
+        /**
+         * Filter search engines based on input
+         * @param {string} input - The user input
+         * @returns {Array} Array of matching engine options
+         */
+        filterSearchEngines: (input) => {
+            if (!input) return [];
+            const searchTerm = input.toLowerCase();
+            return Object.entries(SEARCH_ENGINES)
+                .filter(([shortcut, engine]) => {
+                    return shortcut.toLowerCase().includes(searchTerm) ||
+                        engine.name.toLowerCase().includes(searchTerm);
+                })
+                .slice(0, 6) // Limit to 6 suggestions
+                .map(([shortcut, engine]) => ({
+                    shortcut,
+                    name: engine.name
+                }));
+        },
+
+        /**
+         * Safely remove event listeners
+         * @param {Element} element - DOM element
+         * @param {string} eventType - Event type
+         * @param {Function} handler - Event handler
+         */
+        safeRemoveEventListener: (element, eventType, handler) => {
+            if (element && typeof element.removeEventListener === 'function') {
+                element.removeEventListener(eventType, handler);
+            }
         }
-        let baseUrl = engine.url;
-        if (shortcut === 'epic') {
-            baseUrl += `${encodeURIComponent(query)}&sortBy=relevancy&sortDir=DESC&count=40`;
-        } else {
-            baseUrl += encodeURIComponent(query);
-        }
-        return baseUrl;
     };
 
-    // Remove or ignore the old openNewTab
-    // const openNewTab = (url) => { ... };
-
-    const searchMultipleGamingPlatforms = (query) => {
-        const platforms = ['g2', 'cd'];
-        platforms.forEach(platform => {
-            const searchUrl = constructSearchUrl(platform, query);
-            openSearch(searchUrl);
-        });
-    };
-
-    // React components
-    // Add localStorage support to the BotInterface component
-    const BotInterface = ({ onClose }) => {
-        const [input, setInput] = React.useState('');
-        const [results, setResults] = React.useState([]);
-        const [currentEngine, setCurrentEngine] = React.useState(null);
-        // Update openMode to use GM_getValue/setValue
-        const [openMode, setOpenMode] = React.useState(() => {
-            return GM_getValue('fastsearch_openmode', 'newwindow');
-        });
-        const [showHelp, setShowHelp] = React.useState(false);
-        const inputRef = React.useRef(null);
-
-        // Add effect to save openMode changes
-        React.useEffect(() => {
-            GM_setValue('fastsearch_openmode', openMode);
-        }, [openMode]);
-
-        // Update the openSearch function to handle only two modes
-        const openSearch = (url) => {
+    // ===================================================
+    // SEARCH FUNCTIONS
+    // ===================================================
+    const SearchActions = {
+        /**
+         * Open search URL based on openMode setting
+         * @param {string} url - The URL to open
+         * @param {string} openMode - The mode to open the URL ('currenttab' or 'newwindow')
+         */
+        openSearch: (url, openMode) => {
             if (openMode === 'currenttab') {
                 window.location.href = url;
             } else {
                 window.open(url, '', 'width=800,height=600,noopener');
             }
-        };
+        },
+
+        /**
+         * Search multiple gaming platforms
+         * @param {string} query - The search query
+         * @param {string} openMode - The mode to open the URLs
+         */
+        searchMultipleGamingPlatforms: (query, openMode) => {
+            const platforms = ['g2', 'cd'];
+            platforms.forEach(platform => {
+                const searchUrl = Utils.constructSearchUrl(platform, query);
+                SearchActions.openSearch(searchUrl, openMode);
+            });
+        }
+    };
+
+    // ===================================================
+    // REACT COMPONENTS
+    // ===================================================
+
+    /**
+     * EngineSuggestions Component - Display search engine suggestions
+     */
+    const EngineSuggestions = React.memo(({
+        suggestions,
+        selectedIndex,
+        onSelectSuggestion
+    }) => {
+        if (!suggestions || suggestions.length === 0) return null;
+
+        return React.createElement('div', {
+            className: 'absolute left-0 right-0 top-full mt-1 bg-custom-darker rounded-md shadow-lg z-10 max-h-64 overflow-y-auto'
+        },
+            React.createElement('ul', { className: 'py-1' },
+                suggestions.map((suggestion, index) =>
+                    React.createElement('li', {
+                        key: suggestion.shortcut,
+                        className: `px-3 py-2 cursor-pointer hover:bg-blue-600 text-white ${index === selectedIndex ? 'bg-blue-600' : ''}`,
+                        onClick: () => onSelectSuggestion(suggestion.shortcut)
+                    },
+                        React.createElement('span', { className: 'inline-block min-w-[40px] font-mono text-blue-400' }, suggestion.shortcut),
+                        ': ',
+                        suggestion.name
+                    )
+                )
+            )
+        );
+    });
+
+    /**
+     * SearchInput Component - Handles user input for search with keyboard navigation
+     */
+    const SearchInput = React.memo(({
+        input,
+        setInput,
+        handleSearch,
+        currentEngine,
+        engineOptions = []
+    }) => {
+        const inputRef = React.useRef(null);
+        const [showSuggestions, setShowSuggestions] = React.useState(false);
+        const [selectedIndex, setSelectedIndex] = React.useState(-1);
+        const [suggestions, setSuggestions] = React.useState([]);
+
+        // Generate engine suggestions based on input
+        React.useEffect(() => {
+            const engineSuggestions = Utils.filterSearchEngines(input);
+            setSuggestions(engineSuggestions);
+            // Reset selection when suggestions change
+            setSelectedIndex(-1);
+
+            // Cleanup unnecessary references
+            return () => {
+                setSuggestions([]);
+            };
+        }, [input]);
 
         React.useEffect(() => {
             if (inputRef.current) {
                 inputRef.current.focus();
             }
 
+            // Cleanup function to help garbage collection
+            return () => {
+                inputRef.current = null;
+            };
+        }, []);
+
+        const handleKeyDown = React.useCallback((e) => {
+            // Handle arrow navigation for engine suggestions
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setSelectedIndex(prev =>
+                    prev < suggestions.length - 1 ? prev + 1 : 0
+                );
+            }
+            else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setShowSuggestions(true);
+                setSelectedIndex(prev =>
+                    prev > 0 ? prev - 1 : suggestions.length - 1
+                );
+            }
+            else if (e.key === 'Tab') {
+                // Cycle through common engine shortcuts with Tab
+                e.preventDefault();
+                const commonShortcuts = ['g', 'y', 'w', 'r', 'a'];
+                const currentShortcut = input.split(' ')[0];
+                const currentIndex = commonShortcuts.indexOf(currentShortcut);
+                const nextShortcut = commonShortcuts[(currentIndex + 1) % commonShortcuts.length];
+
+                // Replace the current shortcut or add a new one
+                if (currentIndex >= 0) {
+                    const rest = input.substring(currentShortcut.length);
+                    setInput(nextShortcut + rest);
+                } else {
+                    setInput(nextShortcut + ' ' + input);
+                }
+            }
+            else if (e.key === 'Enter') {
+                // Apply selected suggestion or perform search
+                if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+                    const selectedShortcut = suggestions[selectedIndex].shortcut;
+                    setInput(selectedShortcut + ' ');
+                    setSelectedIndex(-1);
+                    setShowSuggestions(false);
+                } else {
+                    handleSearch();
+                }
+            }
+            else if (e.key === 'Escape') {
+                // Close suggestions panel
+                setShowSuggestions(false);
+                setSelectedIndex(-1);
+            }
+            // Reset selection when typing regular characters
+            else if (e.key.length === 1) {
+                setShowSuggestions(true);
+            }
+        }, [input, suggestions, selectedIndex, setInput, handleSearch]);
+
+        const handleSelectSuggestion = React.useCallback((shortcut) => {
+            setInput(shortcut + ' ');
+            setShowSuggestions(false);
+            setSelectedIndex(-1);
+            setTimeout(() => inputRef.current?.focus(), 10);
+        }, [setInput]);
+
+        return React.createElement('div', { className: 'flex flex-col mb-4 relative' },
+            React.createElement('div', { className: 'flex gap-2 items-center' },
+                currentEngine && React.createElement('div', {
+                    className: 'bg-blue-600 text-white text-sm px-2 py-1 rounded'
+                }, currentEngine.name),
+                React.createElement('input', {
+                    ref: inputRef,
+                    type: 'text',
+                    value: input,
+                    onChange: (e) => setInput(e.target.value),
+                    onKeyDown: handleKeyDown,
+                    onFocus: () => setShowSuggestions(true),
+                    onBlur: () => setTimeout(() => setShowSuggestions(false), 200),
+                    placeholder: 'Enter search command...',
+                    className: 'flex-1 px-3 py-2 bg-custom-darker border-0 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                })
+            ),
+            showSuggestions && suggestions.length > 0 && React.createElement(EngineSuggestions, {
+                suggestions,
+                selectedIndex,
+                onSelectSuggestion: handleSelectSuggestion
+            })
+        );
+    });
+
+    /**
+     * ModeSwitcher Component - Toggles between current tab and new window modes
+     */
+    const ModeSwitcher = React.memo(({ openMode, setOpenMode }) => {
+        const toggleMode = React.useCallback(() => {
+            setOpenMode(openMode === 'currenttab' ? 'newwindow' : 'currenttab');
+        }, [openMode, setOpenMode]);
+
+        return React.createElement('div', { className: 'mb-4 flex items-center justify-between' },
+            React.createElement('div', { className: 'flex items-center gap-3' },
+                React.createElement('button', {
+                    onClick: toggleMode,
+                    className: 'toggle-button-switch flex items-center justify-start'
+                },
+                    React.createElement('div', {
+                        className: `toggle-slider ${openMode === 'currenttab' ? 'active' : ''}`
+                    })
+                ),
+                React.createElement('span', { className: 'text-gray-300 text-sm leading-none' },
+                    openMode === 'newwindow' ? 'New Window' : 'Current Tab'
+                )
+            )
+        );
+    });
+
+    /**
+     * SearchResults Component - Displays search results
+     */
+    const SearchResults = React.memo(({ results }) => {
+        return React.createElement('div', { className: 'space-y-2' },
+            results.map((result, index) =>
+                React.createElement('div', { key: index, className: 'text-sm' },
+                    result.type === 'link'
+                        ? React.createElement('a', {
+                            href: result.url,
+                            target: '_blank',
+                            rel: 'noopener noreferrer',
+                            className: 'text-blue-400 hover:text-blue-300 hover:underline'
+                        }, result.message)
+                        : React.createElement('span', {
+                            className: 'text-gray-300'
+                        }, result.message)
+                )
+            )
+        );
+    });
+
+    /**
+     * HelpContent Component - Shows the help modal content
+     */
+    const HelpContent = React.memo(({ onClose }) => {
+        return React.createElement('div', {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2147483647]',
+            onClick: onClose
+        },
+            React.createElement('div', {
+                className: 'bg-custom-dark p-6 rounded-lg max-w-4xl max-h-[80vh] overflow-y-auto text-white w-full mx-4',
+                onClick: e => e.stopPropagation()
+            },
+                React.createElement('div', { className: 'flex justify-between items-center mb-4' },
+                    React.createElement('h3', { className: 'text-lg font-bold' }, 'Fast Search Help'),
+                    React.createElement('button', {
+                        onClick: onClose,
+                        className: 'text-gray-400 hover:text-white text-xl'
+                    }, '×')
+                ),
+                React.createElement('div', { className: 'grid grid-cols-2 gap-6' },
+                    // Left column - Shortcuts
+                    React.createElement('div', null,
+                        React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Search Shortcuts'),
+                        Object.entries({
+                            'Search': ['a', 'g', 'b', 'd', 'gs', 'gi', 'ar', 'way', 'w', 'p'],
+                            'Coding': ['gf', 'gh', 'so'],
+                            'Social': ['r', 'li', 't', 'x', 'f', 'i', 'pi', 'tu', 'q', 'sc', 'y', 'tk', 'fi', 'sp'],
+                            'Gaming': ['steam', 'epic', 'gog', 'ubi', 'g2', 'cd', 'ori', 'bat'],
+                            'Movies and TV Shows': ['c', 'lm', 'ls']
+                        }).map(([category, shortcuts]) =>
+                            React.createElement('div', { key: category, className: 'mb-4' },
+                                React.createElement('h5', { className: 'text-gray-300 font-bold mb-2 text-sm' }, category),
+                                React.createElement('ul', { className: 'space-y-1' },
+                                    shortcuts.map(shortcut =>
+                                        React.createElement('li', { key: shortcut, className: 'text-sm' },
+                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, shortcut),
+                                            ': ',
+                                            SEARCH_ENGINES[shortcut].name
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    // Right column - Usage & Options
+                    React.createElement('div', null,
+                        React.createElement('div', { className: 'mb-6' },
+                            React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Opening Options'),
+                            React.createElement('div', { className: 'bg-custom-darker p-4 rounded-lg' },
+                                React.createElement('ul', { className: 'space-y-3' },
+                                    React.createElement('li', { className: 'text-sm' },
+                                        React.createElement('span', { className: 'text-blue-400 font-bold' }, 'New Window: '),
+                                        'Opens search in a popup window'
+                                    ),
+                                    React.createElement('li', { className: 'text-sm' },
+                                        React.createElement('span', { className: 'text-blue-400 font-bold' }, 'Current Tab: '),
+                                        'Replaces current page with search'
+                                    )
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: 'mb-6' },
+                            React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Usage Tips'),
+                            React.createElement('ul', { className: 'space-y-2 text-sm' },
+                                React.createElement('li', null, '• Press ',
+                                    React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Insert'),
+                                    ' to open Fast Search'
+                                ),
+                                React.createElement('li', null, '• Type shortcut followed by search terms'),
+                                React.createElement('li', null, '• Press ',
+                                    React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Enter'),
+                                    ' to search'
+                                ),
+                                React.createElement('li', null, '• Press ',
+                                    React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Esc'),
+                                    ' to close'
+                                ),
+                                React.createElement('li', null, '• Type shortcut only to visit site homepage')
+                            )
+                        )
+                    )
+                )
+            )
+        );
+    });
+
+    /**
+     * BotInterface Component - Main component for the search interface
+     */
+    const BotInterface = React.memo(({ onClose, initialQuery = '' }) => {
+        const [input, setInput] = React.useState(initialQuery);
+        const [results, setResults] = React.useState([]);
+        const [currentEngine, setCurrentEngine] = React.useState(null);
+        const [openMode, setOpenMode] = React.useState(() => {
+            return GM_getValue('fastsearch_openmode', 'newwindow');
+        });
+        const [showHelp, setShowHelp] = React.useState(false);
+
+        // Track previous active element to restore focus when unmounting
+        const previousActiveElement = React.useRef(document.activeElement);
+
+        // Create a list of engine shortcuts for keyboard navigation
+        const engineOptions = React.useMemo(() => {
+            return Object.keys(SEARCH_ENGINES);
+        }, []);
+
+        // Save openMode changes
+        React.useEffect(() => {
+            GM_setValue('fastsearch_openmode', openMode);
+        }, [openMode]);
+
+        // Handle escape key to close
+        React.useEffect(() => {
             const handleEscape = (e) => {
                 if (e.key === 'Escape') {
                     onClose();
@@ -142,16 +506,34 @@
             };
 
             document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
-        }, []);
+            return () => {
+                Utils.safeRemoveEventListener(document, 'keydown', handleEscape);
 
+                // Restore focus to previous element when unmounting
+                if (previousActiveElement.current) {
+                    try {
+                        previousActiveElement.current.focus();
+                    } catch (e) {
+                        // Ignore focus errors
+                    }
+                }
+            };
+        }, [onClose]);
+
+        // Update current engine based on input
         React.useEffect(() => {
             const [shortcut] = input.trim().split(/\s+/);
             const engine = SEARCH_ENGINES[shortcut.toLowerCase()];
             setCurrentEngine(engine || null);
+
+            // Clear references on unmount
+            return () => {
+                setCurrentEngine(null);
+            };
         }, [input]);
 
-        const handleSearch = () => {
+        // Memoized search handler
+        const handleSearch = React.useCallback(() => {
             const [rawShortcut, ...queryParts] = input.trim().split(/\s+/);
             const shortcut = rawShortcut.toLowerCase();
             const query = queryParts.join(" ");
@@ -160,16 +542,16 @@
 
             if (shortcut === 'sg') {
                 newResults.push({ type: 'info', message: 'Searching multiple gaming platforms...' });
-                searchMultipleGamingPlatforms(query);
+                SearchActions.searchMultipleGamingPlatforms(query, openMode);
             } else if (SEARCH_ENGINES.hasOwnProperty(shortcut)) {
-                const searchUrl = constructSearchUrl(shortcut, query || '');
+                const searchUrl = Utils.constructSearchUrl(shortcut, query || '');
                 const siteName = SEARCH_ENGINES[shortcut].name;
                 newResults.push({ type: 'link', url: searchUrl, message: `Searching ${siteName} for "${query}"` });
-                openSearch(searchUrl);
+                SearchActions.openSearch(searchUrl, openMode);
             } else {
                 const searchUrl = SEARCH_ENGINES.g.url + encodeURIComponent(input);
                 newResults.push({ type: 'link', url: searchUrl, message: `Searching Google for "${input}"` });
-                openSearch(searchUrl);
+                SearchActions.openSearch(searchUrl, openMode);
             }
 
             setResults(prevResults => [...newResults, ...prevResults]);
@@ -179,10 +561,16 @@
             setTimeout(() => {
                 onClose();
             }, 100);
-        };
+        }, [input, openMode, onClose]);
+
+        // Toggle help dialog
+        const toggleHelp = React.useCallback(() => {
+            setShowHelp(prev => !prev);
+        }, []);
 
         return React.createElement('div', { className: 'fixed top-4 right-4 min-w-[20rem] max-w-[30rem] w-[90vw] bg-custom-dark shadow-lg rounded-lg overflow-hidden' },
             React.createElement('div', { className: 'p-4 relative' },
+                // Header
                 React.createElement('div', { className: 'flex justify-between items-center mb-4' },
                     React.createElement('h2', { className: 'text-lg font-bold text-white' }, 'Fast Search'),
                     React.createElement('button', {
@@ -190,169 +578,160 @@
                         className: 'text-gray-400 hover:text-gray-200'
                     }, '×')
                 ),
-                React.createElement('div', { className: 'flex gap-2 mb-4 items-center' },
-                    currentEngine && React.createElement('div', {
-                        className: 'bg-blue-600 text-white text-sm px-2 py-1 rounded'
-                    }, currentEngine.name),
-                    React.createElement('input', {
-                        ref: inputRef,
-                        type: 'text',
-                        value: input,
-                        onChange: (e) => setInput(e.target.value),
-                        onKeyPress: (e) => e.key === 'Enter' && handleSearch(),
-                        placeholder: 'Enter search command...',
-                        className: 'flex-1 px-3 py-2 bg-custom-darker border-0 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    })
-                ),
-                // Replace the toggle section with a button toggle
+                // Search input
+                React.createElement(SearchInput, {
+                    input,
+                    setInput,
+                    handleSearch,
+                    currentEngine,
+                    engineOptions
+                }),
+                // Mode switcher and help button
                 React.createElement('div', { className: 'mb-4 flex items-center justify-between' },
-                    React.createElement('div', { className: 'flex items-center gap-3' },
-                        React.createElement('button', {
-                            onClick: () => setOpenMode(openMode === 'currenttab' ? 'newwindow' : 'currenttab'),
-                            className: 'toggle-button-switch flex items-center justify-start'
-                        },
-                            React.createElement('div', {
-                                className: `toggle-slider ${openMode === 'currenttab' ? 'active' : ''}`
-                            })
-                        ),
-                        React.createElement('span', { className: 'text-gray-300 text-sm leading-none' },
-                            openMode === 'newwindow' ? 'New Window' : 'Current Tab'
-                        )
-                    ),
+                    React.createElement(ModeSwitcher, {
+                        openMode,
+                        setOpenMode
+                    }),
                     React.createElement('button', {
-                        onClick: () => setShowHelp(true),
+                        onClick: toggleHelp,
                         className: 'bg-custom-darker text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors'
                     }, '❔')
                 ),
-                React.createElement('div', { className: 'space-y-2' },
-                    results.map((result, index) =>
-                        React.createElement('div', { key: index, className: 'text-sm' },
-                            result.type === 'link'
-                                ? React.createElement('a', {
-                                    href: result.url,
-                                    target: '_blank',
-                                    rel: 'noopener noreferrer',
-                                    className: 'text-blue-400 hover:text-blue-300 hover:underline'
-                                }, result.message)
-                                : React.createElement('span', {
-                                    className: 'text-gray-300'
-                                }, result.message)
-                        )
-                    )
-                ),
-                // Replace the help modal section:
-                showHelp && React.createElement('div', {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[2147483647]',
-                    onClick: () => setShowHelp(false)
-                },
-                    React.createElement('div', {
-                        className: 'bg-custom-dark p-6 rounded-lg max-w-4xl max-h-[80vh] overflow-y-auto text-white w-full mx-4',
-                        onClick: e => e.stopPropagation()
-                    },
-                        React.createElement('div', { className: 'flex justify-between items-center mb-4' },
-                            React.createElement('h3', { className: 'text-lg font-bold' }, 'Fast Search Help'),
-                            React.createElement('button', {
-                                onClick: () => setShowHelp(false),
-                                className: 'text-gray-400 hover:text-white text-xl'
-                            }, '×')
-                        ),
-                        React.createElement('div', { className: 'grid grid-cols-2 gap-6' },
-                            // Left column - Shortcuts
-                            React.createElement('div', null,
-                                React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Search Shortcuts'),
-                                Object.entries({
-                                    'Search': ['a', 'g', 'b', 'd', 'gs', 'gi', 'ar', 'way', 'w', 'p'],
-                                    'Coding': ['gf', 'gh', 'so'],
-                                    'Social': ['r', 'li', 't', 'x', 'f', 'i', 'pi', 'tu', 'q', 'sc', 'y', 'tk', 'fi', 'sp'],
-                                    'Gaming': ['steam', 'epic', 'gog', 'ubi', 'g2', 'cd', 'ori', 'bat'],
-                                    'Movies and TV Shows': ['c', 'lm', 'ls']
-                                }).map(([category, shortcuts]) =>
-                                    React.createElement('div', { key: category, className: 'mb-4' },
-                                        React.createElement('h5', { className: 'text-gray-300 font-bold mb-2 text-sm' }, category),
-                                        React.createElement('ul', { className: 'space-y-1' },
-                                            shortcuts.map(shortcut =>
-                                                React.createElement('li', { key: shortcut, className: 'text-sm' },
-                                                    React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, shortcut),
-                                                    ': ',
-                                                    SEARCH_ENGINES[shortcut].name
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            ),
-                            // Right column - Usage & Options
-                            React.createElement('div', null,
-                                React.createElement('div', { className: 'mb-6' },
-                                    React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Opening Options'),
-                                    React.createElement('div', { className: 'bg-custom-darker p-4 rounded-lg' },
-                                        React.createElement('ul', { className: 'space-y-3' },
-                                            React.createElement('li', { className: 'text-sm' },
-                                                React.createElement('span', { className: 'text-blue-400 font-bold' }, 'New Window: '),
-                                                'Opens search in a popup window'
-                                            ),
-                                            React.createElement('li', { className: 'text-sm' },
-                                                React.createElement('span', { className: 'text-blue-400 font-bold' }, 'Current Tab: '),
-                                                'Replaces current page with search'
-                                            )
-                                        )
-                                    )
-                                ),
-                                React.createElement('div', { className: 'mb-6' },
-                                    React.createElement('h4', { className: 'text-blue-400 font-bold mb-3' }, 'Usage Tips'),
-                                    React.createElement('ul', { className: 'space-y-2 text-sm' },
-                                        React.createElement('li', null, '• Press ',
-                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Insert'),
-                                            ' to open Fast Search'
-                                        ),
-                                        React.createElement('li', null, '• Type shortcut followed by search terms'),
-                                        React.createElement('li', null, '• Press ',
-                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Enter'),
-                                            ' to search'
-                                        ),
-                                        React.createElement('li', null, '• Press ',
-                                            React.createElement('code', { className: 'bg-custom-darker px-1 rounded' }, 'Esc'),
-                                            ' to close'
-                                        ),
-                                        React.createElement('li', null, '• Type shortcut only to visit site homepage')
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
+                // Search results
+                React.createElement(SearchResults, { results }),
+                // Help modal
+                showHelp && React.createElement(HelpContent, { onClose: toggleHelp })
             )
         );
-    };
+    });
 
-    // Main script
-    const init = () => {
-        let botContainer = null;
+    // ===================================================
+    // MAIN APP INITIALIZATION
+    // ===================================================
+    const App = {
+        botContainer: null,
+        observer: null,
+        eventListeners: [],
 
-        const showBot = () => {
-            if (botContainer) return;
+        /**
+         * Register event listener with automatic cleanup
+         * @param {Element} element - DOM element
+         * @param {string} eventType - Event type
+         * @param {Function} handler - Event handler
+         * @param {boolean|object} options - Event listener options
+         */
+        registerEventListener: (element, eventType, handler, options = false) => {
+            if (!element || !eventType || !handler) return;
 
-            botContainer = document.createElement('div');
-            document.body.appendChild(botContainer);
+            element.addEventListener(eventType, handler, options);
+            App.eventListeners.push({ element, eventType, handler, options });
+        },
+
+        /**
+         * Clean up resources to prevent memory leaks
+         */
+        cleanup: () => {
+            // Clean up React components properly
+            if (App.botContainer) {
+                ReactDOM.unmountComponentAtNode(App.botContainer);
+                App.botContainer.remove();
+                App.botContainer = null;
+            }
+
+            // Disconnect mutation observer if it exists
+            if (App.observer) {
+                App.observer.disconnect();
+                App.observer = null;
+            }
+
+            // Remove all registered event listeners
+            App.eventListeners.forEach(({ element, eventType, handler, options }) => {
+                Utils.safeRemoveEventListener(element, eventType, handler, options);
+            });
+            App.eventListeners = [];
+        },
+
+        /**
+         * Show the search interface with optional initial query
+         * @param {string} initialQuery - Text to prefill in search input
+         */
+        showBot: (initialQuery = '') => {
+            // Clean up any existing instances first to prevent duplicates
+            App.cleanup();
+
+            App.botContainer = document.createElement('div');
+            document.body.appendChild(App.botContainer);
 
             ReactDOM.render(
                 React.createElement(BotInterface, {
                     onClose: () => {
-                        ReactDOM.unmountComponentAtNode(botContainer);
-                        botContainer.remove();
-                        botContainer = null;
-                    }
+                        App.cleanup();
+                    },
+                    initialQuery: initialQuery
                 }),
-                botContainer
+                App.botContainer
             );
-        };
 
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Insert' && !isFocusInEditable()) {
-                event.preventDefault();
-                showBot();
-            }
-        }, true);
+            // Set up mutation observer to detect if our container gets removed
+            App.observer = new MutationObserver((mutations) => {
+                if (!document.body.contains(App.botContainer) && App.botContainer !== null) {
+                    App.cleanup();
+                }
+            });
+
+            // Watch for changes to document.body
+            App.observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        },
+
+        /**
+         * Initialize the application
+         */
+        init: () => {
+            // Event listener for Insert key
+            App.registerEventListener(document, 'keydown', event => {
+                if (event.key === 'Insert' && !Utils.isFocusInEditable()) {
+                    event.preventDefault();
+
+                    // Use selected text as initial query if available
+                    const selectedText = Utils.getSelectedText();
+                    App.showBot(selectedText);
+                }
+            }, true);
+
+            // Register context menu command
+            GM_registerMenuCommand("Fast Search", () => {
+                const selectedText = Utils.getSelectedText();
+                App.showBot(selectedText);
+            });
+
+            // Add context menu functionality for right-clicking on selected text
+            App.registerEventListener(document, 'mousedown', event => {
+                // Only handle right-click events
+                if (event.button === 2) {
+                    const selectedText = Utils.getSelectedText();
+                    if (selectedText) {
+                        // Store the selected text so we can use it later if the context menu command is chosen
+                        GM_setValue('fastsearch_selected_text', selectedText);
+                    }
+                }
+            });
+
+            // Cleanup on page unload
+            App.registerEventListener(window, 'beforeunload', App.cleanup);
+
+            // Cleanup on page visibility change (helps with some browsers/scenarios)
+            App.registerEventListener(document, 'visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    // Perform partial cleanup when page is hidden
+                    if (App.botContainer) {
+                        ReactDOM.unmountComponentAtNode(App.botContainer);
+                    }
+                }
+            });
+        }
     };
 
     // Add styles
@@ -488,8 +867,62 @@
         .leading-none {
             line-height: 1;
         }
+        .hover\\:bg-blue-600:hover {
+            background-color: #2563eb;
+        }
+        .transition-colors {
+            transition-property: color, background-color, border-color;
+            transition-duration: 0.15s;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* New styles for engine suggestions */
+        .flex-col {
+            flex-direction: column;
+        }
+        
+        .top-full {
+            top: 100%;
+        }
+        
+        .mt-1 {
+            margin-top: 0.25rem;
+        }
+        
+        .py-1 {
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        
+        .max-h-64 {
+            max-height: 16rem;
+        }
+        
+        .overflow-y-auto {
+            overflow-y: auto;
+        }
+        
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        
+        .min-w-\\[40px\\] {
+            min-width: 40px;
+        }
+        
+        .inline-block {
+            display: inline-block;
+        }
+        
+        .z-10 {
+            z-index: 10;
+        }
     `);
 
-    // Start the script
-    init();
+    // Start the app
+    App.init();
 })();
