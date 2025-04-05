@@ -25,13 +25,10 @@ Simple and efficient thread deletion for Perplexity through keyboard shortcuts.
 - Instant response
 - Safe confirmation step
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Ready to use on any Perplexity page
-
 ## Version History
+
+### v0.1.2
+  - Updated selectors for improved compatibility
 
 ### v0.1.1
 - Added deletion confirmation prompt
@@ -48,5 +45,5 @@ Simple and efficient thread deletion for Perplexity through keyboard shortcuts.
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=perplexity.ai" alt="Perplexity Icon">
 
-**Current Version: 0.1.1**
+**Current Version: 0.1.2**
 </div>

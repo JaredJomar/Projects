@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name Delete Thread
 // @namespace http://tampermonkey.net/
-// @version 0.1.1
+// @version 0.1.2
 // @description Delete thread on Perplexity by pressing the Delete key and confirming with Enter
 // @author JJJ
 // @match https://www.perplexity.ai/*
@@ -23,31 +23,37 @@
         else if (event.key === 'Enter') {
             confirmDeletion();
         }
-        // If the Backspace key is pressed, cancel the deletion
-        else if (event.key === 'Backspace') {
+        // If the ESC key is pressed, cancel the deletion
+        else if (event.key === 'Escape') {
             cancelDeletion();
         }
     });
 
     // Function to open the menu and trigger the delete thread action
     function openMenuAndDeleteThread() {
-        var ellipsisButton = document.querySelector('svg[data-icon="ellipsis"]').parentNode;
+        var ellipsisButton = document.querySelector('[data-testid="thread-dropdown-menu"]');
         if (ellipsisButton) {
             ellipsisButton.click();
             setTimeout(deleteThread, 10); // Wait for a short time before triggering the delete thread action
         } else {
-            console.log('Ellipsis button not found');
+            console.log('Dropdown menu button not found');
         }
     }
 
     // Function to trigger the delete thread action
     function deleteThread() {
-        var deleteButton = Array.from(document.querySelectorAll('span')).find(button => button.textContent === 'Delete Thread');
+        var deleteButton = document.querySelector('[data-testid="thread-delete"]');
         if (deleteButton) {
             deleteButton.click();
             console.log('Thread deletion triggered');
         } else {
-            console.log('Delete button not found');
+            var deleteButtonText = Array.from(document.querySelectorAll('span')).find(button => button.textContent === 'Delete');
+            if (deleteButtonText) {
+                deleteButtonText.click();
+                console.log('Thread deletion triggered via text content');
+            } else {
+                console.log('Delete button not found');
+            }
         }
     }
 
@@ -64,12 +70,26 @@
 
     // Function to cancel the deletion
     function cancelDeletion() {
-        var nevermindButton = document.querySelector('button.bg-offsetPlus.dark\\:bg-offsetPlusDark.text-textMain.dark\\:text-textMainDark.md\\:hover\\:text-textOff.md\\:dark\\:hover\\:text-textOffDark.font-sans.focus\\:outline-none.outline-none.outline-transparent.transition.duration-300.ease-in-out.font-sans.select-none.items-center.relative.group\\/button.justify-center.text-center.items-center.rounded.cursor-point.active\\:scale-95.origin-center.whitespace-nowrap.flex.w-full.md\\:inline-flex.md\\:w-auto.text-base.px-md.font-medium.h-10 .flex.items-center.min-w-0.justify-center.gap-xs .text-align-center.relative.truncate.leading-loose');
+        // Try to find the Nevermind button by its text content
+        var nevermindButton = Array.from(document.querySelectorAll('button')).find(
+            button => button.textContent.trim() === 'Nevermind'
+        );
+
+        // If not found, try the close button with data-testid
+        if (!nevermindButton) {
+            nevermindButton = document.querySelector('[data-testid="close-modal"]');
+        }
+
+        // If still not found, try the previous class-based selector as fallback
+        if (!nevermindButton) {
+            nevermindButton = document.querySelector('button.bg-offsetPlus.dark\\:bg-offsetPlusDark.text-textMain.dark\\:text-textMainDark');
+        }
+
         if (nevermindButton) {
             nevermindButton.click();
-            console.log('Nevermind triggered');
+            console.log('Deletion canceled successfully');
         } else {
-            console.log('Nevermind button not found');
+            console.log('Cancel button not found');
         }
     }
 })();
