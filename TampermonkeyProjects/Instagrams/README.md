@@ -24,11 +24,6 @@ A simple userscript to clean up your Instagram feed by hiding unwanted content.
 - Optimized element selection
 - Minimal DOM manipulation
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-
 ## Configuration
 
 The script uses an improved CONFIG object for better control:

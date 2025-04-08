@@ -24,12 +24,6 @@ Enhance your Serieslan experience with automatic provider selection and improved
 - Persistent preferences
 - Real-time updates
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure settings using the F2 key
-
 ## Keyboard Controls
 
 | Key | Function |

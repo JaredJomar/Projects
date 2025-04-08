@@ -26,14 +26,6 @@ Enhances the YouTube playlist dialog with search functionality and improved layo
 
 ---
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Create a new script in Tampermonkey and paste the code
-3. Save and enable the script
-
----
-
 ## How It Works
 
 - **Search Bar**: Filters your playlists as you type

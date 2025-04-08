@@ -25,12 +25,6 @@ It automatically scrolls through the pages, captures visible images, and generat
 - Memory-efficient operation
 - Asynchronous processing
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Create a new script and paste the contents of `drivePDFDownloadBypass.js`
-3. Save the script
-
 ## Version History
 
 ### v0.1.0

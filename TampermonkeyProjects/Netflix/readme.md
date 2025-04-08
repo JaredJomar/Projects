@@ -24,12 +24,6 @@ Enhance your Netflix experience with automatic intro skipping, smart fullscreen 
 - Easy toggle controls
 - Persistent preferences
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure settings using the F2 key
-
 ## Keyboard Controls
 
 | Key | Function |

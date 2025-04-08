@@ -24,12 +24,6 @@ Automate captcha verification across various websites with smart detection and a
 - Seamless integration
 - Error prevention system
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Script runs automatically on supported sites
-
 ## Supported Systems
 
 | System | Support |

@@ -12,13 +12,6 @@ Automate your YourUpload.com download experience with smart button detection and
 - Multi-page support (watch and download pages)
 - Real-time console logging feedback
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/)
-2. Create new script in dashboard
-3. Copy-paste the script code
-4. Save and activate
-
 ## Technical Details
 
 | Component | Implementation |

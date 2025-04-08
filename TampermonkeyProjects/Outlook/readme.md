@@ -28,12 +28,6 @@ Enhance your Outlook Web App experience with quick email filter management and a
 - Alt+S for account switching
 - Clean popup interface
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure filters using the F2 key
-
 ## Keyboard Controls
 
 | Key | Function |

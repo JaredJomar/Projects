@@ -29,12 +29,6 @@ Enhance HTML5 video playback with customizable speed controls and visual indicat
 - Position adjustment
 - Toggle visibility
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Ready to use immediately after installation
-
 ## Version History
 
 ### v0.1

@@ -21,12 +21,6 @@ Seamlessly bypass YouTube's AdBlock detection while maintaining full video funct
 - Maintains YouTube's design
 - Background operation
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Configure through Tampermonkey menu
-
 ## Usage
 
 Script runs automatically in the background:

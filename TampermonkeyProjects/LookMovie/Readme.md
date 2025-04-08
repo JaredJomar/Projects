@@ -24,12 +24,6 @@ Enhance your LookMovie experience with automatic ad removal and smart reCAPTCHA 
 - Continuous monitoring
 - Resource-efficient
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Click [here](#) to install the script (link coming soon)
-3. Script runs automatically on LookMovie
-
 ## Settings
 
 The script automatically:

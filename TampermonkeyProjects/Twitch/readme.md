@@ -31,14 +31,6 @@ Enhance your Twitch and Amazon Gaming experience with automated rewards claiming
 - Settings automatically saved between sessions
 - Accessible via Tampermonkey menu
 
-## Installation
-
-1. Install [Tampermonkey](https://www.tampermonkey.net/) browser extension
-2. Open the Tampermonkey dashboard, click the "+" tab to create a new script
-3. Copy the entire script code from the repository and paste it into the editor
-4. Click "File" > "Save" or press Ctrl+S
-5. Script runs automatically on supported platforms
-
 ## Automated Features
 
 The script automatically:
