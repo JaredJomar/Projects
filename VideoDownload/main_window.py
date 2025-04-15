@@ -31,7 +31,7 @@ from constants import (
     DONE_LABEL_COLOR,
 )
 import os
-import os
+import shutil
 
 
 class MainWindow(QMainWindow):
@@ -45,7 +45,6 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
             
         self.initUI()
-        self.is_live = False  # Initialize is_live
         self.is_live = False  # Initialize is_live
 
     def initUI(self):
@@ -185,10 +184,6 @@ class MainWindow(QMainWindow):
         self.live_label.hide()
         layout.addWidget(self.live_label)
 
-        self.live_label = QLabel("<b><font color='red'>🔴 LIVE STREAM</font></b>")
-        self.live_label.hide()
-        layout.addWidget(self.live_label)
-
         self.progress_text = QTextEdit()
         self.progress_text.setStyleSheet(
             f"QTextEdit {{ background-color: {PROGRESS_TEXT_BACKGROUND_COLOR}; color: {PROGRESS_TEXT_COLOR}; font-weight: bold; }}")
@@ -233,26 +228,7 @@ class MainWindow(QMainWindow):
             self.cancel_button.setEnabled(False)
             
             # Reset progress bar
-            self.progress_text.append("⏹️ Stopping download...")
-            self.download_button.setEnabled(False)
-            self.cancel_button.setEnabled(False)
-            
-            # Reset progress bar
             self.progress_bar.setValue(0)
-            self.progress_bar.setFormat("Cancelled")
-            
-            try:
-                self.download_thread.stop()
-                self.download_thread.quit()
-                self.download_thread.wait(3000)  # Wait up to 3 seconds
-            except Exception as e:
-                self.progress_text.append(f"❌ Error during cancellation: {str(e)}")
-            finally:
-                self.download_thread = None
-                self.live_label.hide()
-                self.progress_text.append("⏹️ Download cancelled.")
-                self.download_button.setEnabled(True)
-                self.cancel_button.setEnabled(True)
             self.progress_bar.setFormat("Cancelled")
             
             try:
@@ -281,14 +257,28 @@ class MainWindow(QMainWindow):
             self.live_label.hide()
             
         output_folder = self.download_folder_input.text().strip()  # Ensure output folder is stripped of whitespace
-        ffmpeg_path = self.settingsTab.ffmpeg_input.text().strip()  # Ensure ffmpeg path is stripped of whitespace
-        yt_dlp_path = self.settingsTab.yt_dlp_input.text().strip()  # Ensure yt-dlp path is stripped of whitespace
+        ffmpeg_path = self.settingsTab.ffmpeg_input.text().strip()  # Get FFmpeg path from settings
+        yt_dlp_path = self.settingsTab.yt_dlp_input.text().strip()  # Get yt-dlp path from settings
         custom_title = self.title_input.text().strip()  # Get custom title
         
-        # Normalize path and ensure it exists
-        yt_dlp_path = os.path.normpath(yt_dlp_path)
-        if not os.path.exists(yt_dlp_path):
-            self.progress_text.append("❌ Error: yt-dlp executable not found!")
+        # If the paths are empty, try to find them dynamically
+        if not ffmpeg_path:
+            ffmpeg_path = shutil.which('ffmpeg')
+            if not ffmpeg_path:
+                ffmpeg_path = self.settingsTab.find_executable('ffmpeg')
+                
+        if not yt_dlp_path:
+            yt_dlp_path = shutil.which('yt-dlp')
+            if not yt_dlp_path:
+                yt_dlp_path = self.settingsTab.find_executable('yt-dlp')
+        
+        # Validate the paths
+        if not ffmpeg_path or not os.path.exists(ffmpeg_path):
+            self.progress_text.append("❌ Error: FFmpeg executable not found! Please install it in Settings tab.")
+            return
+            
+        if not yt_dlp_path or not os.path.exists(yt_dlp_path):
+            self.progress_text.append("❌ Error: yt-dlp executable not found! Please install it in Settings tab.")
             return
         
         download_type = self.download_type_combobox.currentText()
@@ -311,28 +301,8 @@ class MainWindow(QMainWindow):
         self.progress_text.verticalScrollBar().setValue(
             self.progress_text.verticalScrollBar().maximum()
         )
-        self.progress_bar.setFormat(f"{progress}%")
-        self.progress_text.append(f"📊 Progress: {progress}%")
-        # Auto-scroll to the end
-        self.progress_text.verticalScrollBar().setValue(
-            self.progress_text.verticalScrollBar().maximum()
-        )
 
     def update_progress_text(self, output):
-        # Show all logs without filtering
-        if output.strip():  # Only add if text is not empty
-            self.progress_text.append(output)
-            # Auto-scroll to the end
-            self.progress_text.verticalScrollBar().setValue(
-                self.progress_text.verticalScrollBar().maximum()
-            )
-        
-        # Only show live_label if it's a live stream
-        if self.is_live:
-            self.live_label.show()
-            self.progress_bar.setFormat("Recording... %p%")
-        else:
-            self.live_label.hide()
         # Show all logs without filtering
         if output.strip():  # Only add if text is not empty
             self.progress_text.append(output)
@@ -350,7 +320,6 @@ class MainWindow(QMainWindow):
 
     def download_complete(self):
         self.done_label.show()
-        self.live_label.hide()
         self.live_label.hide()
         self.url_input.clear()
         self.title_input.clear()  # Clear the custom title input

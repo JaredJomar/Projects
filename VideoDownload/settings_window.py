@@ -41,9 +41,6 @@ class SettingsWindow(QDialog):
         self.ytdlp_status = QLabel()
         self.aria2_status = QLabel()
         
-        # Now check installations
-        self.check_installations()
-        
         # FFmpeg section with status
         ffmpeg_section = QVBoxLayout()
         install_ffmpeg_button = QPushButton("Install FFmpeg")
@@ -149,7 +146,11 @@ class SettingsWindow(QDialog):
             f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
         layout.addWidget(save_button)
 
+        # Load settings first, then check installations
         self.load_settings()
+        
+        # Now check installations after input fields have been created
+        self.check_installations()
 
     def browse_ffmpeg(self):
         file = QFileDialog.getOpenFileName(self, "Select ffmpeg")
@@ -177,9 +178,9 @@ class SettingsWindow(QDialog):
             self.yt_dlp_input.setText(yt_dlp_path)
 
     def install_ffmpeg(self):
-        ffmpeg_path = os.path.expandvars(
-            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-7.1-full_build/bin/ffmpeg.exe")
-        if os.path.exists(ffmpeg_path):
+        # First check if FFmpeg is already in PATH
+        ffmpeg_path = shutil.which('ffmpeg')
+        if ffmpeg_path:
             QMessageBox.information(
                 self, "Installation", "FFmpeg is already installed.")
             self.ffmpeg_input.setText(ffmpeg_path)
@@ -188,25 +189,56 @@ class SettingsWindow(QDialog):
             return
 
         try:
-            subprocess.run(
-                ["winget", "install", "Gyan.FFmpeg", "--silent"], check=True)
-            if os.path.exists(ffmpeg_path):
+            self.download_output = QMessageBox(self)
+            self.download_output.setWindowTitle("Installing FFmpeg")
+            self.download_output.setText("Installing FFmpeg, please wait...")
+            self.download_output.setStandardButtons(QMessageBox.NoButton)
+            self.download_output.show()
+            
+            # Install FFmpeg using winget
+            process = subprocess.run(
+                ["winget", "install", "Gyan.FFmpeg", "--silent"], 
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            
+            # Wait a moment for installation to complete
+            import time
+            time.sleep(2)
+            
+            # Get the path where FFmpeg was installed
+            ffmpeg_path = shutil.which('ffmpeg')
+            
+            if ffmpeg_path:
                 self.ffmpeg_input.setText(ffmpeg_path)
                 self.settings.setValue("ffmpeg_path", ffmpeg_path)
+                self.download_output.close()
                 QMessageBox.information(
                     self, "Installation", "FFmpeg has been successfully installed.")
             else:
-                QMessageBox.warning(self, "Installation Error",
-                                    "Failed to locate FFmpeg after installation.")
-        except subprocess.CalledProcessError:
+                # Try to find using where command as fallback
+                ffmpeg_path = self.get_dependency_path("ffmpeg")
+                if ffmpeg_path:
+                    self.ffmpeg_input.setText(ffmpeg_path)
+                    self.settings.setValue("ffmpeg_path", ffmpeg_path)
+                    self.download_output.close()
+                    QMessageBox.information(
+                        self, "Installation", "FFmpeg has been successfully installed.")
+                else:
+                    self.download_output.close()
+                    QMessageBox.warning(self, "Installation Note",
+                                       "FFmpeg was installed but couldn't be automatically located. Please click 'Browse' to select it manually.")
+        except subprocess.CalledProcessError as e:
+            self.download_output.close()
             QMessageBox.warning(self, "Installation Error",
-                                "Failed to install FFmpeg using winget.")
+                               f"Failed to install FFmpeg using winget. Error: {e}")
         self.check_installations()  # Refresh status after installation
 
     def install_ytdlp(self):
-        ytdlp_path = os.path.expandvars(
-            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
-        if os.path.exists(ytdlp_path):
+        # First check if yt-dlp is already in PATH
+        ytdlp_path = shutil.which('yt-dlp')
+        if ytdlp_path:
             QMessageBox.information(
                 self, "Installation", "yt-dlp is already installed.")
             self.yt_dlp_input.setText(ytdlp_path)
@@ -215,19 +247,60 @@ class SettingsWindow(QDialog):
             return
 
         try:
-            subprocess.run(
-                ["winget", "install", "yt-dlp.yt-dlp", "--silent"], check=True)
-            if os.path.exists(ytdlp_path):
+            self.download_output = QMessageBox(self)
+            self.download_output.setWindowTitle("Installing yt-dlp")
+            self.download_output.setText("Installing yt-dlp, please wait...")
+            self.download_output.setStandardButtons(QMessageBox.NoButton)
+            self.download_output.show()
+            
+            # Install yt-dlp using winget
+            process = subprocess.run(
+                ["winget", "install", "yt-dlp.yt-dlp", "--silent"], 
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            
+            # Wait a moment for installation to complete
+            import time
+            time.sleep(2)
+            
+            # Get the path where yt-dlp was installed
+            ytdlp_path = shutil.which('yt-dlp')
+            
+            if ytdlp_path:
                 self.yt_dlp_input.setText(ytdlp_path)
                 self.settings.setValue("yt_dlp_path", ytdlp_path)
+                self.download_output.close()
                 QMessageBox.information(
                     self, "Installation", "yt-dlp has been successfully installed.")
             else:
-                QMessageBox.warning(self, "Installation Error",
-                                    "Failed to locate yt-dlp after installation.")
-        except subprocess.CalledProcessError:
+                # Try to find using where command as fallback
+                ytdlp_path = self.get_dependency_path("yt-dlp")
+                if ytdlp_path:
+                    self.yt_dlp_input.setText(ytdlp_path)
+                    self.settings.setValue("yt_dlp_path", ytdlp_path)
+                    self.download_output.close()
+                    QMessageBox.information(
+                        self, "Installation", "yt-dlp has been successfully installed.")
+                else:
+                    # As a last resort, try the typical installation path
+                    default_path = os.path.expandvars(
+                        "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
+                    if os.path.exists(default_path):
+                        self.yt_dlp_input.setText(default_path)
+                        self.settings.setValue("yt_dlp_path", default_path)
+                        self.download_output.close()
+                        QMessageBox.information(
+                            self, "Installation", "yt-dlp has been successfully installed.")
+                    else:
+                        self.download_output.close()
+                        QMessageBox.warning(self, "Installation Note",
+                                        "yt-dlp was installed but couldn't be automatically located. Please click 'Browse' to select it manually.")
+        except subprocess.CalledProcessError as e:
+            self.download_output.close()
             QMessageBox.warning(self, "Installation Error",
-                                "Failed to install yt-dlp using winget.")
+                              f"Failed to install yt-dlp using winget. Error: {e}")
         self.check_installations()  # Refresh status after installation
 
     def install_aria2c(self):
@@ -273,29 +346,102 @@ class SettingsWindow(QDialog):
         except subprocess.CalledProcessError:
             return ""
 
+    def find_executable(self, executable_name):
+        """Search for an executable in common installation directories"""
+        # First check if it's in PATH
+        path = shutil.which(executable_name)
+        if path:
+            return path
+            
+        # Try using the where command (Windows specific)
+        try:
+            path = self.get_dependency_path(executable_name)
+            if path:
+                return path
+        except Exception:
+            pass
+            
+        # Common WinGet installation paths for popular tools
+        if executable_name == 'ffmpeg':
+            possible_paths = [
+                # WinGet installation paths
+                os.path.join(os.environ.get('LOCALAPPDATA', ''), 
+                             'Microsoft', 'WinGet', 'Packages', 
+                             'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 
+                             'ffmpeg.exe'),
+                # Check in Program Files
+                os.path.join(os.environ.get('PROGRAMFILES', ''), 
+                             'ffmpeg', 'bin', 'ffmpeg.exe'),
+                # Also check for FFmpeg in temp path
+                os.path.join(os.environ.get('TEMP', ''), 
+                             'ffmpeg', 'bin', 'ffmpeg.exe')
+            ]
+        elif executable_name == 'yt-dlp':
+            possible_paths = [
+                # WinGet installation paths
+                os.path.join(os.environ.get('LOCALAPPDATA', ''), 
+                             'Microsoft', 'WinGet', 'Packages', 
+                             'yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe', 
+                             'yt-dlp.exe'),
+                # Check in Program Files
+                os.path.join(os.environ.get('PROGRAMFILES', ''), 
+                             'yt-dlp', 'yt-dlp.exe'),
+                # Check in user directory
+                os.path.join(os.environ.get('USERPROFILE', ''), 
+                             'AppData', 'Local', 'yt-dlp', 'yt-dlp.exe')
+            ]
+        else:
+            return None
+            
+        # Check all possible paths
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+                
+        # Try to search in common directories using glob
+        import glob
+        for pattern in [
+            f"{os.environ.get('LOCALAPPDATA', '')}/**/*/bin/{executable_name}.exe",
+            f"{os.environ.get('PROGRAMFILES', '')}/**/{executable_name}.exe",
+            f"{os.environ.get('PROGRAMFILES(X86)', '')}/**/{executable_name}.exe",
+            f"{os.environ.get('USERPROFILE', '')}/AppData/Local/**/{executable_name}.exe"
+        ]:
+            try:
+                matches = glob.glob(pattern, recursive=True)
+                if matches:
+                    return matches[0]
+            except Exception:
+                pass
+                
+        return None
+
     def check_installations(self):
         """Check the installation status of all required packages"""
-        # Check FFmpeg
-        ffmpeg_path = os.path.expandvars(
-            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-7.1-full_build/bin/ffmpeg.exe")
-        if os.path.exists(ffmpeg_path):
-            self.update_status_label(self.ffmpeg_status, True)
-        else:
-            self.update_status_label(self.ffmpeg_status, False)
+        # Check FFmpeg - only use system paths, not hardcoded version paths
+        ffmpeg_path = shutil.which('ffmpeg')
+        ffmpeg_installed = bool(ffmpeg_path)
+        
+        # If FFmpeg is installed but not in the input field, update it
+        if ffmpeg_installed and not self.ffmpeg_input.text():
+            self.ffmpeg_input.setText(ffmpeg_path)
+            self.settings.setValue("ffmpeg_path", ffmpeg_path)
+        
+        self.update_status_label(self.ffmpeg_status, ffmpeg_installed)
 
-        # Check yt-dlp
-        ytdlp_path = os.path.expandvars(
-            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
-        if os.path.exists(ytdlp_path):
-            self.update_status_label(self.ytdlp_status, True)
-        else:
-            self.update_status_label(self.ytdlp_status, False)
+        # Check yt-dlp - only use system paths, not hardcoded paths
+        ytdlp_path = shutil.which('yt-dlp')
+        ytdlp_installed = bool(ytdlp_path)
+        
+        # If yt-dlp is installed but not in the input field, update it
+        if ytdlp_installed and not self.yt_dlp_input.text():
+            self.yt_dlp_input.setText(ytdlp_path)
+            self.settings.setValue("yt_dlp_path", ytdlp_path)
+            
+        self.update_status_label(self.ytdlp_status, ytdlp_installed)
 
         # Check aria2c
-        if shutil.which('aria2c'):
-            self.update_status_label(self.aria2_status, True)
-        else:
-            self.update_status_label(self.aria2_status, False)
+        aria2c_installed = bool(shutil.which('aria2c'))
+        self.update_status_label(self.aria2_status, aria2c_installed)
 
     def update_status_label(self, label, installed):
         """Update the status label with appropriate icon and text"""
