@@ -1,3 +1,8 @@
 # Local configuration files
 last_dir.json
 tempCodeRunnerFile.py
+
+# Python cache files
+__pycache__/
+*.pyc
+.pytest_cache/
