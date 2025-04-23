@@ -1,61 +1,75 @@
-# Archive.org-Downloader Installation Guide
+# 📚 Archive.org Book Downloader
 
-## Remember 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/downloads/)
 
-This is just a bat file that runs the archive-org-downloader.py. It saves your email, password, and sets the default image resolution so you don't need to enter it every time, just enter the book link and it will be downloaded into the Archive.org-Downloader folder.
+A simple utility that enhances the [Archive.org-Downloader](https://github.com/MiniGlome/Archive.org-Downloader) tool by providing a convenient batch file interface for downloading books from Archive.org.
 
-## Prerequisites
+## ✨ Features
 
-Before installing the Archive.org-Downloader, ensure that you have the following prerequisites installed on your system:
+- **Simplified Download Process**: Just enter the book URL and start downloading
+- **Credential Storage**: Saves your Archive.org credentials so you don't need to re-enter them
+- **Customizable Image Resolution**: Preset image quality for consistent downloads
+- **User-Friendly Interface**: Simple batch file execution with minimal input required
 
-- Git
-- Python 3.x
-- pip (Python package installer)
+## 🔧 Prerequisites
 
-## Installation Steps
+Before using this tool, please ensure you have the following installed:
 
-1. **Clone the Repository:**
+- [Git](https://git-scm.com/downloads) - For cloning the repository
+- [Python 3.x](https://www.python.org/downloads/) - Required to run the downloader script
+- [pip](https://pip.pypa.io/en/stable/installation/) - Python package installer for dependencies
 
-    Open your terminal or command prompt and run the following command to clone the Archive.org-Downloader repository:
+## 📋 Installation Guide
 
-    ```bash
-    git clone https://github.com/MiniGlome/Archive.org-Downloader.git
-    ```
+### Step 1: Clone the Repository
 
-2. **Change your current directory to the newly cloned Archive.org-Downloader repository:**
+```bash
+git clone https://github.com/MiniGlome/Archive.org-Downloader.git
+cd Archive.org-Downloader
+```
 
-    ```bash
-    cd Archive.org-Downloader
-    ```
+### Step 2: Install Required Dependencies
 
-3. **Install Dependencies:**
+```bash
+pip install -r requirements.txt
+```
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+### Step 3: Configure the Batch File
 
-4. **Move the ArchiveBooksDownloads.bat file into the Archive.org-Downloader folder:**
+1. Copy the `ArchiveBooksDownloads.bat` file into your newly cloned `Archive.org-Downloader` folder
+2. Open `ArchiveBooksDownloads.bat` in any text editor
+3. Edit the following lines with your information:
+   ```batch
+   set "Email= -e your_email@example.com"
+   set "Password= -p your_password"
+   set "imageResolution= -r 3"  # Image resolution (0-10, where 0 is highest quality)
+   ```
+4. Save the batch file
 
-    Open the ArchiveBooksDownloads.bat file using any text editor.
+## 🚀 How to Use
 
-5. **Enter your Archive.org email and password:**
+1. Navigate to the `Archive.org-Downloader` folder
+2. Double-click on `ArchiveBooksDownloads.bat` to run it
+3. When prompted, paste the Archive.org URL of the book you want to download
+4. The download will begin automatically and save the book in the same folder
 
-    Inside the bat file, enter your Archive.org email and password in the designated fields.
+## ⚙️ Customization
 
-6. **Save the bat file:**
+- **Image Resolution**: You can modify the default image resolution in the batch file
+  - Values range from 0 (highest quality) to 10 (lowest quality)
+  - Default is set to 3 for a good balance of quality and file size
 
-    Save the changes made to the bat file.
+## 📝 Notes
 
-## Downloading a Book
+- All downloads are saved within the `Archive.org-Downloader` folder
+- Make sure you have sufficient disk space for larger books
+- For questions or issues related to the downloader itself, please refer to the [original repository](https://github.com/MiniGlome/Archive.org-Downloader)
 
-7. **Run the bat file:**
+## 📜 License
 
-    Run the ArchiveBooksDownloads.bat file.
+This project is licensed under the MIT License - see the [LICENSE](https://choosealicense.com/licenses/mit/) for details.
 
-8. **Enter the book link:**
+---
 
-    The books are going to be downloaded into the Archive.org-Downloader folder.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+*Note: This tool is intended for downloading books that are freely available through Archive.org and should be used in accordance with their terms of service.*
