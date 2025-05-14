@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QSpacerItem,
     QSizePolicy,
+    QCheckBox,
+    QComboBox,
 )
 from PyQt5.QtCore import QSettings, pyqtSignal
 from constants import (
@@ -100,6 +102,32 @@ class SettingsWindow(QDialog):
         spacer1 = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         layout.addItem(spacer1)
 
+        # Browser cookies section
+        cookies_section = QHBoxLayout()
+        
+        cookies_label = QLabel("<b>Use Browser Cookies:</b>")
+        cookies_label.setStyleSheet("color: white;")
+        cookies_label.setToolTip(
+            "Use cookies from your browser to bypass age restrictions and access private videos.\n"
+            "Required for accessing age-restricted or private YouTube content."
+        )
+        cookies_section.addWidget(cookies_label)
+        
+        self.browser_combobox = QComboBox()
+        self.browser_combobox.addItems(["None", "Chrome", "Firefox", "Edge", "Safari", "Opera", "Brave"])
+        self.browser_combobox.setStyleSheet(
+            "QComboBox { background-color: #06283D; color: white; font-weight: bold; }"
+            "QComboBox QAbstractItemView { background-color: #06283D; color: white; font-weight: bold; selection-background-color: #1363DF; }"
+        )
+        self.browser_combobox.setToolTip(
+            "Select which browser to use for cookies.\n"
+            "Select 'None' to disable using cookies."
+        )
+        self.browser_combobox.setMinimumWidth(200)  # Make it wider like in the image
+        cookies_section.addWidget(self.browser_combobox)
+        
+        layout.addLayout(cookies_section)
+
         ffmpeg_layout = QHBoxLayout()
         ffmpeg_label = QLabel("<b>FFmpeg Path:</b>")
         ffmpeg_label.setStyleSheet("color: white;")
@@ -165,22 +193,29 @@ class SettingsWindow(QDialog):
     def save_settings(self):
         self.settings.setValue("ffmpeg_path", self.ffmpeg_input.text())
         self.settings.setValue("yt_dlp_path", self.yt_dlp_input.text())
+        # Save browser_cookies selection so it persists
+        self.settings.setValue("browser_cookies", self.browser_combobox.currentText())
         self.settings_saved.emit()  # Emit the custom signal
         self.accept()
 
     def load_settings(self):
         ffmpeg_path = self.settings.value("ffmpeg_path", "")
         yt_dlp_path = self.settings.value("yt_dlp_path", "")
+        browser_cookies = self.settings.value("browser_cookies", "None")
 
         if ffmpeg_path:
             self.ffmpeg_input.setText(ffmpeg_path)
         if yt_dlp_path:
             self.yt_dlp_input.setText(yt_dlp_path)
+        # Restore browser selection if present
+        index = self.browser_combobox.findText(browser_cookies)
+        if index >= 0:
+            self.browser_combobox.setCurrentIndex(index)
 
     def install_ffmpeg(self):
         # First check if FFmpeg is already in PATH
         ffmpeg_path = shutil.which('ffmpeg')
-        if ffmpeg_path:
+        if (ffmpeg_path):
             QMessageBox.information(
                 self, "Installation", "FFmpeg is already installed.")
             self.ffmpeg_input.setText(ffmpeg_path)
@@ -422,7 +457,7 @@ class SettingsWindow(QDialog):
         ffmpeg_installed = bool(ffmpeg_path)
         
         # If FFmpeg is installed but not in the input field, update it
-        if ffmpeg_installed and not self.ffmpeg_input.text():
+        if (ffmpeg_installed and not self.ffmpeg_input.text()):
             self.ffmpeg_input.setText(ffmpeg_path)
             self.settings.setValue("ffmpeg_path", ffmpeg_path)
         

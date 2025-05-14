@@ -11,8 +11,9 @@ class DownloadThread(QThread):
     download_progress = pyqtSignal(int)
     download_output = pyqtSignal(str)
     download_complete = pyqtSignal()
+    download_location_complete = pyqtSignal(str)  
 
-    def __init__(self, urls, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title=""):
+    def __init__(self, urls, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title="", browser_cookies="None"):
         super().__init__()
         self.urls = urls.split("\n") if "\n" in urls else [urls]
         # Store original paths for test compatibility 
@@ -26,6 +27,7 @@ class DownloadThread(QThread):
         self.download_type = download_type
         self.resolution = resolution
         self.custom_title = custom_title
+        self.browser_cookies = browser_cookies
         self.running = True
 
     def run(self):
@@ -34,7 +36,7 @@ class DownloadThread(QThread):
                 return
 
             command = self.construct_command(url)
-            self.execute_command(command)
+            self.execute_command(command, url=url)
 
         if self.running:
             self.download_complete.emit()
@@ -43,7 +45,7 @@ class DownloadThread(QThread):
         # Fix sanitize_path to handle the correct number of special characters
         return re.sub(r'[<>:"/\\|?*]', '_', path)
 
-    def construct_command(self, url):
+    def construct_command(self, url, force_cookies=False):
         if not url.startswith(('http://', 'https://', 'ftp://')):
             url = f'https://{url}'
         
@@ -70,6 +72,18 @@ class DownloadThread(QThread):
             "--progress",
             url
         ]
+
+        # Only use browser cookies if necessary or forced
+        use_cookies = False
+        if force_cookies:
+            use_cookies = self.browser_cookies != "None"
+        else:
+            if self.browser_cookies != "None":
+                if "youtube.com" in url.lower() or "private" in url.lower():
+                    use_cookies = True
+        if use_cookies:
+            base_command.extend(["--cookies-from-browser", self.browser_cookies.lower()])
+            self.download_output.emit(f"🍪 Using cookies from {self.browser_cookies} browser")
 
         # Only add live-from-start for YouTube, not for Twitch
         if 'youtube.com' in url.lower():
@@ -107,7 +121,7 @@ class DownloadThread(QThread):
     def construct_video_with_audio_command(self, url):
         return self.construct_command(url)
 
-    def execute_command(self, command):
+    def execute_command(self, command, url=None, retry_with_cookies=False):
         try:
             self.process = subprocess.Popen(
                 command,
@@ -116,16 +130,20 @@ class DownloadThread(QThread):
                 universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
-            
+            error_detected = False
             for line in self.process.stdout:
                 if not self.running:
                     self.process.terminate()
                     return
-                    
                 line = line.strip()
                 if not line:
                     continue
-                
+                # Error detection for age restriction/cookie requirement
+                if (
+                    'sign in to confirm your age' in line.lower() or
+                    'use --cookies-from-browser or --cookies for the authentication' in line.lower()
+                ):
+                    error_detected = True
                 # Filter and format different types of messages
                 if line.startswith('[download]'):
                     if 'Destination:' in line:
@@ -172,10 +190,15 @@ class DownloadThread(QThread):
                 ]):
                     # Filter out technical noise but keep important messages
                     self.download_output.emit(line)
-                
+            self.process.stdout.close()
+            self.process.wait()
+            # If error detected and not already retried with cookies, retry
+            if error_detected and not retry_with_cookies and self.browser_cookies != "None":
+                self.download_output.emit("🔄 Retrying with browser cookies due to authentication error...")
+                retry_command = self.construct_command(url, force_cookies=True)
+                self.execute_command(retry_command, url=url, retry_with_cookies=True)
         except Exception as e:
             self.download_output.emit(f"❌ Error: {str(e)}")
-            
         finally:
             if hasattr(self, 'process'):
                 self.process.terminate()

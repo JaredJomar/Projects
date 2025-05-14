@@ -260,6 +260,7 @@ class MainWindow(QMainWindow):
         ffmpeg_path = self.settingsTab.ffmpeg_input.text().strip()  # Get FFmpeg path from settings
         yt_dlp_path = self.settingsTab.yt_dlp_input.text().strip()  # Get yt-dlp path from settings
         custom_title = self.title_input.text().strip()  # Get custom title
+        browser_cookies = self.settingsTab.browser_combobox.currentText()  # Get browser cookies setting
         
         # If the paths are empty, try to find them dynamically
         if not ffmpeg_path:
@@ -287,10 +288,11 @@ class MainWindow(QMainWindow):
         self.done_label.hide()
 
         self.download_thread = DownloadThread(
-            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title)  # Add custom_title
+            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title, browser_cookies)  
         self.download_thread.download_progress.connect(self.update_progress)
         self.download_thread.download_output.connect(self.update_progress_text)
         self.download_thread.download_complete.connect(self.download_complete)
+        self.download_thread.download_location_complete.connect(self.show_download_location)  
         self.download_thread.start()
 
     def update_progress(self, progress):
@@ -325,6 +327,14 @@ class MainWindow(QMainWindow):
         self.title_input.clear()  # Clear the custom title input
         self.progress_text.append("✅ Download Completed!")
 
+    def show_download_location(self, location):
+        """Show the download location in the progress text box."""
+        if location:
+            self.progress_text.append(f"📁 Download saved to: {location}")
+            self.progress_text.verticalScrollBar().setValue(
+                self.progress_text.verticalScrollBar().maximum()
+            )
+
     def save_settings(self):
         self.settings.setValue(
             "download_folder", self.download_folder_input.text())
@@ -332,6 +342,9 @@ class MainWindow(QMainWindow):
             "ffmpeg_path", self.settingsTab.ffmpeg_input.text())
         self.settings.setValue(
             "yt_dlp_path", self.settingsTab.yt_dlp_input.text())
+        # Do NOT save browser_cookies anymore
+        # self.settings.setValue(
+        #     "browser_cookies", self.settingsTab.browser_combobox.currentText())
         self.settings.setValue("window_size", self.size())
         self.settings.setValue("window_position", self.pos())
 

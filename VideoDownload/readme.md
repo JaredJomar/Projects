@@ -85,6 +85,14 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 3. Recording starts immediately
 4. Use Cancel to stop recording
 
+### 🍪 Browser Cookies for Age-Restricted Videos
+1. In the Settings tab, select your browser under "Use Browser Cookies"
+2. The app will read (but never save) cookies from your selected browser
+3. For age-restricted videos, the app automatically retries with cookies if needed
+4. Only the browser selection is saved, not the actual cookies
+
+> **Note:** Cookies are only used when required for authentication or age-restricted content
+
 ## ❗ Troubleshooting
 
 1. **📦 Dependencies Not Found:**
