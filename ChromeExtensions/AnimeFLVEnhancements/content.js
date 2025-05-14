@@ -15,7 +15,8 @@ const CONFIG = {
         sortContainer: '.order-lst',
         pageUpButton: '.button-85',
         downloadLinks: 'a.fa-download',
-        mainContent: 'main.Main'
+        mainContent: 'main.Main',
+        acceptRiskButton: '.btn.btn-primary.accept-risk'
     },
     storage: {
         selectedOption: 'selectedOption'
@@ -241,6 +242,26 @@ const Features = {
                 }, CONFIG.delays.sort);
             });
         }
+    },
+
+    // Auto Accept Risk Feature
+    AutoAcceptRisk: {
+        clickButton: function () {
+            const buttons = document.querySelectorAll(CONFIG.selectors.acceptRiskButton);
+            if (buttons.length > 0) {
+                console.log(`Found ${buttons.length} accept-risk button(s), clicking...`);
+                buttons.forEach(button => {
+                    console.log(`Clicking accept-risk button with data-id: ${button.getAttribute('data-id')}`);
+                    button.click();
+                });
+            } else {
+                console.log('No accept-risk buttons found, retrying...');
+                setTimeout(Features.AutoAcceptRisk.clickButton, 500); // Retry every 500ms until button appears
+            }
+        },
+        execute: () => {
+            window.addEventListener('load', Features.AutoAcceptRisk.clickButton);
+        }
     }
 };
 
@@ -254,6 +275,9 @@ class AppInitializer {
         try {
             // Execute auto-sort immediately
             Features.AutoSort.execute();
+
+            // Execute auto accept risk feature
+            Features.AutoAcceptRisk.execute();
 
             Features.PageNavigation.createPageUpButton();
 
