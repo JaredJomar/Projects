@@ -35,6 +35,11 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - 🚀 yt-dlp for video downloading
    - 🎞️ FFmpeg for media processing
    - ⚡ aria2c for accelerated downloads
+   
+4. **⚡ Platform-Specific Optimizations:**
+   - 🎮 Enhanced Twitch downloads with superior audio quality
+   - 🔄 Automatic audio synchronization for Twitch streams
+   - 📱 YouTube age-restricted content support
 
 ## 📥 Installation
 
@@ -79,11 +84,16 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 4. Configure other options
 5. Click Download
 
-### 🔴 Live Stream Recording
-1. Paste live stream URL
-2. App automatically detects live streams
-3. Recording starts immediately
-4. Use Cancel to stop recording
+### 🔴 Live Stream & Twitch Content
+1. Paste live stream URL or Twitch video/clip URL
+2. App automatically detects content type
+3. For live streams:
+   - Recording starts immediately
+   - Use Cancel to stop recording
+4. For Twitch videos:
+   - Select "video with audio" and "best" resolution for highest quality
+   - App handles audio synchronization automatically
+   - Audio quality is set to maximum for all Twitch downloads
 
 ### 🍪 Browser Cookies for Age-Restricted Videos
 1. In the Settings tab, select your browser under "Use Browser Cookies"

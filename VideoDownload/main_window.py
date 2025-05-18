@@ -229,20 +229,33 @@ class MainWindow(QMainWindow):
             
             # Reset progress bar
             self.progress_bar.setValue(0)
-            self.progress_bar.setFormat("Cancelled")
+            self.progress_bar.setFormat("Cancelling...")
+            
+            # Ensure UI updates immediately
+            from PyQt5.QtCore import QCoreApplication
+            QCoreApplication.processEvents()
             
             try:
+                # First try graceful termination
                 self.download_thread.stop()
-                self.download_thread.quit()
-                self.download_thread.wait(3000)  # Wait up to 3 seconds
+                
+                # Give time for graceful termination
+                if not self.download_thread.wait(1000):  # Wait 1 second
+                    # If still running, force terminate
+                    self.progress_text.append("⏹️ Forcing termination...")
+                    self.download_thread.terminate()  # Hard terminate the thread
+                    
+                    # Final wait with longer timeout
+                    if not self.download_thread.wait(2000):  # Wait 2 more seconds
+                        # Last resort - try to force kill the thread
+                        self.progress_text.append("⏹️ Force killing process...")
+                        self.download_thread.quit()
             except Exception as e:
                 self.progress_text.append(f"❌ Error during cancellation: {str(e)}")
             finally:
-                self.download_thread = None
-                self.live_label.hide()
+                # Use our reset method to ensure complete cleanup
                 self.progress_text.append("⏹️ Download cancelled.")
-                self.download_button.setEnabled(True)
-                self.cancel_button.setEnabled(True)
+                self.reset_download_state()
 
     def start_download(self):
         self.live_label.hide()
@@ -390,3 +403,31 @@ class MainWindow(QMainWindow):
             "QComboBox { background-color: #06283D; color: white; font-weight: bold; }"
             "QComboBox QAbstractItemView { background-color: #06283D; color: white; font-weight: bold; selection-background-color: #1363DF; }"
         )
+
+    def reset_download_state(self):
+        """Reset the download state to recover from failed or hanging processes"""
+        # Reset UI
+        self.progress_bar.setValue(0)
+        self.progress_bar.setFormat("")
+        self.download_button.setEnabled(True)
+        self.cancel_button.setEnabled(True)
+        self.live_label.hide()
+        self.done_label.hide()
+        
+        # If there's a running download thread, clean it up
+        if hasattr(self, "download_thread") and self.download_thread:
+            try:
+                if self.download_thread.isRunning():
+                    self.download_thread.stop()
+                    self.download_thread.terminate()
+                    self.download_thread.wait(1000)
+            except Exception:
+                pass
+            finally:
+                self.download_thread = None
+                
+        self.progress_text.append("🔄 Download state reset - Ready for new download")
+        
+        # Ensure UI updates immediately
+        from PyQt5.QtCore import QCoreApplication
+        QCoreApplication.processEvents()
