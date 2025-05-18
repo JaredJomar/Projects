@@ -4,6 +4,7 @@ import os
 import signal
 import psutil
 import shutil
+import sys
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
@@ -42,18 +43,42 @@ class DownloadThread(QThread):
             self.download_complete.emit()
 
     def sanitize_path(self, path):
-        # Fix sanitize_path to handle the correct number of special characters
-        return re.sub(r'[<>:"/\\|?*]', '_', path)
+        """
+        Sanitize a file path by replacing invalid characters
+        while preserving international characters when possible
+        """
+        if not path:
+            return ""
+            
+        # First replace the most problematic characters
+        path = re.sub(r'[<>:"/\\|?*]', '_', path)
+        
+        # Replace additional problematic characters (control characters)
+        path = re.sub(r'[\x00-\x1f]', '', path)
+        
+        # Limit the maximum length (Windows has a 255 character path limit)
+        max_length = 200  # Conservative limit to account for extensions and folder paths
+        if len(path) > max_length:
+            path = path[:max_length]
+            
+        return path
 
     def construct_command(self, url, force_cookies=False):
         if not url.startswith(('http://', 'https://', 'ftp://')):
             url = f'https://{url}'
         output_path = self._normalized_output_folder
+        
+        # Create sanitized custom title for the output template
+        safe_title = self.custom_title
+        if safe_title:
+            safe_title = self.sanitize_path(safe_title)
+            
         output_template = (
-            f"{output_path}\\{self.custom_title}.%(ext)s" 
-            if self.custom_title 
+            f"{output_path}\\{safe_title}.%(ext)s" 
+            if safe_title 
             else f"{output_path}\\%(title)s_%(resolution)s.%(ext)s"
         )
+        
         base_command = [
             self._normalized_yt_dlp_path,
             "--no-cache-dir",
@@ -65,6 +90,7 @@ class DownloadThread(QThread):
             "--concurrent-fragments", "5",
             "--no-part",
             "--progress",
+            "--restrict-filenames",  # Replace problematic characters in filenames
             url
         ]
         # Only use browser cookies if necessary or forced
@@ -82,9 +108,8 @@ class DownloadThread(QThread):
         if 'youtube.com' in url.lower():
             base_command.append("--live-from-start")
         elif 'twitch.tv' in url.lower():
-            # For Twitch, use special parameters to improve audio quality and fix choppy playback
+            # Common Twitch parameters for both live and VOD
             base_command.extend([
-                "--no-live-from-start",
                 "--wait-for-video", "5",  # Wait up to 5 seconds for live stream
                 "--downloader", "ffmpeg",  # Use ffmpeg directly for downloading
                 "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
@@ -94,6 +119,18 @@ class DownloadThread(QThread):
                 "--fragment-retries", "10",  # Retry fragment downloads up to 10 times
                 "--retry-sleep", "5"  # Wait 5 seconds between retries
             ])
+            
+            # Special handling for Twitch live vs VOD
+            is_vod = '/videos/' in url.lower() or 'twitch.tv/videos/' in url.lower()
+            
+            if is_vod:
+                # This is a VOD (recorded video), explicitly DON'T use live-from-start
+                base_command.append("--no-live-from-start")
+                self.download_output.emit("📺 Twitch VOD detected - Using VOD-specific settings")
+            else:
+                # This is likely a live stream
+                base_command.append("--live-from-start")
+                self.download_output.emit("🔴 Twitch live stream detected - Will record from beginning")
             
             # For Twitch, if we're downloading video with audio, use this specific format
             if self.download_type == "video with audio":
@@ -125,12 +162,18 @@ class DownloadThread(QThread):
 
     def execute_command(self, command, url=None, retry_with_cookies=False):
         try:
+            # Set encoding for the subprocess to handle non-ASCII characters
+            if os.name == 'nt':  # Windows
+                sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+                
             self.process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 creationflags=subprocess.CREATE_NO_WINDOW,
+                encoding='utf-8',
+                errors='replace'  # Handle encoding errors gracefully
             )
             error_detected = False
             for line in self.process.stdout:
@@ -146,6 +189,22 @@ class DownloadThread(QThread):
                     'use --cookies-from-browser or --cookies for the authentication' in line.lower()
                 ):
                     error_detected = True
+                # Error detection for live-from-start issues
+                if '--live-from-start is passed, but there are no formats that can be downloaded from the start' in line:
+                    self.download_output.emit("⚠️ Cannot download from start - switching to current time recording")
+                    # If we're still running, retry without live-from-start
+                    if self.running and url:
+                        self.process.terminate()
+                        # Wait for process to terminate properly
+                        self.wait_with_timeout(self.process, 2)
+                        # Modify command to remove live-from-start
+                        modified_command = [param for param in command if param != "--live-from-start"]
+                        modified_command.append("--no-live-from-start")
+                        # Restart with modified command
+                        self.download_output.emit("🔄 Restarting download from current position...")
+                        self.execute_command(modified_command, url=url, retry_with_cookies=retry_with_cookies)
+                        return
+                
                 # Filter and format different types of messages
                 if line.startswith('[download]'):
                     if 'Destination:' in line:
@@ -169,11 +228,20 @@ class DownloadThread(QThread):
                         self.download_output.emit("📄 Loading stream information...")
                     elif 'Downloading m3u8 information' in line:
                         self.download_output.emit("📊 Connecting to live stream...")
-                elif line.startswith('[Twitch]'):
+                elif line.startswith('[Twitch]') or line.startswith('[twitch:'):
                     if 'Downloading m3u8 information' in line:
                         self.download_output.emit("🎮 Connecting to Twitch stream...")
                     elif 'Opening' in line:
                         self.download_output.emit("🔴 Recording Twitch stream...")
+                    elif (
+                        'Downloading video access token' in line or 
+                        'Downloading stream metadata' in line
+                    ):
+                        self.download_output.emit("📀 Processing Twitch VOD information...")
+                    elif 'Downloading storyboard' in line:
+                        self.download_output.emit("📊 Processing Twitch stream preview data...")
+                    elif 'Extracting URL' in line:
+                        self.download_output.emit("🔗 Processing Twitch stream URL...")
                 elif line.startswith('[Merger]'):
                     self.download_output.emit("🔄 Processing recording...")
                 elif line.startswith('[Metadata]'):
