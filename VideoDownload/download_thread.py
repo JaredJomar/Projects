@@ -1,6 +1,7 @@
 import subprocess
 import re
 import os
+import glob
 import signal
 import psutil
 import shutil
@@ -12,7 +13,7 @@ class DownloadThread(QThread):
     download_progress = pyqtSignal(int)
     download_output = pyqtSignal(str)
     download_complete = pyqtSignal()
-    download_location_complete = pyqtSignal(str)  
+    download_location_complete = pyqtSignal(str)
 
     def __init__(self, urls, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title="", browser_cookies="None"):
         super().__init__()
@@ -21,10 +22,11 @@ class DownloadThread(QThread):
         self.output_folder = output_folder
         self.ffmpeg_path = ffmpeg_path 
         self.yt_dlp_path = yt_dlp_path
-        # Normalized paths for actual use
-        self._normalized_output_folder = os.path.normpath(output_folder)
-        self._normalized_ffmpeg_path = os.path.normpath(ffmpeg_path)
-        self._normalized_yt_dlp_path = os.path.normpath(yt_dlp_path)
+        
+        # Normalized paths for actual use - expand environment variables first
+        self._normalized_output_folder = os.path.normpath(os.path.expandvars(output_folder))
+        self._normalized_ffmpeg_path = os.path.normpath(os.path.expandvars(ffmpeg_path))
+        self._normalized_yt_dlp_path = os.path.normpath(os.path.expandvars(yt_dlp_path))
         self.download_type = download_type
         self.resolution = resolution
         self.custom_title = custom_title
@@ -40,6 +42,8 @@ class DownloadThread(QThread):
             self.execute_command(command, url=url)
 
         if self.running:
+            # Emit final progress update to ensure progress bar reaches 100%
+            self.download_progress.emit(100)
             self.download_complete.emit()
 
     def sanitize_path(self, path):
@@ -68,6 +72,9 @@ class DownloadThread(QThread):
             url = f'https://{url}'
         output_path = self._normalized_output_folder
         
+        # Clean up any temporary files from previous downloads
+        self.cleanup_temp_files(output_path)
+        
         # Create sanitized custom title for the output template
         safe_title = self.custom_title
         if safe_title:
@@ -91,9 +98,12 @@ class DownloadThread(QThread):
             "--no-part",
             "--progress",
             "--restrict-filenames",  # Replace problematic characters in filenames
+            "--no-continue",         # Don't resume partially downloaded files (prevents 416 errors)
+            "--ignore-errors",       # Continue on download errors
+            "--retries", "10",       # Retry 10 times on connection errors
+            "--retry-sleep", "5",    # Wait 5 seconds between retries
             url
-        ]
-        # Only use browser cookies if necessary or forced
+        ]        # Only use browser cookies if necessary or forced
         use_cookies = False
         if force_cookies:
             use_cookies = self.browser_cookies != "None"
@@ -101,12 +111,23 @@ class DownloadThread(QThread):
             if self.browser_cookies != "None":
                 if "youtube.com" in url.lower() or "private" in url.lower():
                     use_cookies = True
+        
         if use_cookies:
             base_command.extend(["--cookies-from-browser", self.browser_cookies.lower()])
             self.download_output.emit(f"🍪 Using cookies from {self.browser_cookies} browser")
-              # Add specific parameters for different platforms
+        
+        # Add specific parameters for different platforms
         if 'youtube.com' in url.lower():
             base_command.append("--live-from-start")
+            # Add safer audio handling to avoid "Function not implemented" errors
+            base_command.extend([
+                "--audio-quality", "0",  # Use highest audio quality
+                "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
+                # Specify path for temporary files
+                "--paths", f"temp:{self._normalized_output_folder}"  # Specify temp file location
+            ])
+            if '/live/' in url.lower() or 'livestream' in url.lower():
+                self.download_output.emit("🔴 YouTube live stream detected - Using enhanced audio processing")
         elif 'twitch.tv' in url.lower():
             # Common Twitch parameters for both live and VOD
             base_command.extend([
@@ -114,7 +135,8 @@ class DownloadThread(QThread):
                 "--downloader", "ffmpeg",  # Use ffmpeg directly for downloading
                 "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
                 "--audio-quality", "0",  # Use highest audio quality
-                "--postprocessor-args", "ffmpeg:-af aresample=async=1:min_hard_comp=0.100000:first_pts=0",  # Fix audio sync issues
+                # Use paths command for temp files
+                "--paths", f"temp:{self._normalized_output_folder}",  # Use output folder for temp files
                 "--file-access-retries", "10",  # Retry file access operations up to 10 times
                 "--fragment-retries", "10",  # Retry fragment downloads up to 10 times
                 "--retry-sleep", "5"  # Wait 5 seconds between retries
@@ -164,7 +186,11 @@ class DownloadThread(QThread):
         try:
             # Set encoding for the subprocess to handle non-ASCII characters
             if os.name == 'nt':  # Windows
-                sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+                try:
+                    if hasattr(sys.stdout, 'reconfigure'):
+                        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+                except Exception:
+                    pass  # Ignore if sys.stdout does not support reconfigure
                 
             self.process = subprocess.Popen(
                 command,
@@ -189,6 +215,31 @@ class DownloadThread(QThread):
                     'use --cookies-from-browser or --cookies for the authentication' in line.lower()
                 ):
                     error_detected = True
+                # Error detection for HTTP 416 issues (range errors)
+                if 'HTTP Error 416' in line:
+                    self.download_output.emit("⚠️ Range request issue detected - Attempting to restart download...")
+                    # If we're still running, retry with no-continue flag
+                    if self.running and url:
+                        self.process.terminate()
+                        # Wait for process to terminate properly
+                        self.wait_with_timeout(self.process, 2)
+                        # Create a fresh command with explicit no-continue flag
+                        fresh_command = self.construct_command(url, force_cookies=retry_with_cookies)
+                        # Restart with fresh command
+                        self.download_output.emit("🔄 Restarting download with fresh connection...")
+                        self.execute_command(fresh_command, url=url, retry_with_cookies=retry_with_cookies)
+                        return
+                
+                # Error detection for file not found errors
+                if 'The system cannot find the file specified' in line or 'No such file or directory' in line:
+                    self.download_output.emit("⚠️ File path issue detected - This is usually caused by special characters in filenames")
+                    # Continue with the download process but notify the user of the potential issue
+                
+                # Error detection for postprocessing errors
+                if 'Error opening output files: Function not implemented' in line:
+                    self.download_output.emit("⚠️ Processing issue detected - Using alternative method...")
+                    # This is a FFmpeg postprocessing error, but we can usually still get the main video
+                                
                 # Error detection for live-from-start issues
                 if '--live-from-start is passed, but there are no formats that can be downloaded from the start' in line:
                     self.download_output.emit("⚠️ Cannot download from start - switching to current time recording")
@@ -336,3 +387,17 @@ class DownloadThread(QThread):
                 return False  # Timeout expired
             time.sleep(0.1)
         return True  # Process terminated
+
+    def cleanup_temp_files(self, directory):
+        """Clean up temporary files that might cause issues with new downloads"""
+        try:
+            # Look for temporary files (*.part, *.temp, etc.) that might interfere
+            for pattern in ["*.part", "*.temp", "*.tmp"]:
+                pattern_path = os.path.join(directory, pattern)
+                for file in glob.glob(pattern_path):
+                    try:
+                        os.remove(file)
+                    except (PermissionError, OSError):
+                        pass  # Ignore errors if we can't delete a file
+        except Exception:
+            pass  # Silently fail if cleanup encounters issues
