@@ -113,8 +113,10 @@ class DownloadThread(QThread):
                     use_cookies = True
         
         if use_cookies:
-            base_command.extend(["--cookies-from-browser", self.browser_cookies.lower()])
-            self.download_output.emit(f"🍪 Using cookies from {self.browser_cookies} browser")
+            browser = self.browser_cookies.lower() if self.browser_cookies and self.browser_cookies != "None" else ""
+            if browser:
+                base_command.extend(["--cookies-from-browser", browser])
+                self.download_output.emit(f"🍪 Using cookies from {self.browser_cookies} browser")
         
         # Add specific parameters for different platforms
         if 'youtube.com' in url.lower():
