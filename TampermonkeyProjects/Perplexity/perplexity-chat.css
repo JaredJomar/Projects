@@ -1,19 +1,34 @@
-/* Expand chat width in Perplexity */
-.max-w-threadContentWidth {
-    max-width: none !important;
-    width: 100% !important;
-}
+/* ==UserStyle==
+@name           Perplexity Large Chat
+@namespace      userstyles.world
+@version        2025/26/5
+@description    Expand chat width in Perplexity for a better reading experience
+@author         YourUsername
+@homepageURL    https://github.com/YourUsername/TampermonkeyProjects
+@supportURL     https://github.com/YourUsername/TampermonkeyProjects/issues
+@updateURL      https://userstyles.world/api/style/STYLE_ID.user.css
+@license        MIT
+==/UserStyle== */
 
-/* Ensure proper spacing with expanded width */
-.mx-auto.max-w-threadContentWidth {
-    margin-left: auto !important;
-    margin-right: auto !important;
-    padding-left: 1rem !important;
-    padding-right: 2rem !important;
-}
+@-moz-document domain("perplexity.ai") {
 
-/* Adjust container padding for wider layout */
-.isolate.mx-auto.px-md {
-    padding-left: 4rem !important;
-    padding-right: 4rem !important;
+    /* Expand chat width in Perplexity */
+    .max-w-threadContentWidth {
+        max-width: none !important;
+        width: 100% !important;
+    }
+
+    /* Ensure proper spacing with expanded width */
+    .mx-auto.max-w-threadContentWidth {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 1rem !important;
+        padding-right: 2rem !important;
+    }
+
+    /* Adjust container padding for wider layout */
+    .isolate.mx-auto.px-md {
+        padding-left: 4rem !important;
+        padding-right: 4rem !important;
+    }
 }
