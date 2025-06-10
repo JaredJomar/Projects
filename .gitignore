@@ -1,6 +1,7 @@
 # Local configuration files
 last_dir.json
 tempCodeRunnerFile.py
+.copilot-rules.md
 
 # Python cache files
 __pycache__/
