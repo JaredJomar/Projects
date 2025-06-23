@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      http://tampermonkey.net/
-// @version        0.8.2
+// @version        0.8.3
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -691,8 +691,47 @@
             tries++;
             setTimeout(handleAdBlockError, CONSTANTS.DELAY);
         }
-    }
+    } function redirectToVideosPage() {
+        const currentUrl = window.location.href;
 
+        // Check if we're on a channel page (new format @username)
+        if (currentUrl.includes('/@')) {
+            // Handle explicit featured page
+            if (currentUrl.endsWith('/featured') || currentUrl.includes('/featured?')) {
+                const videosUrl = currentUrl.replace(/\/featured(\?.*)?$/, '/videos');
+                Logger.info(`Redirecting from featured page to videos page: ${videosUrl}`);
+                window.location.replace(videosUrl);
+                return true;
+            }
+            // Handle channel home page (defaults to featured) - no specific tab specified
+            else if (currentUrl.match(/\/@[^\/]+\/?(\?.*)?$/)) {
+                const videosUrl = currentUrl.replace(/\/?(\?.*)?$/, '/videos');
+                Logger.info(`Redirecting from channel home to videos page: ${videosUrl}`);
+                window.location.replace(videosUrl);
+                return true;
+            }
+        }
+
+        // Also handle the older channel URL format
+        if (currentUrl.includes('/channel/')) {
+            // Handle explicit featured page
+            if (currentUrl.endsWith('/featured') || currentUrl.includes('/featured?')) {
+                const videosUrl = currentUrl.replace(/\/featured(\?.*)?$/, '/videos');
+                Logger.info(`Redirecting from featured page to videos page: ${videosUrl}`);
+                window.location.replace(videosUrl);
+                return true;
+            }
+            // Handle channel home page (defaults to featured) - no specific tab specified
+            else if (currentUrl.match(/\/channel\/[^\/]+\/?(\?.*)?$/)) {
+                const videosUrl = currentUrl.replace(/\/?(\?.*)?$/, '/videos');
+                Logger.info(`Redirecting from channel home to videos page: ${videosUrl}`);
+                window.location.replace(videosUrl);
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     function handleKeyPress(event) {
         switch (event.key) {
@@ -739,13 +778,17 @@
     function setupEventListeners() {
         window.addEventListener('beforeunload', () => {
             currentPageUrl = window.location.href;
-        });
-
-        document.addEventListener('yt-navigate-finish', () => {
+        }); document.addEventListener('yt-navigate-finish', () => {
             Logger.info('yt-navigate-finish event triggered');
             const newUrl = window.location.href;
             if (newUrl !== currentPageUrl) {
                 Logger.info(`URL changed: ${newUrl}`);
+
+                // Check for channel featured page redirect first
+                if (redirectToVideosPage()) {
+                    return; // Don't continue if we're redirecting
+                }
+
                 if (newUrl.endsWith('.com/')) {
                     const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
                     if (iframe) {
@@ -865,6 +908,9 @@
             Logger.info('Initializing script for Edge compatibility');
             createSettingsMenu();
             setupEventListeners();
+
+            // Check for initial redirect on page load
+            redirectToVideosPage();
 
             const worker = createWorker();
             if (worker) {
