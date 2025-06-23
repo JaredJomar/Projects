@@ -12,9 +12,7 @@
 // ==/UserScript==
 
 (function () {
-    'use strict';
-
-    /**
+    'use strict';    /**
      * Configuration constants
      */
     const CONFIG = {
@@ -22,7 +20,8 @@
         TV_TIME_SEARCH_URL: 'https://app.tvtime.com/explore/search/media',
         TV_TIME_FAVICON: 'https://www.tvtime.com/favicon.ico',
         OBSERVER_TIMEOUT: 1000,
-        BUTTON_ID: 'tvTimeButton'
+        BUTTON_ID: 'tvTimeButton',
+        STORAGE_KEY: 'simklSearchTitle'
     };
 
     const SELECTORS = {
@@ -41,7 +40,23 @@
 
         // TV Time specific
         TV_TIME_BUTTON: `#${CONFIG.BUTTON_ID}`,
-        TV_TIME_SEARCH_INPUT: 'input[type="text"]'
+        TV_TIME_SEARCH_INPUT: 'input[type="text"]',
+
+        // TV Time search selectors
+        SEARCH_INPUT: 'input[type="text"]',
+        SEARCH_INTERFACES: [
+            '[role="search"]',
+            '.search-container',
+            '.search-wrapper',
+            '.search-bar',
+            '[data-testid*="search"]',
+            '[placeholder*="search"]:not([style*="-9999"])',
+            '[placeholder*="Search"]:not([style*="-9999"])',
+            'flt-semantics[role="textbox"]',
+            '[aria-label*="search"]:not(input)',
+            '[aria-label*="Search"]:not(input)'
+        ],
+        FLUTTER_INPUTS: 'flt-text-editing-host input, .flt-text-editing, input[placeholder*="search"], input[placeholder*="Search"]'
     };
 
     const CSS_CLASSES = {
@@ -364,38 +379,272 @@
                 this.observer = null;
             }
         }
-    };
-
-    /**
+    };    /**
      * TV Time search page handler
      */
     const TVTimeHandler = {
+        searchQuery: null,
+        retryAttempts: 0,
+        maxRetries: 15,
+
         /**
          * Initializes auto-paste functionality on TV Time search page
          */
         init() {
-            Utils.waitForElement(SELECTORS.TV_TIME_SEARCH_INPUT)
-                .then(searchInput => {
-                    setTimeout(async () => {
-                        try {
-                            const clipboardText = await navigator.clipboard.readText();
-                            searchInput.focus();
+            this.searchQuery = this.getSearchQuery();
 
-                            // Try modern approach first
-                            if (!document.execCommand('insertText', false, clipboardText)) {
-                                // Fallback to direct value setting
-                                searchInput.value = clipboardText;
-                            }
+            if (!this.searchQuery) {
+                console.warn('No search query found');
+                return;
+            }
 
-                            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        } catch (error) {
-                            console.error('Failed to read clipboard:', error);
-                        }
-                    }, CONFIG.OBSERVER_TIMEOUT);
-                })
-                .catch(error => {
-                    console.error('Search input not found:', error);
-                });
+            console.log('Starting TV Time auto-search for:', this.searchQuery);
+            this.startSearchFieldMonitor();
+        },
+
+        /**
+         * Gets search query from URL parameters or sessionStorage
+         */
+        getSearchQuery() {
+            // Try URL parameter first
+            const urlParams = new URLSearchParams(window.location.search);
+            let query = urlParams.get('q') || urlParams.get('search');
+
+            if (!query) {
+                // Try sessionStorage
+                query = sessionStorage.getItem('simkl_tvtime_search');
+                if (query) {
+                    sessionStorage.removeItem('simkl_tvtime_search');
+                }
+            }
+
+            return query;
+        },
+
+        /**
+         * Starts monitoring for search field and automatically fills it
+         */
+        startSearchFieldMonitor() {
+            const attemptSearch = () => {
+                if (this.retryAttempts >= this.maxRetries) {
+                    console.warn('Maximum retry attempts reached for search field detection');
+                    return;
+                }
+
+                this.retryAttempts++;
+                console.log(`Search attempt ${this.retryAttempts}/${this.maxRetries}`);
+
+                if (this.findAndFillSearchField()) {
+                    console.log('Successfully filled search field');
+                    return;
+                }
+
+                // Retry after 1 second
+                setTimeout(attemptSearch, 1000);
+            };
+
+            attemptSearch();
+        },
+
+        /**
+         * Finds and fills the search field
+         */
+        findAndFillSearchField() {
+            // Try different search field detection strategies
+            let searchField = this.findSearchField();
+
+            if (searchField && this.fillSearchField(searchField)) {
+                return true;
+            }
+
+            return false;
+        },
+
+        /**
+         * Finds search field using multiple strategies
+         */
+        findSearchField() {
+            // Strategy 1: Direct input selectors
+            let field = document.querySelector(SELECTORS.SEARCH_INPUT);
+            if (field && this.isValidSearchField(field)) return field;
+
+            // Strategy 2: Search interfaces
+            for (const selector of SELECTORS.SEARCH_INTERFACES) {
+                const container = document.querySelector(selector);
+                if (container) {
+                    field = container.querySelector('input[type="text"], input:not([type]), textarea');
+                    if (field && this.isValidSearchField(field)) return field;
+                }
+            }
+
+            // Strategy 3: Flutter inputs
+            field = document.querySelector(SELECTORS.FLUTTER_INPUTS);
+            if (field && this.isValidSearchField(field)) return field;
+
+            // Strategy 4: All visible text inputs
+            const inputs = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), textarea'));
+            for (const input of inputs) {
+                if (this.isValidSearchField(input)) return input;
+            }
+
+            // Strategy 5: Flutter semantic elements
+            const flutterElements = Array.from(document.querySelectorAll('[aria-label*="search"], [aria-label*="Search"]'));
+            for (const element of flutterElements) {
+                if (this.isValidSearchField(element)) return element;
+            }
+
+            return null;
+        },
+
+        /**
+         * Validates if an element is a valid search field
+         */
+        isValidSearchField(element) {
+            if (!element) return false;
+
+            const style = window.getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                return false;
+            }
+
+            const rect = element.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) return false;
+
+            if (element.disabled || element.readOnly) return false;
+
+            // Check for search-related attributes
+            const searchIndicators = [
+                element.placeholder?.toLowerCase().includes('search'),
+                element.name?.toLowerCase().includes('search'),
+                element.id?.toLowerCase().includes('search'),
+                element.className?.toLowerCase().includes('search'),
+                element.getAttribute('aria-label')?.toLowerCase().includes('search')
+            ];
+
+            return searchIndicators.some(indicator => indicator === true);
+        },
+
+        /**
+         * Fills the search field with the query
+         */
+        fillSearchField(field) {
+            try {
+                // Clear existing value
+                field.value = '';
+                field.textContent = '';
+
+                // Focus the field
+                field.focus();
+                field.click();
+
+                // Set the value using multiple methods
+                field.value = this.searchQuery;
+
+                if (field.setAttribute) {
+                    field.setAttribute('value', this.searchQuery);
+                }
+
+                if (field.textContent !== undefined) {
+                    field.textContent = this.searchQuery;
+                }
+
+                // Simulate typing character by character
+                this.simulateTyping(field, this.searchQuery);
+
+                // Dispatch comprehensive events
+                this.dispatchInputEvents(field);
+
+                return true;
+            } catch (error) {
+                console.error('Error filling search field:', error);
+                return false;
+            }
+        },
+
+        /**
+         * Simulates typing character by character
+         */
+        simulateTyping(element, text) {
+            element.focus();
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+
+                // Key events
+                element.dispatchEvent(new KeyboardEvent('keydown', {
+                    key: char,
+                    char: char,
+                    charCode: char.charCodeAt(0),
+                    keyCode: char.charCodeAt(0),
+                    which: char.charCodeAt(0),
+                    bubbles: true
+                }));
+
+                element.dispatchEvent(new KeyboardEvent('keypress', {
+                    key: char,
+                    char: char,
+                    charCode: char.charCodeAt(0),
+                    keyCode: char.charCodeAt(0),
+                    which: char.charCodeAt(0),
+                    bubbles: true
+                }));
+
+                // Update value progressively
+                element.value = text.substring(0, i + 1);
+
+                // Input event for each character
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+
+                element.dispatchEvent(new KeyboardEvent('keyup', {
+                    key: char,
+                    char: char,
+                    charCode: char.charCodeAt(0),
+                    keyCode: char.charCodeAt(0),
+                    which: char.charCodeAt(0),
+                    bubbles: true
+                }));
+            }
+        },
+
+        /**
+         * Dispatches comprehensive input events
+         */
+        dispatchInputEvents(element) {
+            const events = [
+                new Event('input', { bubbles: true }),
+                new Event('change', { bubbles: true }),
+                new Event('blur', { bubbles: true }),
+                new Event('focus', { bubbles: true }),
+                new InputEvent('input', {
+                    bubbles: true,
+                    inputType: 'insertText',
+                    data: this.searchQuery
+                }),
+                new Event('search', { bubbles: true })
+            ];
+
+            events.forEach(event => {
+                try {
+                    element.dispatchEvent(event);
+                } catch (e) {
+                    console.warn('Failed to dispatch event:', e);
+                }
+            });
+
+            // For React/Vue components
+            if (element._valueTracker) {
+                element._valueTracker.setValue('');
+            }
+
+            // Trigger React's synthetic events
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value'
+            )?.set;
+
+            if (nativeInputValueSetter) {
+                nativeInputValueSetter.call(element, this.searchQuery);
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         }
     };
 
