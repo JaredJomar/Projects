@@ -29,7 +29,10 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - 📝 Custom title naming
    - 📋 Batch downloads from text files
    - 📈 Progress tracking with detailed logs
+   - ⏸️ Download pause and resume functionality
    - ⏹️ Download cancellation support
+   - 🔧 Non-blocking package installations
+   - 🔄 Automatic package updates when available
 
 3. **🔧 Integration with:**
    - 🚀 yt-dlp for video downloading
@@ -47,10 +50,10 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 1. ⬇️ Download the latest [VideoDownload.exe](https://github.com/JaredJomar/Projects/raw/main/VideoDownload/VideoDownload.exe)
 2. 🏃 Run the application
 3. ⚙️ Go to the Settings tab
-4. 🔧 Use the installation buttons to install required dependencies:
-   - Install FFmpeg
-   - Install yt-dlp
-   - Install aria2c
+4. 🔧 Use the installation buttons to install/update required dependencies:
+   - Install/Update FFmpeg
+   - Install/Update yt-dlp
+   - Install/Update aria2c
 
 ### 💻 Method 2: From Source
 1. Clone the repository
@@ -63,9 +66,10 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 ## ⚙️ Configuration
 
 1. Open the Settings tab
-2. Install required packages using the provided buttons
+2. Install or update required packages using the provided buttons
 3. Verify installation status (green checkmarks)
 4. Paths will be automatically configured after installation
+5. **Smart Updates**: Buttons automatically check for and install updates if packages are already installed
 
 ## 📚 Usage
 
@@ -76,6 +80,13 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 4. Select download type
 5. Pick resolution
 6. Click Download
+7. Use Pause/Resume button to control download progress
+
+### ⏸️ Pause and Resume Downloads
+1. **Pause**: Click the "Pause" button during an active download to suspend it
+2. **Resume**: Click "Resume" to continue the download from where it was paused
+3. **Benefits**: No need to restart downloads, saves bandwidth and time
+4. **Compatibility**: Works with all supported platforms and download types
 
 ### 📋 Batch Download
 1. Create a text file with URLs (one per line)
@@ -118,6 +129,13 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 3. **📁 Path Issues:**
    - Use Browse buttons to set correct paths
    - Ensure write permissions in download folder
+
+4. **🔒 App Freezes During Installation:**
+   - **✅ Fixed!** Installations now run in background threads
+   - Progress dialog shows real-time installation status
+   - UI remains fully responsive during package installations
+   - Multiple installations are prevented to avoid conflicts
+   - **🔄 Smart Updates**: Automatically checks for updates when clicking install buttons
 
 ## 📄 License
 

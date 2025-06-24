@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
 )
-from PyQt5.QtCore import QSettings, pyqtSignal
+from PyQt5.QtCore import QSettings, pyqtSignal, QThread
 from constants import (
     BUTTON_BACKGROUND_COLOR,
     BUTTON_TEXT_COLOR,
@@ -22,6 +22,178 @@ from constants import (
 import os
 import subprocess
 import shutil
+import time
+
+
+class InstallationWorker(QThread):
+    """Worker thread for package installations to prevent UI freezing"""
+    installation_started = pyqtSignal(str)  # package name
+    installation_finished = pyqtSignal(str, bool, str)  # package name, success, message
+    installation_progress = pyqtSignal(str)  # progress message
+    
+    def __init__(self, package_type, parent=None):
+        super().__init__(parent)
+        self.package_type = package_type
+        self.success = False
+        self.message = ""
+        
+    def run(self):
+        """Run the installation in a separate thread"""
+        try:
+            if self.package_type == "ffmpeg":
+                self._install_ffmpeg()
+            elif self.package_type == "ytdlp":
+                self._install_ytdlp()
+            elif self.package_type == "aria2c":
+                self._install_aria2c()
+        except Exception as e:
+            self.success = False
+            self.message = f"Installation failed: {str(e)}"
+        finally:
+            self.installation_finished.emit(self.package_type, self.success, self.message)
+    
+    def _install_ffmpeg(self):
+        """Install or update FFmpeg using winget"""
+        self.installation_progress.emit("Checking for existing FFmpeg installation...")
+        ffmpeg_path = shutil.which('ffmpeg')
+        
+        if ffmpeg_path:
+            self.installation_progress.emit("FFmpeg found. Checking for updates...")
+            # Try to update existing installation
+            result = subprocess.run(
+                ["winget", "upgrade", "Gyan.FFmpeg", "--silent"], 
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                self.installation_progress.emit("FFmpeg updated successfully!")
+                self.success = True
+                self.message = f"FFmpeg updated at: {ffmpeg_path}"
+            else:
+                # Update failed, but it's already installed
+                self.success = True
+                self.message = f"FFmpeg already up-to-date at: {ffmpeg_path}"
+            return
+            
+        self.installation_progress.emit("Installing FFmpeg via winget...")
+        result = subprocess.run(
+            ["winget", "install", "Gyan.FFmpeg", "--silent"], 
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            self.installation_progress.emit("Waiting for installation to complete...")
+            time.sleep(3)  # Give time for installation to complete
+            
+            ffmpeg_path = shutil.which('ffmpeg')
+            if ffmpeg_path:
+                self.success = True
+                self.message = f"FFmpeg successfully installed at: {ffmpeg_path}"
+            else:
+                self.success = False
+                self.message = "FFmpeg installed but not found in PATH. Manual path setting required."
+        else:
+            self.success = False
+            self.message = f"Failed to install FFmpeg: {result.stderr}"
+    
+    def _install_ytdlp(self):
+        """Install or update yt-dlp using winget"""
+        self.installation_progress.emit("Checking for existing yt-dlp installation...")
+        ytdlp_path = shutil.which('yt-dlp')
+        
+        if ytdlp_path:
+            self.installation_progress.emit("yt-dlp found. Checking for updates...")
+            # Try to update existing installation
+            result = subprocess.run(
+                ["winget", "upgrade", "yt-dlp.yt-dlp", "--silent"], 
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                self.installation_progress.emit("yt-dlp updated successfully!")
+                self.success = True
+                self.message = f"yt-dlp updated at: {ytdlp_path}"
+            else:
+                # Update failed, but it's already installed
+                self.success = True
+                self.message = f"yt-dlp already up-to-date at: {ytdlp_path}"
+            return
+            
+        self.installation_progress.emit("Installing yt-dlp via winget...")
+        result = subprocess.run(
+            ["winget", "install", "yt-dlp.yt-dlp", "--silent"], 
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            self.installation_progress.emit("Waiting for installation to complete...")
+            time.sleep(3)  # Give time for installation to complete
+            
+            ytdlp_path = shutil.which('yt-dlp')
+            if ytdlp_path:
+                self.success = True
+                self.message = f"yt-dlp successfully installed at: {ytdlp_path}"
+            else:
+                # Try default winget installation path
+                default_path = os.path.expandvars(
+                    "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
+                if os.path.exists(default_path):
+                    self.success = True
+                    self.message = f"yt-dlp successfully installed at: {default_path}"
+                else:
+                    self.success = False
+                    self.message = "yt-dlp installed but not found in PATH. Manual path setting required."
+        else:
+            self.success = False
+            self.message = f"Failed to install yt-dlp: {result.stderr}"
+    
+    def _install_aria2c(self):
+        """Install or update aria2c using chocolatey"""
+        self.installation_progress.emit("Checking for existing aria2c installation...")
+        
+        if shutil.which('aria2c'):
+            self.installation_progress.emit("aria2c found. Checking for updates...")
+            # Try to update existing installation
+            result = subprocess.run(
+                ['choco', 'upgrade', '-y', 'aria2'], 
+                capture_output=True,
+                text=True
+            )
+            
+            if result.returncode == 0:
+                self.installation_progress.emit("aria2c updated successfully!")
+                self.success = True
+                self.message = "aria2c updated successfully"
+            else:
+                # Update failed, but it's already installed
+                self.success = True
+                self.message = "aria2c already up-to-date"
+            return
+            
+        self.installation_progress.emit("Installing aria2c via chocolatey...")
+        result = subprocess.run(
+            ['choco', 'install', '-y', 'aria2'], 
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            self.installation_progress.emit("Waiting for installation to complete...")
+            time.sleep(3)  # Give time for installation to complete
+            
+            if shutil.which('aria2c'):
+                self.success = True
+                self.message = "aria2c successfully installed"
+            else:
+                self.success = False
+                self.message = "aria2c installed but not found in PATH"
+        else:
+            self.success = False
+            self.message = f"Failed to install aria2c: {result.stderr}"
 
 
 class SettingsWindow(QDialog):
@@ -34,6 +206,11 @@ class SettingsWindow(QDialog):
         self.setMinimumSize(400, 300)
 
         self.settings = QSettings("YourCompany", "VideoDownloadApp")
+        
+        # Initialize worker thread variables
+        self.installation_worker = None
+        self.progress_dialog = None
+        
         layout = QVBoxLayout(self)
 
         install_layout = QHBoxLayout()
@@ -45,12 +222,13 @@ class SettingsWindow(QDialog):
         
         # FFmpeg section with status
         ffmpeg_section = QVBoxLayout()
-        install_ffmpeg_button = QPushButton("Install FFmpeg")
+        install_ffmpeg_button = QPushButton("Install/Update FFmpeg")
         install_ffmpeg_button.setToolTip(
             "FFmpeg is a complete solution to record, convert and stream audio and video.\n"
             "• Required for video processing and format conversion\n"
             "• Handles video/audio encoding and decoding\n"
-            "• Essential for merging video and audio streams"
+            "• Essential for merging video and audio streams\n"
+            "• Will install if not present, or update if already installed"
         )
         install_ffmpeg_button.clicked.connect(self.install_ffmpeg)
         install_ffmpeg_button.setStyleSheet(
@@ -63,12 +241,13 @@ class SettingsWindow(QDialog):
 
         # yt-dlp section with status
         ytdlp_section = QVBoxLayout()
-        install_ytdlp_button = QPushButton("Install yt-dlp")
+        install_ytdlp_button = QPushButton("Install/Update yt-dlp")
         install_ytdlp_button.setToolTip(
             "yt-dlp is a youtube-dl fork with additional features and fixes.\n"
             "• Downloads videos from YouTube and other platforms\n"
             "• Supports various video qualities and formats\n"
-            "• Handles live streams and playlists"
+            "• Handles live streams and playlists\n"
+            "• Will install if not present, or update if already installed"
         )
         install_ytdlp_button.clicked.connect(self.install_ytdlp)
         install_ytdlp_button.setStyleSheet(
@@ -81,12 +260,13 @@ class SettingsWindow(QDialog):
 
         # aria2c section with status
         aria2_section = QVBoxLayout()
-        install_aria2_button = QPushButton("Install aria2c")
+        install_aria2_button = QPushButton("Install/Update aria2c")
         install_aria2_button.setToolTip(
             "aria2 is a lightweight multi-protocol download utility.\n"
             "• Accelerates downloads with multi-connection downloading\n"
             "• Improves download stability and speed\n"
-            "• Supports resuming interrupted downloads"
+            "• Supports resuming interrupted downloads\n"
+            "• Will install if not present, or update if already installed"
         )
         install_aria2_button.clicked.connect(self.install_aria2c)
         install_aria2_button.setStyleSheet(
@@ -206,170 +386,92 @@ class SettingsWindow(QDialog):
         if ffmpeg_path:
             self.ffmpeg_input.setText(ffmpeg_path)
         if yt_dlp_path:
-            self.yt_dlp_input.setText(yt_dlp_path)
-        # Restore browser selection if present
+            self.yt_dlp_input.setText(yt_dlp_path)        # Restore browser selection if present
         index = self.browser_combobox.findText(browser_cookies)
         if index >= 0:
             self.browser_combobox.setCurrentIndex(index)
 
     def install_ffmpeg(self):
-        # First check if FFmpeg is already in PATH
-        ffmpeg_path = shutil.which('ffmpeg')
-        if (ffmpeg_path):
-            QMessageBox.information(
-                self, "Installation", "FFmpeg is already installed.")
-            self.ffmpeg_input.setText(ffmpeg_path)
-            self.settings.setValue("ffmpeg_path", ffmpeg_path)
-            self.check_installations()  # Refresh status after installation
+        """Start FFmpeg installation in a separate thread"""
+        self._start_installation("ffmpeg", "Installing FFmpeg")
+    
+    def install_ytdlp(self):
+        """Start yt-dlp installation in a separate thread"""
+        self._start_installation("ytdlp", "Installing yt-dlp")
+    
+    def install_aria2c(self):
+        """Start aria2c installation in a separate thread"""
+        self._start_installation("aria2c", "Installing aria2c")
+    
+    def _start_installation(self, package_type, title):
+        """Generic method to start installation in worker thread"""
+        if self.installation_worker and self.installation_worker.isRunning():
+            QMessageBox.warning(self, "Installation in Progress", 
+                              "Another installation is already running. Please wait for it to complete.")
             return
-
-        try:
-            self.download_output = QMessageBox(self)
-            self.download_output.setWindowTitle("Installing FFmpeg")
-            self.download_output.setText("Installing FFmpeg, please wait...")
-            self.download_output.setStandardButtons(QMessageBox.NoButton)
-            self.download_output.show()
-            
-            # Install FFmpeg using winget
-            process = subprocess.run(
-                ["winget", "install", "Gyan.FFmpeg", "--silent"], 
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            
-            # Wait a moment for installation to complete
-            import time
-            time.sleep(2)
-            
-            # Get the path where FFmpeg was installed
-            ffmpeg_path = shutil.which('ffmpeg')
-            
-            if ffmpeg_path:
-                self.ffmpeg_input.setText(ffmpeg_path)
-                self.settings.setValue("ffmpeg_path", ffmpeg_path)
-                self.download_output.close()
-                QMessageBox.information(
-                    self, "Installation", "FFmpeg has been successfully installed.")
-            else:
-                # Try to find using where command as fallback
-                ffmpeg_path = self.get_dependency_path("ffmpeg")
+        
+        # Create and show progress dialog
+        self.progress_dialog = InstallationProgressDialog(self)
+        self.progress_dialog.setWindowTitle(title)
+        self.progress_dialog.update_status(f"Starting {package_type} installation...")
+        
+        # Create worker thread
+        self.installation_worker = InstallationWorker(package_type, self)
+        
+        # Connect signals
+        self.installation_worker.installation_started.connect(
+            lambda pkg: self.progress_dialog.update_status(f"Installing {pkg}..."))
+        self.installation_worker.installation_progress.connect(
+            self.progress_dialog.update_progress)
+        self.installation_worker.installation_finished.connect(
+            self._on_installation_finished)
+        
+        # Start installation
+        self.installation_worker.start()
+        self.progress_dialog.show()
+    
+    def _on_installation_finished(self, package_type, success, message):
+        """Handle installation completion"""
+        # Close progress dialog
+        if self.progress_dialog:
+            self.progress_dialog.close()
+            self.progress_dialog = None
+        
+        # Update UI based on results
+        if success:
+            if package_type == "ffmpeg":
+                # Try to find FFmpeg path
+                ffmpeg_path = shutil.which('ffmpeg')
+                if not ffmpeg_path:
+                    ffmpeg_path = self.get_dependency_path("ffmpeg")
                 if ffmpeg_path:
                     self.ffmpeg_input.setText(ffmpeg_path)
                     self.settings.setValue("ffmpeg_path", ffmpeg_path)
-                    self.download_output.close()
-                    QMessageBox.information(
-                        self, "Installation", "FFmpeg has been successfully installed.")
-                else:
-                    self.download_output.close()
-                    QMessageBox.warning(self, "Installation Note",
-                                       "FFmpeg was installed but couldn't be automatically located. Please click 'Browse' to select it manually.")
-        except subprocess.CalledProcessError as e:
-            self.download_output.close()
-            QMessageBox.warning(self, "Installation Error",
-                               f"Failed to install FFmpeg using winget. Error: {e}")
-        self.check_installations()  # Refresh status after installation
-
-    def install_ytdlp(self):
-        # First check if yt-dlp is already in PATH
-        ytdlp_path = shutil.which('yt-dlp')
-        if ytdlp_path:
-            QMessageBox.information(
-                self, "Installation", "yt-dlp is already installed.")
-            self.yt_dlp_input.setText(ytdlp_path)
-            self.settings.setValue("yt_dlp_path", ytdlp_path)
-            self.check_installations()  # Refresh status after installation
-            return
-
-        try:
-            self.download_output = QMessageBox(self)
-            self.download_output.setWindowTitle("Installing yt-dlp")
-            self.download_output.setText("Installing yt-dlp, please wait...")
-            self.download_output.setStandardButtons(QMessageBox.NoButton)
-            self.download_output.show()
-            
-            # Install yt-dlp using winget
-            process = subprocess.run(
-                ["winget", "install", "yt-dlp.yt-dlp", "--silent"], 
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            
-            # Wait a moment for installation to complete
-            import time
-            time.sleep(2)
-            
-            # Get the path where yt-dlp was installed
-            ytdlp_path = shutil.which('yt-dlp')
-            
-            if ytdlp_path:
-                self.yt_dlp_input.setText(ytdlp_path)
-                self.settings.setValue("yt_dlp_path", ytdlp_path)
-                self.download_output.close()
-                QMessageBox.information(
-                    self, "Installation", "yt-dlp has been successfully installed.")
-            else:
-                # Try to find using where command as fallback
-                ytdlp_path = self.get_dependency_path("yt-dlp")
+            elif package_type == "ytdlp":
+                # Try to find yt-dlp path
+                ytdlp_path = shutil.which('yt-dlp')
+                if not ytdlp_path:
+                    ytdlp_path = self.get_dependency_path("yt-dlp")
+                    # Try default winget path as fallback
+                    if not ytdlp_path:
+                        default_path = os.path.expandvars(
+                            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
+                        if os.path.exists(default_path):
+                            ytdlp_path = default_path
                 if ytdlp_path:
                     self.yt_dlp_input.setText(ytdlp_path)
                     self.settings.setValue("yt_dlp_path", ytdlp_path)
-                    self.download_output.close()
-                    QMessageBox.information(
-                        self, "Installation", "yt-dlp has been successfully installed.")
-                else:
-                    # As a last resort, try the typical installation path
-                    default_path = os.path.expandvars(
-                        "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
-                    if os.path.exists(default_path):
-                        self.yt_dlp_input.setText(default_path)
-                        self.settings.setValue("yt_dlp_path", default_path)
-                        self.download_output.close()
-                        QMessageBox.information(
-                            self, "Installation", "yt-dlp has been successfully installed.")
-                    else:
-                        self.download_output.close()
-                        QMessageBox.warning(self, "Installation Note",
-                                        "yt-dlp was installed but couldn't be automatically located. Please click 'Browse' to select it manually.")
-        except subprocess.CalledProcessError as e:
-            self.download_output.close()
-            QMessageBox.warning(self, "Installation Error",
-                              f"Failed to install yt-dlp using winget. Error: {e}")
-        self.check_installations()  # Refresh status after installation
-
-    def install_aria2c(self):
-        if shutil.which('aria2c'):
-            QMessageBox.information(
-                self, "Installation", "aria2c is already installed.")
-            self.check_installations()  # Refresh status after installation
-            return
-
-        try:
-            subprocess.run(
-                ['choco', 'install', '-y', 'aria2'], 
-                check=True,
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
             
-            # Wait and check for successful installation
-            import time
-            for _ in range(5):
-                time.sleep(2)
-                if shutil.which('aria2c'):
-                    QMessageBox.information(
-                        self, "Installation", "aria2c has been successfully installed.")
-                    self.check_installations()  # Refresh status after installation
-                    return
-                    
-            QMessageBox.warning(
-                self, "Installation Error", 
-                "Failed to locate aria2c after installation. Please try installing manually.")
-        except subprocess.CalledProcessError:
-            QMessageBox.warning(
-                self, "Installation Error",
-                "Failed to install aria2c using Chocolatey. Please make sure Chocolatey is installed.")
-        self.check_installations()  # Refresh status after installation
+            QMessageBox.information(self, "Installation Complete", message)
+        else:
+            QMessageBox.warning(self, "Installation Failed", message)
+        
+        # Refresh installation status
+        self.check_installations()
+          # Clean up worker
+        if self.installation_worker:
+            self.installation_worker.deleteLater()
+            self.installation_worker = None
 
     def get_dependency_path(self, dependency):
         try:
@@ -486,3 +588,33 @@ class SettingsWindow(QDialog):
         else:
             label.setText("❌ Not Installed")
             label.setStyleSheet("color: #ff0000;")  # Red color
+
+
+class InstallationProgressDialog(QDialog):
+    """Progress dialog for installation operations"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Installing Package")
+        self.setModal(True)
+        self.setFixedSize(400, 150)
+        
+        layout = QVBoxLayout(self)
+        
+        self.status_label = QLabel("Preparing installation...")
+        layout.addWidget(self.status_label)
+        
+        self.progress_label = QLabel("")
+        layout.addWidget(self.progress_label)
+        
+        # Cancel button (disabled during critical operations)
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.setEnabled(False)  # Will be enabled when safe to cancel
+        layout.addWidget(self.cancel_button)
+        
+    def update_status(self, message):
+        """Update the main status message"""
+        self.status_label.setText(message)
+        
+    def update_progress(self, message):
+        """Update the progress message"""
+        self.progress_label.setText(message)

@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
 
         self.load_settings()
 
-        self.resize(500, 400)
+        self.resize(600, 450)
         self.center_window()
 
     def center_window(self):
@@ -114,6 +114,13 @@ class MainWindow(QMainWindow):
         self.download_button.setStyleSheet(
             f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
         url_layout.addWidget(self.download_button)
+
+        self.pause_button = QPushButton("Pause")
+        self.pause_button.clicked.connect(self.toggle_pause_resume)
+        self.pause_button.setStyleSheet(
+            f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
+        self.pause_button.setEnabled(False)  # Initially disabled
+        url_layout.addWidget(self.pause_button)
 
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.cancel_download)
@@ -226,6 +233,7 @@ class MainWindow(QMainWindow):
             self.progress_text.append("⏹️ Stopping download...")
             self.download_button.setEnabled(False)
             self.cancel_button.setEnabled(False)
+            self.pause_button.setEnabled(False)
             
             # Reset progress bar
             self.progress_bar.setValue(0)
@@ -307,6 +315,10 @@ class MainWindow(QMainWindow):
         self.download_thread.download_complete.connect(self.download_complete)
         self.download_thread.download_location_complete.connect(self.show_download_location)  
         self.download_thread.start()
+        
+        # Enable pause button when download starts
+        self.pause_button.setEnabled(True)
+        self.pause_button.setText("Pause")
 
     def update_progress(self, progress):
         self.progress_bar.setValue(progress)
@@ -326,8 +338,7 @@ class MainWindow(QMainWindow):
                 self.progress_text.verticalScrollBar().maximum()
             )
         
-        # Only show live_label if it's a live stream
-        if self.is_live:
+        # Only show live_label if it's a live stream        if self.is_live:
             self.live_label.show()
             self.progress_bar.setFormat("Recording... %p%")
         else:
@@ -339,6 +350,10 @@ class MainWindow(QMainWindow):
         self.url_input.clear()
         self.title_input.clear()  # Clear the custom title input
         self.progress_text.append("✅ Download Completed!")
+        
+        # Disable pause button when download completes
+        self.pause_button.setEnabled(False)
+        self.pause_button.setText("Pause")
 
     def show_download_location(self, location):
         """Show the download location in the progress text box."""
@@ -411,6 +426,8 @@ class MainWindow(QMainWindow):
         self.progress_bar.setFormat("")
         self.download_button.setEnabled(True)
         self.cancel_button.setEnabled(True)
+        self.pause_button.setEnabled(False)
+        self.pause_button.setText("Pause")
         self.live_label.hide()
         self.done_label.hide()
         
@@ -431,3 +448,17 @@ class MainWindow(QMainWindow):
         # Ensure UI updates immediately
         from PyQt5.QtCore import QCoreApplication
         QCoreApplication.processEvents()
+
+    def toggle_pause_resume(self):
+        """Toggle between pause and resume for the download"""
+        if hasattr(self, "download_thread") and self.download_thread:
+            if hasattr(self.download_thread, "is_paused") and self.download_thread.is_paused:
+                # Resume the download
+                self.download_thread.resume()
+                self.pause_button.setText("Pause")
+                self.progress_text.append("▶️ Download resumed")
+            else:
+                # Pause the download
+                self.download_thread.pause()
+                self.pause_button.setText("Resume")
+                self.progress_text.append("⏸️ Download paused")

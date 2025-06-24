@@ -7,3 +7,7 @@ tempCodeRunnerFile.py
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Build directories
+VideoDownload/build/
+VideoDownload/dist/

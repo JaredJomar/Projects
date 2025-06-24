@@ -32,6 +32,7 @@ class DownloadThread(QThread):
         self.custom_title = custom_title
         self.browser_cookies = browser_cookies
         self.running = True
+        self.is_paused = False  # Add pause state tracking
 
     def run(self):
         for url in self.urls:
@@ -334,14 +335,20 @@ class DownloadThread(QThread):
                         self.process.terminate()
                         self.wait_with_timeout(self.process, 1)  # Short wait
                 except Exception:
-                    pass  # Ignore errors in cleanup
-
-    def stop(self):
+                    pass  # Ignore errors in cleanup    def stop(self):
         self.running = False
+        self.is_paused = False  # Reset pause state when stopping
         if hasattr(self, 'process') and self.process:
             try:
                 # Check if process is still running before attempting to kill
                 if self.process.poll() is None:
+                    # If process was paused, resume it first before killing
+                    if self.is_paused:
+                        try:
+                            self.resume()
+                        except Exception:
+                            pass  # Ignore errors when resuming before killing
+                    
                     # Get the parent process
                     parent = psutil.Process(self.process.pid)
                     
@@ -403,3 +410,73 @@ class DownloadThread(QThread):
                         pass  # Ignore errors if we can't delete a file
         except Exception:
             pass  # Silently fail if cleanup encounters issues
+
+    def pause(self):
+        """Pause the download by suspending the process"""
+        self.is_paused = True
+        if hasattr(self, 'process') and self.process:
+            try:
+                # On Windows, suspend the process
+                if os.name == 'nt':
+                    import psutil
+                    parent = psutil.Process(self.process.pid)
+                    parent.suspend()
+                    # Also suspend child processes (ffmpeg, etc.)
+                    for child in parent.children(recursive=True):
+                        try:
+                            child.suspend()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
+                else:
+                    # On Unix-like systems, send SIGSTOP
+                    os.kill(self.process.pid, signal.SIGSTOP)
+                    # Also suspend child processes
+                    try:
+                        import psutil
+                        parent = psutil.Process(self.process.pid)
+                        for child in parent.children(recursive=True):
+                            try:
+                                os.kill(child.pid, signal.SIGSTOP)
+                            except (OSError, psutil.NoSuchProcess):
+                                pass
+                    except ImportError:
+                        pass
+                
+                self.download_output.emit("⏸️ Download process paused")
+            except Exception as e:
+                self.download_output.emit(f"❌ Error pausing download: {str(e)}")
+
+    def resume(self):
+        """Resume the paused download"""
+        self.is_paused = False
+        if hasattr(self, 'process') and self.process:
+            try:
+                # On Windows, resume the process
+                if os.name == 'nt':
+                    import psutil
+                    parent = psutil.Process(self.process.pid)
+                    parent.resume()
+                    # Also resume child processes (ffmpeg, etc.)
+                    for child in parent.children(recursive=True):
+                        try:
+                            child.resume()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
+                else:
+                    # On Unix-like systems, send SIGCONT
+                    os.kill(self.process.pid, signal.SIGCONT)
+                    # Also resume child processes
+                    try:
+                        import psutil
+                        parent = psutil.Process(self.process.pid)
+                        for child in parent.children(recursive=True):
+                            try:
+                                os.kill(child.pid, signal.SIGCONT)
+                            except (OSError, psutil.NoSuchProcess):
+                                pass
+                    except ImportError:
+                        pass
+                
+                self.download_output.emit("▶️ Download process resumed")
+            except Exception as e:
+                self.download_output.emit(f"❌ Error resuming download: {str(e)}")
