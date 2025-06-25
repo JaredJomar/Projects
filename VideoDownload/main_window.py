@@ -313,7 +313,8 @@ class MainWindow(QMainWindow):
         self.download_thread.download_progress.connect(self.update_progress)
         self.download_thread.download_output.connect(self.update_progress_text)
         self.download_thread.download_complete.connect(self.download_complete)
-        self.download_thread.download_location_complete.connect(self.show_download_location)  
+        self.download_thread.download_location_complete.connect(self.show_download_location)
+        self.download_thread.finished.connect(self.on_download_thread_finished)  # Handle any thread finish
         self.download_thread.start()
         
         # Enable pause button when download starts
@@ -431,6 +432,10 @@ class MainWindow(QMainWindow):
         self.live_label.hide()
         self.done_label.hide()
         
+        # Clear input fields
+        self.url_input.clear()
+        self.title_input.clear()
+        
         # If there's a running download thread, clean it up
         if hasattr(self, "download_thread") and self.download_thread:
             try:
@@ -462,3 +467,16 @@ class MainWindow(QMainWindow):
                 self.download_thread.pause()
                 self.pause_button.setText("Resume")
                 self.progress_text.append("⏸️ Download paused")
+
+    def on_download_thread_finished(self):
+        """Handle when download thread finishes for any reason"""
+        # Ensure the URL is cleared when thread finishes
+        if self.url_input.text().strip():  # Only clear if there's actually a URL
+            self.url_input.clear()
+            self.title_input.clear()
+        
+        # Reset buttons to default state
+        self.download_button.setEnabled(True)
+        self.cancel_button.setEnabled(True) 
+        self.pause_button.setEnabled(False)
+        self.pause_button.setText("Pause")

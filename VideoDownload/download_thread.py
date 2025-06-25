@@ -383,6 +383,8 @@ class DownloadThread(QThread):
                     pass
                     
                 self.download_output.emit("✅ Download process terminated")
+                # Emit download complete signal even when terminated to ensure UI cleanup
+                self.download_complete.emit()
                     
             except (psutil.NoSuchProcess, Exception) as e:
                 self.download_output.emit(f"❌ Error stopping process: {str(e)}")
