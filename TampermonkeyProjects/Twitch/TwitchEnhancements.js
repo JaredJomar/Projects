@@ -78,7 +78,7 @@
     const GOG_FINAL_REDEEM_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Redeem the code"]';
 
     // Redeem on Legacy Games Constants
-    const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/royal-romances-cursed-hearts-ce-prime-deal/';
+    const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/gallery-of-things-reveries-prime-deal/';
     const LEGACY_GAMES_CODE_INPUT_SELECTOR = '#primedeal_game_code';
     const LEGACY_GAMES_EMAIL_INPUT_SELECTOR = '#primedeal_email';
     const LEGACY_GAMES_EMAIL_VALIDATE_INPUT_SELECTOR = '#primedeal_email_validate';
