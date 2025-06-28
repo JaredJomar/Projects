@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Send to TV Time
 // @namespace    http://tampermonkey.net/
-// @version      0.0.2
-// @description  Adds TV Time buttons to Simkl pages and automatically pastes titles in TV Time search.
+// @version      0.0.3
+// @description  Adds TV Time and Simkl buttons to Plex pages, TV Time buttons to Simkl pages, and automatically pastes titles in search fields.
 // @author       JJJ
 // @match        https://simkl.com/*/*
 // @match        https://app.tvtime.com/*
+// @match        https://app.plex.tv/*
+// @match        http://127.0.0.1:32400/web/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
 // @license      MIT
@@ -19,8 +21,11 @@
         TV_TIME_BASE_URL: 'https://app.tvtime.com',
         TV_TIME_SEARCH_URL: 'https://app.tvtime.com/explore/search/media',
         TV_TIME_FAVICON: 'https://www.tvtime.com/favicon.ico',
+        SIMKL_SEARCH_URL: 'https://simkl.com/search/',
+        SIMKL_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=simkl.com',
         OBSERVER_TIMEOUT: 1000,
         BUTTON_ID: 'tvTimeButton',
+        SIMKL_BUTTON_ID: 'simklButton',
         STORAGE_KEY: 'simklSearchTitle'
     };
 
@@ -29,6 +34,10 @@
         IMDB_LINK: 'a[href*="imdb.com"]',
         MAL_LINK: 'a[href*="myanimelist.net"]',
         TITLE: 'h1[itemprop="name"]',
+
+        // Plex selectors
+        PLEX_TITLE: '[data-testid="metadata-title"]',
+        PLEX_BUTTON_CONTAINER: 'div._1h4p3k00._1v25wbq8._1v25wbq1o._1v25wbq1p._1v25wbqg._1v25wbq1g._1v25wbq1c._1v25wbqw._1v25wbq3g._1v25wbq2g',
 
         // Anime page selectors
         ANIME_RATINGS_ROW: '.SimklTVAboutRatingsBlockTR',
@@ -40,6 +49,7 @@
 
         // TV Time specific
         TV_TIME_BUTTON: `#${CONFIG.BUTTON_ID}`,
+        SIMKL_BUTTON: `#${CONFIG.SIMKL_BUTTON_ID}`,
         TV_TIME_SEARCH_INPUT: 'input[type="text"]',
 
         // TV Time search selectors
@@ -63,7 +73,9 @@
         ANIME_BLOCK_TD: 'SimklTVAboutRatingsBlockTD',
         RATING_BORDER: 'SimklTVAboutRatingBorder SimklTVAboutRatingBorderClick',
         RATING_TEN: 'SimklTVRatingTen',
-        TV_TIME_BUTTON: 'tvtime-button'
+        TV_TIME_BUTTON: 'tvtime-button',
+        PLEX_TV_TIME_BUTTON: 'plex-tvtime-button',
+        PLEX_SIMKL_BUTTON: 'plex-simkl-button'
     };
 
     /**
@@ -175,6 +187,80 @@
                 .${CSS_CLASSES.TV_TIME_BUTTON}:hover {
                     opacity: 0.8;
                 }
+
+                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON} {
+                    background: url('${CONFIG.TV_TIME_FAVICON}') center/20px no-repeat #1f1f1f;
+                    border: 1px solid #404040;
+                    border-radius: 8px;
+                    width: 48px;
+                    height: 48px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    margin-right: 8px;
+                    position: relative;
+                }
+                
+                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}:hover {
+                    background-color: #2a2a2a;
+                    border-color: #505050;
+                }
+
+                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}::after {
+                    content: 'TV Time';
+                    position: absolute;
+                    bottom: -20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}:hover::after {
+                    opacity: 1;
+                }
+
+                .${CSS_CLASSES.PLEX_SIMKL_BUTTON} {
+                    background: url('${CONFIG.SIMKL_FAVICON}') center/20px no-repeat #1f1f1f;
+                    border: 1px solid #404040;
+                    border-radius: 8px;
+                    width: 48px;
+                    height: 48px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    margin-right: 8px;
+                    position: relative;
+                }
+                
+                .${CSS_CLASSES.PLEX_SIMKL_BUTTON}:hover {
+                    background-color: #2a2a2a;
+                    border-color: #505050;
+                }
+
+                .${CSS_CLASSES.PLEX_SIMKL_BUTTON}::after {
+                    content: 'Simkl';
+                    position: absolute;
+                    bottom: -20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .${CSS_CLASSES.PLEX_SIMKL_BUTTON}:hover::after {
+                    opacity: 1;
+                }
             `);
             document.head.appendChild(style);
         }
@@ -240,6 +326,36 @@
                     </tbody>
                 </table>
             `);
+        },
+
+        /**
+         * Creates a Plex-specific TV Time button element
+         * @returns {Element}
+         */
+        createPlexButton() {
+            return Utils.createElement('button', {
+                class: `${CSS_CLASSES.PLEX_TV_TIME_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
+                'data-testid': 'preplay-tvtime',
+                'aria-label': 'Send to TV Time',
+                role: 'button',
+                type: 'button',
+                id: CONFIG.BUTTON_ID
+            });
+        },
+
+        /**
+         * Creates a Plex-specific Simkl button element
+         * @returns {Element}
+         */
+        createPlexSimklButton() {
+            return Utils.createElement('button', {
+                class: `${CSS_CLASSES.PLEX_SIMKL_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
+                'data-testid': 'preplay-simkl',
+                'aria-label': 'Send to Simkl',
+                role: 'button',
+                type: 'button',
+                id: CONFIG.SIMKL_BUTTON_ID
+            });
         }
     };
 
@@ -302,6 +418,22 @@
             ratingTable.insertBefore(tvTimeCell, spacerCell.nextSibling);
 
             return true;
+        },
+
+        /**
+         * Inserts button for Plex pages
+         */
+        insertForPlexPage() {
+            const buttonContainer = document.querySelector(SELECTORS.PLEX_BUTTON_CONTAINER);
+            if (!buttonContainer) return false;
+
+            const tvTimeButton = ButtonFactory.createPlexButton();
+            const simklButton = ButtonFactory.createPlexSimklButton();
+
+            buttonContainer.appendChild(tvTimeButton);
+            buttonContainer.appendChild(simklButton);
+
+            return true;
         }
     };
 
@@ -332,13 +464,14 @@
          * Attempts to insert the TV Time button using various strategies
          */
         attemptButtonInsertion() {
-            // Skip if button already exists
-            if (document.querySelector(SELECTORS.TV_TIME_BUTTON)) {
+            // Skip if buttons already exist
+            if (document.querySelector(SELECTORS.TV_TIME_BUTTON) || document.querySelector(SELECTORS.SIMKL_BUTTON)) {
                 return;
             }
 
             // Try different insertion strategies
             const strategies = [
+                InsertionStrategies.insertForPlexPage,
                 InsertionStrategies.insertForRatingCell,
                 InsertionStrategies.insertForAnimePage,
                 InsertionStrategies.insertForRatingTable
@@ -357,17 +490,31 @@
         handleButtonClick(event) {
             event.preventDefault();
 
-            const titleElement = document.querySelector(SELECTORS.TITLE);
+            let titleElement = document.querySelector(SELECTORS.TITLE);
+
+            // Check for Plex title if standard title not found
+            if (!titleElement) {
+                titleElement = document.querySelector(SELECTORS.PLEX_TITLE);
+            }
+
             if (!titleElement) {
                 console.error('Title element not found');
                 return;
             }
 
             const title = titleElement.textContent.trim();
+            const clickedButton = event.target.closest('button, a');
 
-            // Copy title to clipboard and open TV Time search
-            Utils.copyToClipboard(title);
-            window.open(`${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
+            // Determine which button was clicked
+            if (clickedButton && clickedButton.id === CONFIG.SIMKL_BUTTON_ID) {
+                // Simkl button clicked
+                Utils.copyToClipboard(title);
+                window.open(`${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
+            } else {
+                // TV Time button clicked (default)
+                Utils.copyToClipboard(title);
+                window.open(`${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
+            }
         },
 
         /**
@@ -661,7 +808,7 @@
                 return;
             }
 
-            // Initialize for Simkl pages
+            // Initialize for Simkl and Plex pages
             StyleManager.inject();
             this.setupEventListeners();
             this.startButtonManager();
@@ -673,8 +820,10 @@
         setupEventListeners() {
             // Use event delegation for button clicks
             document.addEventListener('click', (event) => {
-                const button = event.target.closest(SELECTORS.TV_TIME_BUTTON);
-                if (button) {
+                const tvTimeButton = event.target.closest(SELECTORS.TV_TIME_BUTTON);
+                const simklButton = event.target.closest(SELECTORS.SIMKL_BUTTON);
+
+                if (tvTimeButton || simklButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });
