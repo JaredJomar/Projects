@@ -88,22 +88,21 @@ class DownloadThread(QThread):
         )
         
         base_command = [
-            self._normalized_yt_dlp_path,
-            "--no-cache-dir",
-            "--no-mtime",
-            "--no-check-certificate",
-            "--add-metadata",
-            "-o", output_template,
-            "--ffmpeg-location", self._normalized_ffmpeg_path,
-            "--concurrent-fragments", "5",
-            "--no-part",
-            "--progress",
-            "--restrict-filenames",  # Replace problematic characters in filenames
-            "--no-continue",         # Don't resume partially downloaded files (prevents 416 errors)
-            "--ignore-errors",       # Continue on download errors
-            "--retries", "10",       # Retry 10 times on connection errors
-            "--retry-sleep", "5",    # Wait 5 seconds between retries
-            url
+            self._normalized_yt_dlp_path,    # Path to yt-dlp executable
+            "--no-cache-dir",                # Don't cache downloaded data (saves disk space)
+            "--no-check-certificate",        # Skip SSL certificate verification for problematic sites
+            "--add-metadata",                # Embed metadata into downloaded files
+            "-o", output_template,           # Set output filename template
+            "--ffmpeg-location", self._normalized_ffmpeg_path,  # Path to ffmpeg for video processing
+            "--concurrent-fragments", "5",   # Download 5 video fragments simultaneously (faster downloads)
+            "--no-part",                     # Don't create .part files during download
+            "--progress",                    # Show download progress information
+            "--restrict-filenames",          # Replace problematic characters in filenames
+            "--no-continue",                 # Don't resume partially downloaded files (prevents HTTP 416 errors)
+            "--ignore-errors",               # Continue downloading other videos if one fails
+            "--retries", "10",               # Retry failed downloads up to 10 times
+            "--retry-sleep", "5",            # Wait 5 seconds between retry attempts
+            url                              # The video URL to download
         ]        # Only use browser cookies if necessary or forced
         use_cookies = False
         if force_cookies:
@@ -335,7 +334,9 @@ class DownloadThread(QThread):
                         self.process.terminate()
                         self.wait_with_timeout(self.process, 1)  # Short wait
                 except Exception:
-                    pass  # Ignore errors in cleanup    def stop(self):
+                    pass  # Ignore errors in cleanup
+                    
+    def stop(self):
         self.running = False
         self.is_paused = False  # Reset pause state when stopping
         if hasattr(self, 'process') and self.process:
