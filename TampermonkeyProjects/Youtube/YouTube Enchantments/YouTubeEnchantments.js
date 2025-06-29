@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           YouTube Enchantments
 // @namespace      http://tampermonkey.net/
-// @version        0.8.3
+// @version        0.8.4
 // @description    Automatically likes videos of channels you're subscribed to, scrolls down on Youtube with a toggle button, and bypasses the AdBlock ban.
 // @author         JJJ
 // @match          https://www.youtube.com/*
@@ -61,12 +61,12 @@
         });
     }
 
-    // Updated constants
+    // Constants - Optimized selectors
     const SELECTORS = {
         PLAYER: '#movie_player',
         SUBSCRIBE_BUTTON: '#subscribe-button > ytd-subscribe-button-renderer, ytd-reel-player-overlay-renderer #subscribe-button, tp-yt-paper-button[subscribed]',
-        LIKE_BUTTON: 'ytd-menu-renderer button[aria-pressed][aria-label*="like"], like-button-view-model button[aria-pressed]',
-        DISLIKE_BUTTON: 'ytd-menu-renderer button[aria-pressed][aria-label*="dislike"], dislike-button-view-model button[aria-pressed]',
+        LIKE_BUTTON: 'like-button-view-model button, ytd-menu-renderer button[aria-label*="like" i], button[aria-label*="like" i]',
+        DISLIKE_BUTTON: 'dislike-button-view-model button, ytd-menu-renderer button[aria-label*="dislike" i], button[aria-label*="dislike" i]',
         PLAYER_CONTAINER: '#player-container-outer',
         ERROR_SCREEN: '#error-screen',
         PLAYABILITY_ERROR: '.yt-playability-error-supported-renderers',
@@ -77,18 +77,19 @@
     const CONSTANTS = {
         IFRAME_ID: 'adblock-bypass-player',
         STORAGE_KEY: 'youtubeEnchantmentsSettings',
-        DELAY: 300, // Increased delay for Edge
-        MAX_TRIES: 150, // Increased max tries
-        DUPLICATE_CHECK_INTERVAL: 7000, // Increased interval
-        GAME_CHECK_INTERVAL: 2000 // Interval to check for game sections
+        DELAY: 300,
+        MAX_TRIES: 150,
+        DUPLICATE_CHECK_INTERVAL: 7000,
+        GAME_CHECK_INTERVAL: 2000
     };
 
+    // Optimized settings with better defaults
     const defaultSettings = {
         autoLikeEnabled: true,
         autoLikeLiveStreams: false,
         likeIfNotSubscribed: false,
         watchThreshold: 0,
-        checkFrequency: 5000,
+        checkFrequency: 3000,
         adBlockBypassEnabled: false,
         scrollSpeed: 50,
         removeGamesEnabled: true
@@ -262,31 +263,25 @@
         }
     };
 
-    // Updated worker with error handling
+    // Optimized worker creation
     function createWorker() {
         try {
-            const workerBlob = new Blob([`
+            const workerCode = `
                 let checkInterval;
                 self.onmessage = function(e) {
-                    try {
-                        if (e.data.type === 'startCheck') {
-                            if (checkInterval) clearInterval(checkInterval);
-                            checkInterval = setInterval(() => {
-                                self.postMessage({ type: 'check' });
-                            }, e.data.checkFrequency);
-                        } else if (e.data.type === 'stopCheck') {
-                            clearInterval(checkInterval);
-                        }
-                    } catch (error) {
-                        self.postMessage({ type: 'error', error: error.message });
+                    if (e.data.type === 'startCheck') {
+                        if (checkInterval) clearInterval(checkInterval);
+                        checkInterval = setInterval(() => {
+                            self.postMessage({ type: 'check' });
+                        }, e.data.checkFrequency);
+                    } else if (e.data.type === 'stopCheck') {
+                        clearInterval(checkInterval);
                     }
                 };
-            `], { type: 'text/javascript' });
+            `;
 
-            const worker = new Worker(URL.createObjectURL(workerBlob));
-            worker.onerror = function (error) {
-                Logger.error(`Worker error: ${error}`);
-            };
+            const worker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'text/javascript' })));
+            worker.onerror = error => Logger.error(`Worker error: ${error}`);
             return worker;
         } catch (error) {
             Logger.error(`Failed to create worker: ${error}`);
@@ -294,17 +289,13 @@
         }
     }
 
+    // Optimized settings management
     function loadSettings() {
-        const savedSettings = GM_getValue(CONSTANTS.STORAGE_KEY, {});
-        return Object.keys(defaultSettings).reduce((acc, key) => {
-            acc[key] = key in savedSettings ? savedSettings[key] : defaultSettings[key];
-            return acc;
-        }, {});
+        const saved = GM_getValue(CONSTANTS.STORAGE_KEY, {});
+        return { ...defaultSettings, ...saved };
     }
 
-    function saveSettings() {
-        GM_setValue(CONSTANTS.STORAGE_KEY, settings);
-    }
+    const saveSettings = () => GM_setValue(CONSTANTS.STORAGE_KEY, settings);
 
     function createSettingsMenu() {
         GM_registerMenuCommand('YouTube Enchantments Settings', showSettingsDialog);
@@ -333,7 +324,7 @@
                 ${createToggle('removeGamesEnabled', 'Remove Games', 'Hide game sections from YouTube homepage')}
                 <div class="dpe-slider-container" title="Percentage of video to watch before liking">
                     <label for="watchThreshold">Watch Threshold</label>
-                    <input type="range" id="watchThreshold" min="0" max="100" step="10" 
+                    <input type="range" id="watchThreshold" data-setting="watchThreshold" min="0" max="100" step="10" 
                            value="${settings.watchThreshold}">
                     <span id="watchThresholdValue">${settings.watchThreshold}%</span>
                 </div>
@@ -570,10 +561,11 @@
             const value = e.target.value;
             if (e.target.id === 'watchThreshold') {
                 document.getElementById('watchThresholdValue').textContent = `${value}%`;
+                updateNumericSetting('watchThreshold', value);
             } else if (e.target.id === 'scrollSpeed') {
                 document.getElementById('scrollSpeedValue').textContent = `${value}px`;
+                updateNumericSetting('scrollSpeed', value);
             }
-            updateNumericSetting(e.target.dataset.setting, value);
         }
     }
 
@@ -588,7 +580,18 @@
     }
 
     function startBackgroundCheck() {
-        worker.postMessage({ type: 'startCheck', checkFrequency: settings.checkFrequency });
+        if (worker) {
+            worker.postMessage({ type: 'startCheck', checkFrequency: settings.checkFrequency });
+
+            // Set up worker message listener
+            worker.onmessage = function (e) {
+                if (e.data.type === 'check') {
+                    checkAndLikeVideo();
+                } else if (e.data.type === 'error') {
+                    Logger.error(`Worker error: ${e.data.error}`);
+                }
+            };
+        }
     }
 
     function checkAndLikeVideo() {
@@ -618,20 +621,36 @@
 
     function watchThresholdReached() {
         const player = document.querySelector(SELECTORS.PLAYER);
-        if (player) {
-            const watched = player.getCurrentTime() / player.getDuration();
-            const watchedTarget = settings.watchThreshold / 100;
-            if (watched < watchedTarget) {
-                Logger.info(`Waiting until watch threshold reached (${watched.toFixed(2)}/${watchedTarget})...`);
-                return false;
+        if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+            const currentTime = player.getCurrentTime();
+            const duration = player.getDuration();
+
+            if (duration > 0) {
+                const watched = currentTime / duration;
+                const watchedTarget = settings.watchThreshold / 100;
+                if (watched < watchedTarget) {
+                    Logger.info(`Waiting until watch threshold reached (${(watched * 100).toFixed(1)}%/${settings.watchThreshold}%)...`);
+                    return false;
+                }
             }
         }
         return true;
     }
 
+    // Optimized subscription detection
     function isSubscribed() {
         const subscribeButton = document.querySelector(SELECTORS.SUBSCRIBE_BUTTON);
-        return subscribeButton && (subscribeButton.hasAttribute('subscribe-button-invisible') || subscribeButton.hasAttribute('subscribed'));
+        if (!subscribeButton) {
+            Logger.info('Subscribe button not found');
+            return false;
+        }
+
+        const isSubbed = subscribeButton.hasAttribute('subscribe-button-invisible') ||
+            subscribeButton.hasAttribute('subscribed') ||
+            /subscrib/i.test(subscribeButton.textContent);
+
+        Logger.info(`Subscribe button found: true, Is subscribed: ${isSubbed}`);
+        return isSubbed;
     }
 
     function isLiveStream() {
@@ -645,20 +664,36 @@
         const dislikeButton = document.querySelector(SELECTORS.DISLIKE_BUTTON);
         const videoId = getVideoId();
 
+        Logger.info(`Like button found: ${!!likeButton}`);
+        Logger.info(`Dislike button found: ${!!dislikeButton}`);
+        Logger.info(`Video ID: ${videoId}`);
+
         if (!likeButton || !dislikeButton || !videoId) {
             Logger.info('Like button, dislike button, or video ID not found.');
             return;
         }
 
-        if (!isButtonPressed(likeButton) && !isButtonPressed(dislikeButton) && !autoLikedVideoIds.has(videoId)) {
+        const likePressed = isButtonPressed(likeButton);
+        const dislikePressed = isButtonPressed(dislikeButton);
+        const alreadyAutoLiked = autoLikedVideoIds.has(videoId);
+
+        Logger.info(`Like button pressed: ${likePressed}`);
+        Logger.info(`Dislike button pressed: ${dislikePressed}`);
+        Logger.info(`Already auto-liked: ${alreadyAutoLiked}`);
+
+        if (!likePressed && !dislikePressed && !alreadyAutoLiked) {
             Logger.info('Liking the video...');
             likeButton.click();
-            if (isButtonPressed(likeButton)) {
-                Logger.success('Video liked successfully.');
-                autoLikedVideoIds.add(videoId);
-            } else {
-                Logger.warning('Failed to like the video.');
-            }
+
+            // Check again after a short delay
+            setTimeout(() => {
+                if (isButtonPressed(likeButton)) {
+                    Logger.success('Video liked successfully.');
+                    autoLikedVideoIds.add(videoId);
+                } else {
+                    Logger.warning('Failed to like the video.');
+                }
+            }, 500);
         } else {
             Logger.info('Video already liked or disliked, or already auto-liked.');
         }
@@ -679,8 +714,8 @@
 
     function handleAdBlockError() {
         if (!settings.adBlockBypassEnabled) {
-            Logger.info('AdBlock bypass is disabled.');
-            return; // Do nothing if the AdBlock bypass is disabled
+            Logger.info('AdBlock bypass disabled');
+            return;
         }
 
         const playabilityError = document.querySelector(SELECTORS.PLAYABILITY_ERROR);
@@ -691,40 +726,36 @@
             tries++;
             setTimeout(handleAdBlockError, CONSTANTS.DELAY);
         }
-    } function redirectToVideosPage() {
+    }
+
+    function redirectToVideosPage() {
         const currentUrl = window.location.href;
 
-        // Check if we're on a channel page (new format @username)
+        // Handle new format @username channels
         if (currentUrl.includes('/@')) {
-            // Handle explicit featured page
             if (currentUrl.endsWith('/featured') || currentUrl.includes('/featured?')) {
                 const videosUrl = currentUrl.replace(/\/featured(\?.*)?$/, '/videos');
-                Logger.info(`Redirecting from featured page to videos page: ${videosUrl}`);
+                Logger.info(`Redirecting to videos page: ${videosUrl}`);
                 window.location.replace(videosUrl);
                 return true;
-            }
-            // Handle channel home page (defaults to featured) - no specific tab specified
-            else if (currentUrl.match(/\/@[^\/]+\/?(\?.*)?$/)) {
+            } else if (currentUrl.match(/\/@[^\/]+\/?(\?.*)?$/)) {
                 const videosUrl = currentUrl.replace(/\/?(\?.*)?$/, '/videos');
-                Logger.info(`Redirecting from channel home to videos page: ${videosUrl}`);
+                Logger.info(`Redirecting to videos page: ${videosUrl}`);
                 window.location.replace(videosUrl);
                 return true;
             }
         }
 
-        // Also handle the older channel URL format
+        // Handle legacy channel URLs
         if (currentUrl.includes('/channel/')) {
-            // Handle explicit featured page
             if (currentUrl.endsWith('/featured') || currentUrl.includes('/featured?')) {
                 const videosUrl = currentUrl.replace(/\/featured(\?.*)?$/, '/videos');
-                Logger.info(`Redirecting from featured page to videos page: ${videosUrl}`);
+                Logger.info(`Redirecting to videos page: ${videosUrl}`);
                 window.location.replace(videosUrl);
                 return true;
-            }
-            // Handle channel home page (defaults to featured) - no specific tab specified
-            else if (currentUrl.match(/\/channel\/[^\/]+\/?(\?.*)?$/)) {
+            } else if (currentUrl.match(/\/channel\/[^\/]+\/?(\?.*)?$/)) {
                 const videosUrl = currentUrl.replace(/\/?(\?.*)?$/, '/videos');
-                Logger.info(`Redirecting from channel home to videos page: ${videosUrl}`);
+                Logger.info(`Redirecting to videos page: ${videosUrl}`);
                 window.location.replace(videosUrl);
                 return true;
             }
@@ -733,30 +764,17 @@
         return false;
     }
 
-    function handleKeyPress(event) {
-        switch (event.key) {
-            case 'F2':
-                toggleSettingsDialog();
-                break;
-            case 'PageDown':
-                toggleScrolling();
-                break;
-            case 'PageUp':
-                handlePageUp();
-                break;
-        }
-    }
-
-    function toggleSettingsDialog() {
+    // Remove redundant functions
+    const toggleSettingsDialog = () => {
         const dialog = document.getElementById('youtube-enchantments-settings');
         if (dialog && dialog.style.display === 'block') {
             hideSettingsDialog();
         } else {
             showSettingsDialog();
         }
-    }
+    };
 
-    function toggleScrolling() {
+    const toggleScrolling = () => {
         if (isScrolling) {
             clearInterval(scrollInterval);
             isScrolling = false;
@@ -764,30 +782,31 @@
             isScrolling = true;
             scrollInterval = setInterval(() => window.scrollBy(0, settings.scrollSpeed), 20);
         }
-    }
+    };
 
-    function handlePageUp() {
+    const handlePageUp = () => {
         if (isScrolling) {
             clearInterval(scrollInterval);
             isScrolling = false;
         } else {
             window.scrollTo(0, 0);
         }
-    }
+    };
 
+    // Optimized event handling
     function setupEventListeners() {
+        // Page navigation
         window.addEventListener('beforeunload', () => {
             currentPageUrl = window.location.href;
-        }); document.addEventListener('yt-navigate-finish', () => {
-            Logger.info('yt-navigate-finish event triggered');
+        });
+
+        document.addEventListener('yt-navigate-finish', () => {
+            Logger.info('Page navigation detected');
             const newUrl = window.location.href;
             if (newUrl !== currentPageUrl) {
                 Logger.info(`URL changed: ${newUrl}`);
 
-                // Check for channel featured page redirect first
-                if (redirectToVideosPage()) {
-                    return; // Don't continue if we're redirecting
-                }
+                if (redirectToVideosPage()) return;
 
                 if (newUrl.endsWith('.com/')) {
                     const iframe = document.getElementById(CONSTANTS.IFRAME_ID);
@@ -796,18 +815,29 @@
                         iframe.remove();
                     }
                 } else {
-                    Logger.info('Handling ad block error');
+                    Logger.info('Handling potential ad block error');
                     handleAdBlockError();
                 }
                 currentPageUrl = newUrl;
             }
         });
 
+        // Keyboard shortcuts
         document.addEventListener('keydown', (event) => {
-            Logger.info(`Key pressed: ${event.key}`);
-            handleKeyPress(event);
+            switch (event.key) {
+                case 'F2':
+                    toggleSettingsDialog();
+                    break;
+                case 'PageDown':
+                    toggleScrolling();
+                    break;
+                case 'PageUp':
+                    handlePageUp();
+                    break;
+            }
         });
 
+        // DOM observer for ad block errors
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 if (mutation.type === 'childList') {
@@ -824,12 +854,8 @@
         });
         observer.observe(document.body, { childList: true, subtree: true });
 
-        setInterval(() => {
-            Logger.info('Checking for duplicate players');
-            playerManager.removeDuplicates();
-        }, CONSTANTS.DUPLICATE_CHECK_INTERVAL);
-
-        // Add interval to check and hide game sections
+        // Periodic tasks
+        setInterval(() => playerManager.removeDuplicates(), CONSTANTS.DUPLICATE_CHECK_INTERVAL);
         setInterval(hideGameSections, CONSTANTS.GAME_CHECK_INTERVAL);
     }
 
@@ -848,91 +874,57 @@
         }
     }
 
+    // Optimized game section detection
     function isGameSection(section) {
-        // Check for dismissible rich shelf renderer elements
-        const dismissibleElements = section.querySelectorAll('div#dismissible.style-scope.ytd-rich-shelf-renderer');
-        if (dismissibleElements.length > 0) {
-            return true;
-        }
+        // Quick checks first
+        if (section.querySelectorAll('div#dismissible.style-scope.ytd-rich-shelf-renderer').length > 0) return true;
+        if (section.querySelectorAll('ytd-mini-game-card-view-model').length > 0) return true;
+        if (section.querySelectorAll('a[href*="/playables"], a[href*="gaming"]').length > 0) return true;
 
-        // Check if this is a games/playables section using various indicators
-
-        // Check for "Jugables de YouTube" in the title
+        // Text-based checks
         const titleElement = section.querySelector('#title-text span');
-        if (titleElement && titleElement.textContent.includes('Jugables')) {
-            return true;
-        }
+        if (titleElement && /game|jugable/i.test(titleElement.textContent)) return true;
 
-        // Check for playables links
-        const playablesLinks = section.querySelectorAll('a[href="/playables"], a[href*="/playables"]');
-        if (playablesLinks.length > 0) {
-            return true;
-        }
-
-        // Check for gaming links
-        const gamingLinks = section.querySelectorAll('a[href*="gaming"]');
-        if (gamingLinks.length > 0) {
-            return true;
-        }
-
-        // Check for game-related text in aria-labels
+        // Aria-label checks
         const richShelfElements = section.querySelectorAll('ytd-rich-shelf-renderer');
         for (const element of richShelfElements) {
             const ariaLabel = element.getAttribute('aria-label');
-            if (ariaLabel && (ariaLabel.toLowerCase().includes('game') || ariaLabel.toLowerCase().includes('juego'))) {
-                return true;
-            }
+            if (ariaLabel && /game|juego/i.test(ariaLabel)) return true;
         }
 
-        // Check for mini-game-card elements
-        const miniGameCards = section.querySelectorAll('ytd-mini-game-card-view-model');
-        if (miniGameCards.length > 0) {
-            return true;
-        }
-
-        // Check for content with specific game-related patterns
-        const gameGenres = ['Arcade', 'Carreras', 'Deportes', 'Acción', 'Puzles', 'Música'];
+        // Genre checks
+        const gameGenres = ['Arcade', 'Racing', 'Sports', 'Action', 'Puzzles', 'Music', 'Carreras', 'Deportes', 'Acción', 'Puzles', 'Música'];
         const genreSpans = section.querySelectorAll('.yt-mini-game-card-view-model__genre');
-        for (const span of genreSpans) {
-            if (gameGenres.some(genre => span.textContent.includes(genre))) {
-                return true;
-            }
-        }
-
-        return false;
+        return Array.from(genreSpans).some(span =>
+            gameGenres.some(genre => span.textContent.includes(genre))
+        );
     }
 
-    // Updated main initialization function
+    // Optimized initialization
     async function initScript() {
         try {
-            Logger.info('Initializing script for Edge compatibility');
+            Logger.info('Initializing YouTube Enchantments');
+
+            // Setup core functionality
             createSettingsMenu();
             setupEventListeners();
-
-            // Check for initial redirect on page load
             redirectToVideosPage();
 
+            // Initialize auto-like system
             const worker = createWorker();
             if (worker) {
-                startBackgroundCheck(worker);
+                startBackgroundCheck();
             } else {
-                Logger.warning('Worker creation failed, falling back to interval');
+                Logger.warning('Worker failed, using fallback interval');
                 setInterval(checkAndLikeVideo, settings.checkFrequency);
             }
 
-            // Initial check for game sections
+            // Initialize game section removal
             hideGameSections();
 
-            // Check browser compatibility
-            const userAgent = navigator.userAgent;
-            if (userAgent.includes("Edg/")) {
-                Logger.info('Edge detected, applying specific optimizations');
-                CONSTANTS.DELAY = 300; // Specific adjustment for Edge
-                CONSTANTS.MAX_TRIES = 150;
-            }
-
+            Logger.info('Script initialization complete');
         } catch (error) {
-            Logger.error(`Script initialization failed: ${error}`);
+            Logger.error(`Initialization failed: ${error}`);
         }
     }
 
