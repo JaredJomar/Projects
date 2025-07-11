@@ -2,12 +2,13 @@
 // @name         Send to TV Time
 // @namespace    http://tampermonkey.net/
 // @version      0.0.3
-// @description  Adds TV Time and Simkl buttons to Plex pages, TV Time buttons to Simkl pages, and automatically pastes titles in search fields.
+// @description  Adds TV Time, Simkl, and AniList buttons to Plex pages, TV Time and AniList buttons to Simkl pages, and automatically pastes titles in search fields.
 // @author       JJJ
 // @match        https://simkl.com/*/*
 // @match        https://app.tvtime.com/*
 // @match        https://app.plex.tv/*
 // @match        http://127.0.0.1:32400/web/*
+// @match        https://anilist.co/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
 // @license      MIT
@@ -23,9 +24,12 @@
         TV_TIME_FAVICON: 'https://www.tvtime.com/favicon.ico',
         SIMKL_SEARCH_URL: 'https://simkl.com/search/',
         SIMKL_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=simkl.com',
+        ANILIST_SEARCH_URL: 'https://anilist.co/search/anime',
+        ANILIST_FAVICON: 'https://anilist.co/img/icons/favicon-32x32.png',
         OBSERVER_TIMEOUT: 1000,
         BUTTON_ID: 'tvTimeButton',
         SIMKL_BUTTON_ID: 'simklButton',
+        ANILIST_BUTTON_ID: 'anilistButton',
         STORAGE_KEY: 'simklSearchTitle'
     };
 
@@ -50,6 +54,7 @@
         // TV Time specific
         TV_TIME_BUTTON: `#${CONFIG.BUTTON_ID}`,
         SIMKL_BUTTON: `#${CONFIG.SIMKL_BUTTON_ID}`,
+        ANILIST_BUTTON: `#${CONFIG.ANILIST_BUTTON_ID}`,
         TV_TIME_SEARCH_INPUT: 'input[type="text"]',
 
         // TV Time search selectors
@@ -74,8 +79,10 @@
         RATING_BORDER: 'SimklTVAboutRatingBorder SimklTVAboutRatingBorderClick',
         RATING_TEN: 'SimklTVRatingTen',
         TV_TIME_BUTTON: 'tvtime-button',
+        ANILIST_BUTTON: 'anilist-button',
         PLEX_TV_TIME_BUTTON: 'plex-tvtime-button',
-        PLEX_SIMKL_BUTTON: 'plex-simkl-button'
+        PLEX_SIMKL_BUTTON: 'plex-simkl-button',
+        PLEX_ANILIST_BUTTON: 'plex-anilist-button'
     };
 
     /**
@@ -188,6 +195,20 @@
                     opacity: 0.8;
                 }
 
+                .${CSS_CLASSES.ANILIST_BUTTON} {
+                    background: url('${CONFIG.ANILIST_FAVICON}') center/24px no-repeat;
+                    width: 50px;
+                    height: 24px;
+                    display: inline-block;
+                    margin-top: 8px;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                }
+                
+                .${CSS_CLASSES.ANILIST_BUTTON}:hover {
+                    opacity: 0.8;
+                }
+
                 .${CSS_CLASSES.PLEX_TV_TIME_BUTTON} {
                     background: url('${CONFIG.TV_TIME_FAVICON}') center/20px no-repeat #1f1f1f;
                     border: 1px solid #404040;
@@ -261,6 +282,43 @@
                 .${CSS_CLASSES.PLEX_SIMKL_BUTTON}:hover::after {
                     opacity: 1;
                 }
+
+                .${CSS_CLASSES.PLEX_ANILIST_BUTTON} {
+                    background: url('${CONFIG.ANILIST_FAVICON}') center/20px no-repeat #1f1f1f;
+                    border: 1px solid #404040;
+                    border-radius: 8px;
+                    width: 48px;
+                    height: 48px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    margin-right: 8px;
+                    position: relative;
+                }
+                
+                .${CSS_CLASSES.PLEX_ANILIST_BUTTON}:hover {
+                    background-color: #2a2a2a;
+                    border-color: #505050;
+                }
+
+                .${CSS_CLASSES.PLEX_ANILIST_BUTTON}::after {
+                    content: 'AniList';
+                    position: absolute;
+                    bottom: -20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .${CSS_CLASSES.PLEX_ANILIST_BUTTON}:hover::after {
+                    opacity: 1;
+                }
             `);
             document.head.appendChild(style);
         }
@@ -329,6 +387,64 @@
         },
 
         /**
+         * Creates an AniList button element for Simkl pages
+         * @returns {Element}
+         */
+        createAniListButton() {
+            return Utils.createElement('td', { width: '1' }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="40" align="center">
+                                        <a href="#" class="${CSS_CLASSES.ANILIST_BUTTON}" id="${CONFIG.ANILIST_BUTTON_ID}"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <span class="${CSS_CLASSES.RATING_TEN}">AniList</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            `);
+        },
+
+        /**
+         * Creates an anime-specific AniList button element
+         * @returns {Element}
+         */
+        createAnimeAniListButton() {
+            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+                                        <tr>
+                                            <td height="40" align="center">
+                                                <a href="#" class="${CSS_CLASSES.ANILIST_BUTTON}" id="${CONFIG.ANILIST_BUTTON_ID}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center">
+                                                <span class="${CSS_CLASSES.RATING_TEN}">ANILIST</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `);
+        },
+
+        /**
          * Creates a Plex-specific TV Time button element
          * @returns {Element}
          */
@@ -356,6 +472,21 @@
                 type: 'button',
                 id: CONFIG.SIMKL_BUTTON_ID
             });
+        },
+
+        /**
+         * Creates a Plex-specific AniList button element
+         * @returns {Element}
+         */
+        createPlexAniListButton() {
+            return Utils.createElement('button', {
+                class: `${CSS_CLASSES.PLEX_ANILIST_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
+                'data-testid': 'preplay-anilist',
+                'aria-label': 'Send to AniList',
+                role: 'button',
+                type: 'button',
+                id: CONFIG.ANILIST_BUTTON_ID
+            });
         }
     };
 
@@ -376,11 +507,15 @@
             const ratingCell = link.closest(SELECTORS.RATING_CELL_WIDTH);
             if (!ratingCell) return false;
 
-            const spacerCell = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell1 = Utils.createElement('td', {}, '&nbsp;');
             const tvTimeCell = ButtonFactory.createButton();
+            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
+            const aniListCell = ButtonFactory.createAniListButton();
 
-            ratingCell.parentNode.insertBefore(spacerCell, ratingCell.nextSibling);
-            ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell1, ratingCell.nextSibling);
+            ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell1.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell2, tvTimeCell.nextSibling);
+            ratingCell.parentNode.insertBefore(aniListCell, spacerCell2.nextSibling);
 
             return true;
         },
@@ -396,7 +531,10 @@
             if (!reactionsCell) return false;
 
             const tvTimeCell = ButtonFactory.createAnimeButton();
+            const aniListCell = ButtonFactory.createAnimeAniListButton();
+
             animeRatingsRow.insertBefore(tvTimeCell, reactionsCell);
+            animeRatingsRow.insertBefore(aniListCell, reactionsCell);
 
             return true;
         },
@@ -411,11 +549,15 @@
             const lastCell = ratingTable.querySelector('td:last-child');
             if (!lastCell) return false;
 
-            const spacerCell = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell1 = Utils.createElement('td', {}, '&nbsp;');
             const tvTimeCell = ButtonFactory.createButton();
+            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
+            const aniListCell = ButtonFactory.createAniListButton();
 
-            ratingTable.insertBefore(spacerCell, lastCell.nextSibling);
-            ratingTable.insertBefore(tvTimeCell, spacerCell.nextSibling);
+            ratingTable.insertBefore(spacerCell1, lastCell.nextSibling);
+            ratingTable.insertBefore(tvTimeCell, spacerCell1.nextSibling);
+            ratingTable.insertBefore(spacerCell2, tvTimeCell.nextSibling);
+            ratingTable.insertBefore(aniListCell, spacerCell2.nextSibling);
 
             return true;
         },
@@ -429,9 +571,11 @@
 
             const tvTimeButton = ButtonFactory.createPlexButton();
             const simklButton = ButtonFactory.createPlexSimklButton();
+            const aniListButton = ButtonFactory.createPlexAniListButton();
 
             buttonContainer.appendChild(tvTimeButton);
             buttonContainer.appendChild(simklButton);
+            buttonContainer.appendChild(aniListButton);
 
             return true;
         }
@@ -465,7 +609,9 @@
          */
         attemptButtonInsertion() {
             // Skip if buttons already exist
-            if (document.querySelector(SELECTORS.TV_TIME_BUTTON) || document.querySelector(SELECTORS.SIMKL_BUTTON)) {
+            if (document.querySelector(SELECTORS.TV_TIME_BUTTON) ||
+                document.querySelector(SELECTORS.SIMKL_BUTTON) ||
+                document.querySelector(SELECTORS.ANILIST_BUTTON)) {
                 return;
             }
 
@@ -510,6 +656,10 @@
                 // Simkl button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
+            } else if (clickedButton && clickedButton.id === CONFIG.ANILIST_BUTTON_ID) {
+                // AniList button clicked
+                Utils.copyToClipboard(title);
+                window.open(`${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(title)}`, '_blank');
             } else {
                 // TV Time button clicked (default)
                 Utils.copyToClipboard(title);
@@ -822,8 +972,9 @@
             document.addEventListener('click', (event) => {
                 const tvTimeButton = event.target.closest(SELECTORS.TV_TIME_BUTTON);
                 const simklButton = event.target.closest(SELECTORS.SIMKL_BUTTON);
+                const aniListButton = event.target.closest(SELECTORS.ANILIST_BUTTON);
 
-                if (tvTimeButton || simklButton) {
+                if (tvTimeButton || simklButton || aniListButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });

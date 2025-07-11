@@ -2,6 +2,7 @@
 last_dir.json
 tempCodeRunnerFile.py
 .copilot-rules.md
+.github/instructions
 
 # Python cache files
 __pycache__/
