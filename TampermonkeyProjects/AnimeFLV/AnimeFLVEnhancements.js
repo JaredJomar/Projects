@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeFLV Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.3.1
+// @version      0.2.1
 // @description  Select video provider option automatically and add a Page Up button
 // @author       JJJ
 // @match        *://*.animeflv.net/anime/*

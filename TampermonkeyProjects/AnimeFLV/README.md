@@ -40,7 +40,7 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
-### v0.3.1
+### v0.2.1
 - Enhanced error handling system
 - Improved initialization process
 - Added responsive design elements
