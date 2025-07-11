@@ -1,7 +1,8 @@
+
 // ==UserScript==
 // @name Delete Thread
 // @namespace http://tampermonkey.net/
-// @version 0.1.2
+// @version 0.1.3
 // @description Delete thread on Perplexity by pressing the Delete key and confirming with Enter
 // @author JJJ
 // @match https://www.perplexity.ai/*
@@ -59,7 +60,12 @@
 
     // Function to confirm the deletion
     function confirmDeletion() {
-        var confirmButton = document.querySelector('.bg-superAlt.text-white');
+        // Prefer new data-testid selector
+        var confirmButton = document.querySelector('[data-testid="thread-delete-confirm"]');
+        if (!confirmButton) {
+            // Fallback to old class-based selector
+            confirmButton = document.querySelector('.bg-superAlt.text-white');
+        }
         if (confirmButton) {
             confirmButton.click();
             console.log('Confirm triggered');
@@ -70,21 +76,22 @@
 
     // Function to cancel the deletion
     function cancelDeletion() {
-        // Try to find the Nevermind button by its text content
-        var nevermindButton = Array.from(document.querySelectorAll('button')).find(
-            button => button.textContent.trim() === 'Nevermind'
-        );
-
-        // If not found, try the close button with data-testid
+        // Prefer new data-testid selector
+        var nevermindButton = document.querySelector('[data-testid="thread-delete-nevermind"]');
         if (!nevermindButton) {
+            // Fallback to button with text content
+            nevermindButton = Array.from(document.querySelectorAll('button')).find(
+                button => button.textContent.trim() === 'Nevermind'
+            );
+        }
+        if (!nevermindButton) {
+            // Fallback to close button with data-testid
             nevermindButton = document.querySelector('[data-testid="close-modal"]');
         }
-
-        // If still not found, try the previous class-based selector as fallback
         if (!nevermindButton) {
+            // Fallback to previous class-based selector as last resort
             nevermindButton = document.querySelector('button.bg-offsetPlus.dark\\:bg-offsetPlusDark.text-textMain.dark\\:text-textMainDark');
         }
-
         if (nevermindButton) {
             nevermindButton.click();
             console.log('Deletion canceled successfully');

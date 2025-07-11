@@ -1,34 +1,39 @@
 
 ---
 # Delete Thread for Perplexity
+---
 
-Simple and efficient thread deletion for Perplexity through keyboard shortcuts.
+Effortlessly delete threads in Perplexity using keyboard shortcuts for a faster, mouse-free workflow.
 
 ## Features
 
 ### ⌨️ Keyboard Controls
-| Key | Function |
-|-----|----------|
-| Delete | Start deletion process |
-| Enter | Confirm deletion |
-| ESC | Cancel deletion |
+| Key    | Function              |
+|--------|-----------------------|
+| Delete | Start deletion process|
+| Enter  | Confirm deletion      |
+| ESC    | Cancel deletion       |
 
-### 🔄 Process Flow
-- Press Delete to initiate
-- Confirm with Enter
-- Cancel with ESC anytime
-- Visual confirmation prompt
+### 🔄 Smart Deletion Flow
+- Initiate deletion with a single key
+- Visual confirmation before deleting
+- Cancel anytime with ESC
+- Works seamlessly on Perplexity threads
 
 ### ⚡ Quick Actions
-- Single key activation
 - No mouse required
-- Instant response
+- Instant keyboard response
 - Safe confirmation step
+- Minimal UI disruption
 
 ## Version History
 
+### v0.1.3
+- Improved support for new Perplexity selectors
+- Enhanced reliability for confirm/cancel actions
+
 ### v0.1.2
-  - Updated selectors for improved compatibility
+- Updated selectors for improved compatibility
 
 ### v0.1.1
 - Added deletion confirmation prompt
@@ -45,5 +50,5 @@ Simple and efficient thread deletion for Perplexity through keyboard shortcuts.
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=perplexity.ai" alt="Perplexity Icon">
 
-**Current Version: 0.1.2**
+**Current Version: 0.1.3**
 </div>
