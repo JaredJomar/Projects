@@ -40,7 +40,7 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
-### v0.1.0
+### v0.0.1
 - Initial release
 - Added provider auto-selection
 - Implemented dark theme
@@ -56,5 +56,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=serieslan.com" alt="Serieslan Icon">
 
-**Current Version: 0.1.0**
+**Current Version: 0.0.1**
 </div>

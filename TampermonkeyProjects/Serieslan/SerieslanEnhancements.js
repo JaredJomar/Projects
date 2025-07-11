@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Serieslan Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.0.1
 // @description  Select video provider option automatically and change the background color of the page to improve visibility and reduce eye strain
 // @author       JJJ
 // @match        https://serieslan.com/*
