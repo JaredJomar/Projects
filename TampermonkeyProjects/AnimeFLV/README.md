@@ -56,5 +56,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=animeflv.net" alt="AnimeFLV Icon">
 
-**Current Version: 0.3.1**
+**Current Version: 0.2.1**
 </div>
