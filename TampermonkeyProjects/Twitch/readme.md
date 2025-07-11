@@ -52,6 +52,9 @@ The script automatically:
 
 ## Version History
 
+### v0.5.5
+- Updated Legacy Games redeem URL to the correct link
+
 ### v0.5.4
 - Added comprehensive settings dialog with toggle switches
 - Implemented customizable hotkey for settings (default: F2)

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Twitch Enhancements
 // @namespace    http://tampermonkey.net/
-// @version      0.5.4
+// @version      0.5.5
 // @description  Automatically claim channel points, enable theater mode, claim prime rewards, claim drops, and add redeem buttons for GOG and Legacy Games on Twitch and Amazon Gaming websites.
 // @author       JJJ
 // @match        https://www.twitch.tv/*
