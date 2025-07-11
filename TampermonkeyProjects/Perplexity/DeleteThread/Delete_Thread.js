@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name Delete Thread
 // @namespace http://tampermonkey.net/
