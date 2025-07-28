@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HTML5 Video Player Speed Control
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  Control the playback speed of HTML5 video players with keyboard shortcuts.
 // @author       JJJ
 // @match        *://*/*
@@ -12,14 +12,15 @@
 
 (function () {
     'use strict';
-    // Get the video element
-    const video = document.querySelector('video');
 
-    // Set the initial playback rate
-    let playbackRate = 1.0;
-    let previousPlaybackRate = 1.0;
+    // Active video element
+    let video = null;
+    // Use localStorage to persist playback rate across reloads and videos
+    const STORAGE_KEY = 'tm_html5_video_speed';
+    let playbackRate = parseFloat(localStorage.getItem(STORAGE_KEY)) || 1.0; // Current playback rate
+    let previousPlaybackRate = playbackRate; // Previous rate for toggling
 
-    // Create a speed indicator element
+    // Speed indicator overlay setup
     const speedIndicator = document.createElement('div');
     speedIndicator.style.position = 'absolute';
     speedIndicator.style.top = '10px';
@@ -30,98 +31,149 @@
     speedIndicator.style.fontFamily = 'Arial, sans-serif';
     speedIndicator.style.fontSize = '12px';
     speedIndicator.style.zIndex = '9999';
+    speedIndicator.style.pointerEvents = 'none'; // Let clicks pass through
+    speedIndicator.style.userSelect = 'none';    // No text selection
+    speedIndicator.style.webkitUserSelect = 'none';
+    speedIndicator.style.opacity = '0.6';
 
-    // Function to update the speed indicator
+    // Show current speed and fade out after 2s
     function updateSpeedIndicator() {
+        if (!video) return;
+        playbackRate = video.playbackRate;
+        // Persist the current playback rate
+        localStorage.setItem(STORAGE_KEY, playbackRate);
         speedIndicator.textContent = `Speed: ${playbackRate.toFixed(1)}x`;
+        speedIndicator.style.opacity = '1';
+        clearTimeout(speedIndicator.hideTimeout);
+        speedIndicator.hideTimeout = setTimeout(() => {
+            speedIndicator.style.opacity = '0.6';
+        }, 2000);
     }
 
-    // Function to update the speed indicator position
+    // Place indicator as fixed in fullscreen, absolute otherwise
     function updateSpeedIndicatorPosition() {
-        if (video.offsetWidth === window.innerWidth && video.offsetHeight === window.innerHeight) {
-            // Video is in fullscreen
-            speedIndicator.style.position = 'fixed';
-        } else {
-            // Video is not in fullscreen
-            speedIndicator.style.position = 'absolute';
-        }
+        if (!video) return;
+        const isFullscreen = document.fullscreenElement === video ||
+            document.webkitFullscreenElement === video ||
+            video.webkitDisplayingFullscreen === true ||
+            (video.offsetWidth === window.innerWidth && video.offsetHeight === window.innerHeight);
+        speedIndicator.style.position = isFullscreen ? 'fixed' : 'absolute';
     }
 
-    // Update the speed indicator position whenever the window is resized
-    window.addEventListener('resize', updateSpeedIndicatorPosition);
-
-    // Update the speed indicator position initially
-    updateSpeedIndicatorPosition();
-
-    // Function to increase the playback rate by 0.1
-    function speedUpVideo() {
-        playbackRate += 0.1;
-        video.playbackRate = playbackRate;
-        updateSpeedIndicator();
-    }
-
-    // Function to decrease the playback rate by 0.1
-    function slowDownVideo() {
-        playbackRate -= 0.1;
-        video.playbackRate = playbackRate;
-        updateSpeedIndicator();
-    }
-
-    // Function to set the playback rate to 1.5x
-    function setFastSpeed() {
-        playbackRate = 1.5;
-        video.playbackRate = playbackRate;
-        updateSpeedIndicator();
-    }
-
-    // Function to set the playback rate to 1.8x
-    function setFasterSpeed() {
-        playbackRate = 1.8;
-        video.playbackRate = playbackRate;
-        updateSpeedIndicator();
-    }
-
-    // Function to reset the playback rate to normal
-    function resetSpeed() {
-        if (playbackRate !== 1.0) {
+    // Toggle between a fixed speed and previous speed
+    function toggleSpeed(fixedSpeed) {
+        if (playbackRate !== fixedSpeed) {
             previousPlaybackRate = playbackRate;
-            playbackRate = 1.0;
-            video.playbackRate = playbackRate;
-            updateSpeedIndicator();
+            playbackRate = fixedSpeed;
         } else {
             playbackRate = previousPlaybackRate;
-            video.playbackRate = playbackRate;
-            updateSpeedIndicator();
         }
+        video.playbackRate = playbackRate;
+        updateSpeedIndicator();
     }
 
-    // Function to toggle the visibility of the speed indicator
+    // Increase speed by 0.1
+    function speedUpVideo() {
+        previousPlaybackRate = playbackRate;
+        playbackRate = video.playbackRate + 0.1;
+        video.playbackRate = playbackRate;
+        updateSpeedIndicator();
+    }
+
+    // Decrease speed by 0.1
+    function slowDownVideo() {
+        previousPlaybackRate = playbackRate;
+        playbackRate = video.playbackRate - 0.1;
+        video.playbackRate = playbackRate;
+        updateSpeedIndicator();
+    }
+
+    // Toggle 1.5x speed
+    function setFastSpeed() { toggleSpeed(1.5); }
+    // Toggle 1.8x speed
+    function setFasterSpeed() { toggleSpeed(1.8); }
+    // Toggle/reset 1.0x speed
+    function resetSpeed() { toggleSpeed(1.0); }
+
+    // Show or hide the speed indicator
     function toggleSpeedIndicator() {
         speedIndicator.style.display = speedIndicator.style.display === 'none' ? 'block' : 'none';
     }
 
-    // Append the speed indicator element to the video container
-    const videoContainer = video.parentElement;
-    videoContainer.style.position = 'relative';
-    videoContainer.appendChild(speedIndicator);
+    // Attach indicator and listeners to a video element
+    function setupVideo(v) {
+        if (video === v) return;
+        video = v;
+        // Always use the persisted playbackRate for new videos
+        playbackRate = parseFloat(localStorage.getItem(STORAGE_KEY)) || 1.0;
+        previousPlaybackRate = playbackRate;
+        const container = video.parentElement;
+        if (container && !container.contains(speedIndicator)) {
+            container.style.position = 'relative';
+            container.appendChild(speedIndicator);
+        }
+        updateSpeedIndicator();
+        updateSpeedIndicatorPosition();
+        video.addEventListener('ratechange', updateSpeedIndicator);
+        window.addEventListener('resize', updateSpeedIndicatorPosition);
 
-    // Update the speed indicator with the initial playback rate
-    updateSpeedIndicator();
+        // Helper to force playback rate and update indicator
+        function forcePlaybackRate() {
+            video.playbackRate = playbackRate;
+            updateSpeedIndicator();
+        }
 
-    // Event listener for key presses
+        // Always enforce playback rate on these events
+        video.addEventListener('canplay', forcePlaybackRate);
+        video.addEventListener('play', forcePlaybackRate);
+        video.addEventListener('playing', forcePlaybackRate);
+        video.addEventListener('loadedmetadata', forcePlaybackRate);
+
+        // Set initial playback rate
+        if (video.readyState < 3) {
+            video.addEventListener('canplay', forcePlaybackRate, { once: true });
+        } else {
+            forcePlaybackRate();
+        }
+    }
+
+    // Watch for new video elements in the DOM
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    if (node.tagName === 'VIDEO') {
+                        setupVideo(node);
+                    } else {
+                        const vid = node.querySelector && node.querySelector('video');
+                        if (vid) setupVideo(vid);
+                    }
+                }
+            });
+        });
+    });
+    // Start observing for video elements in the DOM
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Attach to first video on page load
+    window.addEventListener('load', () => {
+        const vid = document.querySelector('video');
+        if (vid) setupVideo(vid);
+    });
+
+    // Keyboard shortcuts for speed and indicator
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'd') {
-            speedUpVideo();
-        } else if (event.key === 's') {
-            slowDownVideo();
-        } else if (event.key === 'g') {
-            setFastSpeed();
-        } else if (event.key === 'h') {
-            setFasterSpeed();
-        } else if (event.key === 'r') {
-            resetSpeed();
-        } else if (event.key === 'v') {
-            toggleSpeedIndicator();
+        // Ignore if typing in input, textarea, or contenteditable
+        const tag = event.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target.isContentEditable) return;
+        const key = event.key.toLowerCase();
+        switch (key) {
+            case 'd': speedUpVideo(); break;      // +0.1x
+            case 's': slowDownVideo(); break;     // -0.1x
+            case 'g': setFastSpeed(); break;      // 1.5x toggle
+            case 'h': setFasterSpeed(); break;    // 1.8x toggle
+            case 'r': resetSpeed(); break;        // 1.0x toggle/reset
+            case 'v': toggleSpeedIndicator(); break; // Show/hide
         }
     });
 })();
