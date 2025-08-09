@@ -36,6 +36,13 @@ Enhances the YouTube playlist dialog with search functionality and improved layo
 
 ## Version History
 
+### v0.0.2
+- Styled search bar with hover/focus effects and a clear (✕) button
+- More resilient dialog detection and playlist item selectors
+- Improved scrolling/height handling for long playlist lists
+- Auto-fill and clear button added for the "New playlist" title field
+- Stability and UI polish updates
+
 ### v0.0.1
 - Initial release with search functionality
 - Centered dialog implementation
@@ -53,5 +60,5 @@ Enhances the YouTube playlist dialog with search functionality and improved layo
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.0.1**
+**Current Version: 0.0.2**
 </div>
