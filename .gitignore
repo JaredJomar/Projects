@@ -4,6 +4,10 @@ tempCodeRunnerFile.py
 .copilot-rules.md
 .github/instructions
 
+# TODO files
+TODO
+TODO.*
+
 # Python cache files
 __pycache__/
 *.pyc
