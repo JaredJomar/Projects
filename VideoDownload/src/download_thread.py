@@ -6,6 +6,15 @@ import signal
 import psutil
 import shutil
 import sys
+from datetime import datetime, timezone
+from math import inf
+from urllib.parse import urlparse, parse_qs
+try:
+    import yt_dlp  # type: ignore
+except Exception:  # Module may not be available; fall back to CLI-only path
+    yt_dlp = None  # noqa: N816
+
+from .helpers import ensure_python_module
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
@@ -39,8 +48,90 @@ class DownloadThread(QThread):
             if not self.running:
                 return
 
-            command = self.construct_command(url)
-            self.execute_command(command, url=url)
+            # Announce per-URL processing start
+            self.download_output.emit(f"🔎 Preparing: {url}")
+
+            # Try to enumerate playlist and apply numbering if applicable
+            try:
+                self.download_output.emit("🧭 Pre-extracting playlist metadata (fast)…")
+                # If YouTube watch URL contains list=, prefer the actual playlist URL for extraction
+                playlist_probe_url = self._prefer_playlist_url(url)
+                if playlist_probe_url != url:
+                    self.download_output.emit(f"📃 Using playlist URL for detection: {playlist_probe_url}")
+                info = self._extract_info(playlist_probe_url)
+                self.download_output.emit("🧭 Pre-extraction complete")
+            except Exception as e:
+                info = None
+                self.download_output.emit(f"ℹ️ Could not pre-extract info for sorting/numbering: {e}")
+
+            # Allow disabling numbering via environment and only treat as playlist when entries > 1
+            numbering_disabled = os.environ.get("VD_DISABLE_PLAYLIST_NUMBERING") == "1"
+            has_entries = isinstance(info, dict) and bool(info.get("entries"))
+            entries_list = self._make_entries_list(info)
+            # Consider it a playlist if entries > 1, or yt_dlp reports playlist_count > 1, or URL has list= param
+            is_youtube_list_url = ("list=" in url.lower())
+            playlist_count = 0
+            if isinstance(info, dict):
+                try:
+                    playlist_count = int(info.get('playlist_count') or 0)
+                except Exception:
+                    playlist_count = 0
+            is_playlist = (len(entries_list) > 1) or (playlist_count > 1) or is_youtube_list_url
+
+            if not numbering_disabled and is_playlist:
+                # Playlist handling with numbering
+                try:
+                    entries = entries_list
+                    # Ensure we have a flat list of entry dicts
+                    flat_entries = []
+                    for idx, entry in enumerate(entries):
+                        if isinstance(entry, dict):
+                            entry["_orig_pos"] = idx
+                            flat_entries.append(entry)
+                    sorted_entries = self._sort_entries_by_date(flat_entries)
+
+                    # Determine next number and pad width
+                    next_number = self._determine_next_number(self._normalized_output_folder)
+                    pad = self._decide_zero_pad(next_number, len(sorted_entries))
+
+                    self.download_output.emit(
+                        f"📚 Playlist detected: {len(sorted_entries)} items. Numbering will start at {next_number:0{pad}d}"
+                    )
+
+                    current = next_number
+                    for entry in sorted_entries:
+                        if not self.running:
+                            return
+                        # Find a free prefix (avoid collisions)
+                        number_to_use = self._find_free_number(self._normalized_output_folder, current, pad)
+                        prefix = f"{number_to_use:0{pad}d}_"
+
+                        # Choose a concrete URL for the item
+                        entry_url = (
+                            entry.get("webpage_url")
+                            or entry.get("original_url")
+                            or entry.get("url")
+                            or url  # fallback
+                        )
+
+                        # Build outtmpl with our prefix
+                        outtmpl = os.path.join(self._normalized_output_folder, f"{prefix}%(title)s.%(ext)s")
+                        command = self.construct_command(entry_url, outtmpl_override=outtmpl)
+                        self.download_output.emit(f"⬇️ Downloading as {prefix}%(title)s.%(ext)s")
+                        self.execute_command(command, url=entry_url)
+
+                        # Move to next number for next item
+                        current = number_to_use + 1
+
+                except Exception as e:
+                    self.download_output.emit(f"❌ Playlist processing failed, falling back to single download: {e}")
+                    command = self.construct_command(url)
+                    self.execute_command(command, url=url)
+            else:
+                # Single URL (non-playlist) — keep existing naming
+                self.download_output.emit("➡️ No playlist detected; starting single download")
+                command = self.construct_command(url)
+                self.execute_command(command, url=url)
 
         if self.running:
             # Emit final progress update to ensure progress bar reaches 100%
@@ -68,7 +159,7 @@ class DownloadThread(QThread):
             
         return path
 
-    def construct_command(self, url, force_cookies=False):
+    def construct_command(self, url, force_cookies=False, outtmpl_override: str | None = None):
         if not url.startswith(('http://', 'https://', 'ftp://')):
             url = f'https://{url}'
         output_path = self._normalized_output_folder
@@ -81,11 +172,14 @@ class DownloadThread(QThread):
         if safe_title:
             safe_title = self.sanitize_path(safe_title)
             
-        output_template = (
-            f"{output_path}\\{safe_title}.%(ext)s" 
-            if safe_title 
-            else f"{output_path}\\%(title)s_%(resolution)s.%(ext)s"
-        )
+        if outtmpl_override:
+            output_template = outtmpl_override
+        else:
+            output_template = (
+                f"{output_path}\\{safe_title}.%(ext)s" 
+                if safe_title 
+                else f"{output_path}\\%(title)s_%(resolution)s.%(ext)s"
+            )
         
         base_command = [
             self._normalized_yt_dlp_path,    # Path to yt-dlp executable
@@ -102,6 +196,7 @@ class DownloadThread(QThread):
             "--ignore-errors",               # Continue downloading other videos if one fails
             "--retries", "10",               # Retry failed downloads up to 10 times
             "--retry-sleep", "5",            # Wait 5 seconds between retry attempts
+            "--no-overwrites",               # Never overwrite existing files
             url                              # The video URL to download
         ]        # Only use browser cookies if necessary or forced
         use_cookies = False
@@ -174,6 +269,141 @@ class DownloadThread(QThread):
             base_command.extend(["--format", format_spec])
         return base_command
 
+    # --- Playlist numbering helpers ---
+    def _extract_info(self, url: str) -> dict | None:
+        """Use yt_dlp Python API to extract info without downloading."""
+        if yt_dlp is None:
+            # Try to auto-install the module on demand
+            ok = ensure_python_module("yt_dlp", "yt-dlp", on_log=self.download_output.emit)
+            if ok:
+                try:
+                    import importlib
+                    importlib.invalidate_caches()
+                    import yt_dlp as _yt  # type: ignore
+                    globals()['yt_dlp'] = _yt
+                except Exception as e:
+                    self.download_output.emit(f"❌ Could not load yt_dlp after install: {e}")
+                    return None
+            else:
+                self.download_output.emit("ℹ️ Skipping playlist pre-extraction (yt_dlp module not available)")
+                return None
+        ydl_opts = {
+            'quiet': True,
+            'skip_download': True,
+            'nocheckcertificate': True,
+            'socket_timeout': 8,
+            'retries': 1,
+            'extractor_retries': 1,
+            'ignoreerrors': True,
+            'noplaylist': False,  # allow playlist extraction even for watch?v URLs with list= param
+            'extract_flat': 'in_playlist',  # faster to just get entries list
+        }
+        if yt_dlp is None:
+            return None
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[attr-defined]
+            return ydl.extract_info(url, download=False)
+
+    def _prefer_playlist_url(self, url: str) -> str:
+        """If URL is a YouTube watch link with a list= param, return the playlist URL."""
+        try:
+            parsed = urlparse(url)
+            if parsed.netloc.lower().endswith("youtube.com"):
+                qs = parse_qs(parsed.query)
+                list_ids = qs.get('list') or []
+                if list_ids:
+                    list_id = list_ids[0]
+                    return f"https://www.youtube.com/playlist?list={list_id}"
+        except Exception:
+            pass
+        return url
+
+    def _make_entries_list(self, info: dict | None) -> list[dict]:
+        """Normalize info['entries'] to a list of dicts; return [] if unavailable."""
+        if not isinstance(info, dict):
+            return []
+        entries = info.get('entries')
+        if entries is None:
+            return []
+        if isinstance(entries, list):
+            return entries
+        try:
+            return list(entries)
+        except Exception:
+            return []
+
+    def _normalize_date_value(self, entry: dict) -> int | float:
+        """Return YYYYMMDD as int; fallback to +inf if unavailable."""
+        # Highest precedence: upload_date as YYYYMMDD string
+        upload_date = entry.get('upload_date') or entry.get('playlist_uploader_date')
+        if upload_date:
+            try:
+                return int(str(upload_date)[:8])  # guard against malformed
+            except Exception:
+                pass
+        # Next: timestamp or release_timestamp (unix seconds)
+        ts = entry.get('timestamp') or entry.get('release_timestamp')
+        if ts:
+            try:
+                dt = datetime.fromtimestamp(int(ts), tz=timezone.utc)
+                return int(dt.strftime('%Y%m%d'))
+            except Exception:
+                pass
+        return inf
+
+    def _sort_entries_by_date(self, entries: list[dict]) -> list[dict]:
+        """Sort from oldest to newest using date, then playlist_index; stable fallback to original order."""
+        def key(e: dict):
+            date_val = self._normalize_date_value(e)
+            pidx = e.get('playlist_index')
+            try:
+                pidx = int(pidx) if pidx is not None else inf
+            except Exception:
+                pidx = inf
+            orig = e.get('_orig_pos', 0)
+            return (date_val, pidx, orig)
+
+        # Python's sort is stable; this preserves original order when keys tie
+        return sorted(entries, key=key)
+
+    def _determine_next_number(self, folder: str) -> int:
+        """Scan destination folder for existing leading numbers and return next."""
+        try:
+            files = os.listdir(folder)
+        except Exception:
+            return 1
+        nums = []
+        pattern = re.compile(r'^(\d{2,})\s*[_\-\s]')
+        for name in files:
+            m = pattern.match(name)
+            if m:
+                try:
+                    nums.append(int(m.group(1)))
+                except Exception:
+                    pass
+        return (max(nums) + 1) if nums else 1
+
+    def _decide_zero_pad(self, next_number: int, count: int) -> int:
+        last_planned = max(next_number + max(count - 1, 0), next_number)
+        return max(2, len(str(last_planned)))
+
+    def _prefix_in_use(self, folder: str, prefix: str) -> bool:
+        """Return True if any file in folder starts with the given prefix."""
+        try:
+            for name in os.listdir(folder):
+                if name.startswith(prefix):
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def _find_free_number(self, folder: str, start_number: int, pad: int) -> int:
+        n = start_number
+        while True:
+            prefix = f"{n:0{pad}d}_"
+            if not self._prefix_in_use(folder, prefix):
+                return n
+            n += 1
+
     # The following methods are replaced by the construct_command method above but kept for backward compatibility
     def construct_video_command(self, url):
         return self.construct_command(url)
@@ -186,14 +416,7 @@ class DownloadThread(QThread):
 
     def execute_command(self, command, url=None, retry_with_cookies=False):
         try:
-            # Set encoding for the subprocess to handle non-ASCII characters
-            if os.name == 'nt':  # Windows
-                try:
-                    if hasattr(sys.stdout, 'reconfigure'):
-                        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-                except Exception:
-                    pass  # Ignore if sys.stdout does not support reconfigure
-                
+            # Launch process and stream output
             self.process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
@@ -204,7 +427,8 @@ class DownloadThread(QThread):
                 errors='replace'  # Handle encoding errors gracefully
             )
             error_detected = False
-            for line in self.process.stdout:
+            stream = self.process.stdout
+            for line in (stream or []):
                 if not self.running:
                     self.process.terminate()
                     return
@@ -314,7 +538,11 @@ class DownloadThread(QThread):
                     # Filter out technical noise but keep important messages
                     self.download_output.emit(line)
             
-            self.process.stdout.close()
+            if stream:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
             self.process.wait()
             
             # If error detected and not already retried with cookies, retry

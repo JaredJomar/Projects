@@ -3,7 +3,9 @@ import shutil
 import subprocess
 import glob
 from PyQt5.QtCore import QSettings
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
+import sys
+import importlib
 
 def find_executable(executable_name: str) -> Optional[str]:
     """Search for an executable in common installation directories."""
@@ -128,3 +130,42 @@ def load_app_settings(settings: QSettings) -> Dict[str, Any]:
         "window_position": settings.value("window_position", None)
     }
     return {k: v for k, v in result.items() if v is not None}
+
+
+def ensure_python_module(module_name: str, pip_package: Optional[str] = None, on_log: Optional[Callable[[str], None]] = None) -> bool:
+    """Ensure a Python module is importable; if not, attempt to install it via pip.
+
+    Args:
+        module_name: The import name, e.g., 'yt_dlp'.
+        pip_package: The pip package name, e.g., 'yt-dlp'. Defaults to module_name.
+        on_log: Optional callback to receive progress log strings.
+
+    Returns:
+        True if the module is importable after this call; False otherwise.
+    """
+    try:
+        importlib.import_module(module_name)
+        return True
+    except Exception:
+        pass
+
+    pkg = pip_package or module_name
+    try:
+        if on_log:
+            on_log(f"📦 Installing Python package: {pkg} ...")
+        # Use -q to reduce noise but keep errors
+        result = subprocess.run([sys.executable, "-m", "pip", "install", pkg], capture_output=True, text=True)
+        if result.returncode != 0:
+            if on_log:
+                on_log(f"❌ Failed to install {pkg}: {result.stderr.strip() or result.stdout.strip()}")
+            return False
+        # Try importing again
+        importlib.invalidate_caches()
+        importlib.import_module(module_name)
+        if on_log:
+            on_log(f"✅ Installed {pkg}")
+        return True
+    except Exception as e:
+        if on_log:
+            on_log(f"❌ Error installing {pkg}: {e}")
+        return False

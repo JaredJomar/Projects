@@ -281,6 +281,9 @@ class MainWindow(QMainWindow):
     def start_download(self):
         self.live_label.hide()
         url = self.url_input.text().strip()  # Ensure URL is stripped of whitespace
+        if not url:
+            self.progress_text.append("❗ Please enter a URL to download.")
+            return
         
         # Enhanced live stream detection
         self.is_live = any(x in url.lower() for x in ["twitch.tv/", "youtube.com/live"])
@@ -306,12 +309,12 @@ class MainWindow(QMainWindow):
             yt_dlp_path = shutil.which('yt-dlp')
             if not yt_dlp_path:
                 yt_dlp_path = self.settingsTab.find_executable('yt-dlp')
-        
+
         # Validate the paths
         if not ffmpeg_path or not os.path.exists(ffmpeg_path):
             self.progress_text.append("❌ Error: FFmpeg executable not found! Please install it in Settings tab.")
             return
-            
+
         if not yt_dlp_path or not os.path.exists(yt_dlp_path):
             self.progress_text.append("❌ Error: yt-dlp executable not found! Please install it in Settings tab.")
             return
@@ -321,15 +324,23 @@ class MainWindow(QMainWindow):
 
         self.done_label.hide()
 
+        # Announce start
+        self.progress_text.append("🚀 Starting download...")
+        self.progress_text.append(f"🔗 URL: {url}")
+        self.progress_text.append(f"📁 Output: {output_folder}")
+        self.progress_text.append(f"🧰 yt-dlp: {yt_dlp_path}")
+        self.progress_text.append(f"🎬 FFmpeg: {ffmpeg_path}")
+
         self.download_thread = DownloadThread(
-            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title, browser_cookies)  
+            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title, browser_cookies
+        )
         self.download_thread.download_progress.connect(self.update_progress)
         self.download_thread.download_output.connect(self.update_progress_text)
         self.download_thread.download_complete.connect(self.download_complete)
         self.download_thread.download_location_complete.connect(self.show_download_location)
         self.download_thread.finished.connect(self.on_download_thread_finished)  # Handle any thread finish
         self.download_thread.start()
-        
+
         # Enable pause button when download starts
         self.pause_button.setEnabled(True)
         self.pause_button.setText("Pause")
