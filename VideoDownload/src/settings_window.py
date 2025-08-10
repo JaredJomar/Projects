@@ -63,9 +63,9 @@ class InstallationWorker(QThread):
             "aria2c": {
                 "name": "aria2c",
                 "check_cmd": "aria2c",
-                "install_cmd": ["choco", "install", "-y", "aria2"],
-                "upgrade_cmd": ["choco", "upgrade", "-y", "aria2"],
-                "package_id": "aria2"
+                "install_cmd": ["winget", "install", "aria2.aria2", "--silent"],
+                "upgrade_cmd": ["winget", "upgrade", "aria2.aria2", "--silent"],
+                "package_id": "aria2.aria2"
             }
         }
         
@@ -196,7 +196,7 @@ class SettingsWindow(QDialog):
 
         # aria2c section with status
         aria2_section = QVBoxLayout()
-        install_aria2_button = QPushButton("Install/Update aria2c")
+        install_aria2_button = QPushButton("Install/Update aria2")
         install_aria2_button.setToolTip(
             "aria2 is a lightweight multi-protocol download utility.\n"
             "• Accelerates downloads with multi-connection downloading\n"
