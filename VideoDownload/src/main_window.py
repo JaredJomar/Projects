@@ -14,9 +14,15 @@ from PyQt5.QtWidgets import (
     QDesktopWidget,
 )
 from PyQt5.QtCore import QSettings, QSize, QPoint, Qt
+from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QPalette, QColor, QIcon
 from .download_thread import DownloadThread
 from .settings_window import SettingsWindow
+from .helpers import (
+    find_executable,
+    save_app_settings,
+    load_app_settings,
+)
 from .constants import (
     WINDOW_BACKGROUND_COLOR,
     TAB_BACKGROUND_COLOR,
@@ -88,7 +94,7 @@ class MainWindow(QMainWindow):
     def create_palette(self):
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor("#DFF6FF"))
-        palette.setColor(QPalette.WindowText, QColor(Qt.white))
+        palette.setColor(QPalette.WindowText, QColor('#FFFFFF'))
         palette.setColor(QPalette.Button, QColor(BUTTON_BACKGROUND_COLOR))
         palette.setColor(QPalette.ButtonText, QColor(BUTTON_TEXT_COLOR))
         palette.setColor(QPalette.Base, QColor(TAB_BACKGROUND_COLOR))
@@ -333,18 +339,18 @@ class MainWindow(QMainWindow):
         self.progress_bar.setFormat(f"{progress}%")
         self.progress_text.append(f"📊 Progress: {progress}%")
         # Auto-scroll to the end
-        self.progress_text.verticalScrollBar().setValue(
-            self.progress_text.verticalScrollBar().maximum()
-        )
+        scrollBar = self.progress_text.verticalScrollBar()
+        if scrollBar:
+            scrollBar.setValue(scrollBar.maximum())
 
     def update_progress_text(self, output):
         # Show all logs without filtering
         if output.strip():  # Only add if text is not empty
             self.progress_text.append(output)
             # Auto-scroll to the end
-            self.progress_text.verticalScrollBar().setValue(
-                self.progress_text.verticalScrollBar().maximum()
-            )
+            scrollBar = self.progress_text.verticalScrollBar()
+            if scrollBar:
+                scrollBar.setValue(scrollBar.maximum())
         
         # Only show live_label if it's a live stream
         if self.is_live:
@@ -368,51 +374,49 @@ class MainWindow(QMainWindow):
         """Show the download location in the progress text box."""
         if location:
             self.progress_text.append(f"📁 Download saved to: {location}")
-            self.progress_text.verticalScrollBar().setValue(
-                self.progress_text.verticalScrollBar().maximum()
-            )
+            scrollBar = self.progress_text.verticalScrollBar()
+            if scrollBar:
+                scrollBar.setValue(scrollBar.maximum())
 
     def save_settings(self):
-        self.settings.setValue(
-            "download_folder", self.download_folder_input.text())
-        self.settings.setValue(
-            "ffmpeg_path", self.settingsTab.ffmpeg_input.text())
-        self.settings.setValue(
-            "yt_dlp_path", self.settingsTab.yt_dlp_input.text())
-        # Do NOT save browser_cookies anymore
-        # self.settings.setValue(
-        #     "browser_cookies", self.settingsTab.browser_combobox.currentText())
-        self.settings.setValue("window_size", self.size())
-        self.settings.setValue("window_position", self.pos())
+        settings_data = {
+            "download_folder": self.download_folder_input.text(),
+            "ffmpeg_path": self.settingsTab.ffmpeg_input.text(),
+            "yt_dlp_path": self.settingsTab.yt_dlp_input.text(),
+            "window_size": self.size(),
+            "window_position": self.pos()
+        }
+        save_app_settings(self.settings, settings_data)
 
     def load_settings(self):
-        download_folder = self.settings.value("download_folder", "")
-
-        if download_folder:
-            self.download_folder_input.setText(download_folder)
-
-        window_size = self.settings.value("window_size", QSize(800, 600))
-        window_position = self.settings.value(
-            "window_position", QPoint(100, 100))
-
+        settings_data = load_app_settings(self.settings)
+        
+        if settings_data.get("download_folder"):
+            self.download_folder_input.setText(settings_data["download_folder"])
+            
+        window_size = settings_data.get("window_size", QSize(800, 600))
+        window_position = settings_data.get("window_position", QPoint(100, 100))
+        
         self.resize(window_size)
         self.move(window_position)
 
     def customize_appearance(self):
         menu = self.menuBar()
-        menu.setStyleSheet(
-            "QMenuBar { background-color: #06283D; color: white; font-weight: bold; }"
-        )
+        if menu:
+            menu.setStyleSheet(
+                "QMenuBar { background-color: #06283D; color: white; font-weight: bold; }"
+            )
 
         self.settingsTab.setStyleSheet(
             "QWidget { background-color: #000128; color: white; font-weight: bold; }"
         )
 
         tabBar = self.tabs.tabBar()
-        tabBar.setStyleSheet(
-            "QTabBar::tab { background-color: #000128; color: white; font-weight: bold; padding: 10px 20px; margin-right: 10px; min-width: 100px; }"
-            "QTabBar::tab:selected { background-color: #06283D; }"
-        )
+        if tabBar:
+            tabBar.setStyleSheet(
+                "QTabBar::tab { background-color: #000128; color: white; font-weight: bold; padding: 10px 20px; margin-right: 10px; min-width: 100px; }"
+                "QTabBar::tab:selected { background-color: #06283D; }"
+            )
 
         self.progress_bar.setStyleSheet(
             "QProgressBar { border: 1px solid #47B5FF; border-radius: 5px; text-align: center; background-color: #06283D; color: white; }"

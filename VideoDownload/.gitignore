@@ -63,3 +63,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# TODO
+TODO.md

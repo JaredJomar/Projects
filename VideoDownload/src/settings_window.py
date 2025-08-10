@@ -13,6 +13,13 @@ from PyQt5.QtWidgets import (
     QComboBox,
 )
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread
+from .helpers import (
+    find_executable,
+    check_and_update_path,
+    browse_for_executable,
+    save_app_settings,
+    load_app_settings,
+)
 from .constants import (
     BUTTON_BACKGROUND_COLOR,
     BUTTON_TEXT_COLOR,
@@ -37,163 +44,92 @@ class InstallationWorker(QThread):
         self.success = False
         self.message = ""
         
+        # Define dependency installation configurations
+        self.dependency_configs = {
+            "ffmpeg": {
+                "name": "FFmpeg",
+                "check_cmd": "ffmpeg",
+                "install_cmd": ["winget", "install", "Gyan.FFmpeg", "--silent"],
+                "upgrade_cmd": ["winget", "upgrade", "Gyan.FFmpeg", "--silent"],
+                "package_id": "Gyan.FFmpeg"
+            },
+            "ytdlp": {
+                "name": "yt-dlp",
+                "check_cmd": "yt-dlp",
+                "install_cmd": ["winget", "install", "yt-dlp.yt-dlp", "--silent"],
+                "upgrade_cmd": ["winget", "upgrade", "yt-dlp.yt-dlp", "--silent"],
+                "package_id": "yt-dlp.yt-dlp"
+            },
+            "aria2c": {
+                "name": "aria2c",
+                "check_cmd": "aria2c",
+                "install_cmd": ["choco", "install", "-y", "aria2"],
+                "upgrade_cmd": ["choco", "upgrade", "-y", "aria2"],
+                "package_id": "aria2"
+            }
+        }
+        
     def run(self):
         """Run the installation in a separate thread"""
         try:
-            if self.package_type == "ffmpeg":
-                self._install_ffmpeg()
-            elif self.package_type == "ytdlp":
-                self._install_ytdlp()
-            elif self.package_type == "aria2c":
-                self._install_aria2c()
+            if self.package_type in self.dependency_configs:
+                config = self.dependency_configs[self.package_type]
+                self._install_dependency(**config)
+            else:
+                raise ValueError(f"Unknown package type: {self.package_type}")
         except Exception as e:
             self.success = False
             self.message = f"Installation failed: {str(e)}"
         finally:
             self.installation_finished.emit(self.package_type, self.success, self.message)
     
-    def _install_ffmpeg(self):
-        """Install or update FFmpeg using winget"""
-        self.installation_progress.emit("Checking for existing FFmpeg installation...")
-        ffmpeg_path = shutil.which('ffmpeg')
+    def _install_dependency(self, name, check_cmd, install_cmd, upgrade_cmd, package_id, extra_checks=None):
+        """Generic method to install or update a dependency"""
+        self.installation_progress.emit(f"Checking for existing {name} installation...")
+        executable_path = shutil.which(check_cmd)
         
-        if ffmpeg_path:
-            self.installation_progress.emit("FFmpeg found. Checking for updates...")
+        if executable_path:
+            self.installation_progress.emit(f"{name} found. Checking for updates...")
             # Try to update existing installation
-            result = subprocess.run(
-                ["winget", "upgrade", "Gyan.FFmpeg", "--silent"], 
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(upgrade_cmd, capture_output=True, text=True)
             
             if result.returncode == 0:
-                self.installation_progress.emit("FFmpeg updated successfully!")
+                self.installation_progress.emit(f"{name} updated successfully!")
                 self.success = True
-                self.message = f"FFmpeg updated at: {ffmpeg_path}"
+                self.message = f"{name} updated at: {executable_path}"
             else:
                 # Update failed, but it's already installed
                 self.success = True
-                self.message = f"FFmpeg already up-to-date at: {ffmpeg_path}"
+                self.message = f"{name} already up-to-date at: {executable_path}"
             return
-            
-        self.installation_progress.emit("Installing FFmpeg via winget...")
-        result = subprocess.run(
-            ["winget", "install", "Gyan.FFmpeg", "--silent"], 
-            capture_output=True,
-            text=True
-        )
+        
+        self.installation_progress.emit(f"Installing {name}...")
+        result = subprocess.run(install_cmd, capture_output=True, text=True)
         
         if result.returncode == 0:
             self.installation_progress.emit("Waiting for installation to complete...")
             time.sleep(3)  # Give time for installation to complete
             
-            ffmpeg_path = shutil.which('ffmpeg')
-            if ffmpeg_path:
+            # Check if installation was successful
+            executable_path = shutil.which(check_cmd)
+            if executable_path:
                 self.success = True
-                self.message = f"FFmpeg successfully installed at: {ffmpeg_path}"
+                self.message = f"{name} successfully installed at: {executable_path}"
             else:
-                self.success = False
-                self.message = "FFmpeg installed but not found in PATH. Manual path setting required."
-        else:
-            self.success = False
-            self.message = f"Failed to install FFmpeg: {result.stderr}"
-    
-    def _install_ytdlp(self):
-        """Install or update yt-dlp using winget"""
-        self.installation_progress.emit("Checking for existing yt-dlp installation...")
-        ytdlp_path = shutil.which('yt-dlp')
-        
-        if ytdlp_path:
-            self.installation_progress.emit("yt-dlp found. Checking for updates...")
-            # Try to update existing installation
-            result = subprocess.run(
-                ["winget", "upgrade", "yt-dlp.yt-dlp", "--silent"], 
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                self.installation_progress.emit("yt-dlp updated successfully!")
-                self.success = True
-                self.message = f"yt-dlp updated at: {ytdlp_path}"
-            else:
-                # Update failed, but it's already installed
-                self.success = True
-                self.message = f"yt-dlp already up-to-date at: {ytdlp_path}"
-            return
-            
-        self.installation_progress.emit("Installing yt-dlp via winget...")
-        result = subprocess.run(
-            ["winget", "install", "yt-dlp.yt-dlp", "--silent"], 
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            self.installation_progress.emit("Waiting for installation to complete...")
-            time.sleep(3)  # Give time for installation to complete
-            
-            ytdlp_path = shutil.which('yt-dlp')
-            if ytdlp_path:
-                self.success = True
-                self.message = f"yt-dlp successfully installed at: {ytdlp_path}"
-            else:
-                # Try default winget installation path
-                default_path = os.path.expandvars(
-                    "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
-                if os.path.exists(default_path):
+                # Try additional checks if provided
+                found_path = None
+                if extra_checks and callable(extra_checks):
+                    found_path = extra_checks()
+                
+                if found_path:
                     self.success = True
-                    self.message = f"yt-dlp successfully installed at: {default_path}"
+                    self.message = f"{name} successfully installed at: {found_path}"
                 else:
                     self.success = False
-                    self.message = "yt-dlp installed but not found in PATH. Manual path setting required."
+                    self.message = f"{name} installed but not found in PATH. Manual path setting required."
         else:
             self.success = False
-            self.message = f"Failed to install yt-dlp: {result.stderr}"
-    
-    def _install_aria2c(self):
-        """Install or update aria2c using chocolatey"""
-        self.installation_progress.emit("Checking for existing aria2c installation...")
-        
-        if shutil.which('aria2c'):
-            self.installation_progress.emit("aria2c found. Checking for updates...")
-            # Try to update existing installation
-            result = subprocess.run(
-                ['choco', 'upgrade', '-y', 'aria2'], 
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                self.installation_progress.emit("aria2c updated successfully!")
-                self.success = True
-                self.message = "aria2c updated successfully"
-            else:
-                # Update failed, but it's already installed
-                self.success = True
-                self.message = "aria2c already up-to-date"
-            return
-            
-        self.installation_progress.emit("Installing aria2c via chocolatey...")
-        result = subprocess.run(
-            ['choco', 'install', '-y', 'aria2'], 
-            capture_output=True,
-            text=True
-        )
-        
-        if result.returncode == 0:
-            self.installation_progress.emit("Waiting for installation to complete...")
-            time.sleep(3)  # Give time for installation to complete
-            
-            if shutil.which('aria2c'):
-                self.success = True
-                self.message = "aria2c successfully installed"
-            else:
-                self.success = False
-                self.message = "aria2c installed but not found in PATH"
-        else:
-            self.success = False
-            self.message = f"Failed to install aria2c: {result.stderr}"
+            self.message = f"Failed to install {name}: {result.stderr}"
 
 
 class SettingsWindow(QDialog):
@@ -361,33 +297,31 @@ class SettingsWindow(QDialog):
         self.check_installations()
 
     def browse_ffmpeg(self):
-        file = QFileDialog.getOpenFileName(self, "Select ffmpeg")
-        if file[0]:
-            self.ffmpeg_input.setText(file[0])
+        browse_for_executable(self, self.ffmpeg_input, "ffmpeg")
 
     def browse_ytdlp(self):
-        file = QFileDialog.getOpenFileName(self, "Select yt-dlp")
-        if file[0]:
-            self.yt_dlp_input.setText(file[0])
+        browse_for_executable(self, self.yt_dlp_input, "yt-dlp")
 
     def save_settings(self):
-        self.settings.setValue("ffmpeg_path", self.ffmpeg_input.text())
-        self.settings.setValue("yt_dlp_path", self.yt_dlp_input.text())
-        # Save browser_cookies selection so it persists
-        self.settings.setValue("browser_cookies", self.browser_combobox.currentText())
+        settings_data = {
+            "ffmpeg_path": self.ffmpeg_input.text(),
+            "yt_dlp_path": self.yt_dlp_input.text(),
+            "browser_cookies": self.browser_combobox.currentText()
+        }
+        save_app_settings(self.settings, settings_data)
         self.settings_saved.emit()  # Emit the custom signal
         self.accept()
 
     def load_settings(self):
-        ffmpeg_path = self.settings.value("ffmpeg_path", "")
-        yt_dlp_path = self.settings.value("yt_dlp_path", "")
-        browser_cookies = self.settings.value("browser_cookies", "None")
-
-        if ffmpeg_path:
-            self.ffmpeg_input.setText(ffmpeg_path)
-        if yt_dlp_path:
-            self.yt_dlp_input.setText(yt_dlp_path)
+        settings_data = load_app_settings(self.settings)
+        
+        if settings_data.get("ffmpeg_path"):
+            self.ffmpeg_input.setText(settings_data["ffmpeg_path"])
+        if settings_data.get("yt_dlp_path"):
+            self.yt_dlp_input.setText(settings_data["yt_dlp_path"])
+        
         # Restore browser selection if present
+        browser_cookies = settings_data.get("browser_cookies", "None")
         index = self.browser_combobox.findText(browser_cookies)
         if index >= 0:
             self.browser_combobox.setCurrentIndex(index)
@@ -421,7 +355,7 @@ class SettingsWindow(QDialog):
         
         # Connect signals
         self.installation_worker.installation_started.connect(
-            lambda pkg: self.progress_dialog.update_status(f"Installing {pkg}..."))
+            lambda pkg: self.progress_dialog and self.progress_dialog.update_status(f"Installing {pkg}..."))
         self.installation_worker.installation_progress.connect(
             self.progress_dialog.update_progress)
         self.installation_worker.installation_finished.connect(
@@ -555,31 +489,10 @@ class SettingsWindow(QDialog):
 
     def check_installations(self):
         """Check the installation status of all required packages"""
-        # Check FFmpeg - only use system paths, not hardcoded version paths
-        ffmpeg_path = shutil.which('ffmpeg')
-        ffmpeg_installed = bool(ffmpeg_path)
-        
-        # If FFmpeg is installed but not in the input field, update it
-        if (ffmpeg_installed and not self.ffmpeg_input.text()):
-            self.ffmpeg_input.setText(ffmpeg_path)
-            self.settings.setValue("ffmpeg_path", ffmpeg_path)
-        
-        self.update_status_label(self.ffmpeg_status, ffmpeg_installed)
-
-        # Check yt-dlp - only use system paths, not hardcoded paths
-        ytdlp_path = shutil.which('yt-dlp')
-        ytdlp_installed = bool(ytdlp_path)
-        
-        # If yt-dlp is installed but not in the input field, update it
-        if ytdlp_installed and not self.yt_dlp_input.text():
-            self.yt_dlp_input.setText(ytdlp_path)
-            self.settings.setValue("yt_dlp_path", ytdlp_path)
-            
-        self.update_status_label(self.ytdlp_status, ytdlp_installed)
-
-        # Check aria2c
-        aria2c_installed = bool(shutil.which('aria2c'))
-        self.update_status_label(self.aria2_status, aria2c_installed)
+        # Check each dependency using the helper function
+        ffmpeg_installed = check_and_update_path('ffmpeg', self.ffmpeg_input, self.settings, "ffmpeg_path", self.ffmpeg_status)
+        ytdlp_installed = check_and_update_path('yt-dlp', self.yt_dlp_input, self.settings, "yt_dlp_path", self.ytdlp_status)
+        aria2c_installed = check_and_update_path('aria2c', None, self.settings, None, self.aria2_status)
 
     def update_status_label(self, label, installed):
         """Update the status label with appropriate icon and text"""
