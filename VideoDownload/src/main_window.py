@@ -15,9 +15,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QSettings, QSize, QPoint, Qt
 from PyQt5.QtGui import QPalette, QColor, QIcon
-from download_thread import DownloadThread
-from settings_window import SettingsWindow
-from constants import (
+from .download_thread import DownloadThread
+from .settings_window import SettingsWindow
+from .constants import (
     WINDOW_BACKGROUND_COLOR,
     TAB_BACKGROUND_COLOR,
     BUTTON_BACKGROUND_COLOR,
@@ -32,6 +32,13 @@ from constants import (
 )
 import os
 import shutil
+import sys
+
+
+def resource_path(*relative):
+    """Get absolute path to resource, works for dev and for PyInstaller bundled app."""
+    base_path = getattr(sys, '_MEIPASS', os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    return os.path.join(base_path, *relative)
 
 
 class MainWindow(QMainWindow):
@@ -40,7 +47,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Video Downloader")
         
         # Add window icon
-        icon_path = os.path.join(os.path.dirname(__file__), 'icons', 'app_icon.ico')
+        icon_path = resource_path('icons', 'app_icon.ico')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
             
@@ -339,7 +346,8 @@ class MainWindow(QMainWindow):
                 self.progress_text.verticalScrollBar().maximum()
             )
         
-        # Only show live_label if it's a live stream        if self.is_live:
+        # Only show live_label if it's a live stream
+        if self.is_live:
             self.live_label.show()
             self.progress_bar.setFormat("Recording... %p%")
         else:

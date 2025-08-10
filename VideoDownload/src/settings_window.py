@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
 )
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread
-from constants import (
+from .constants import (
     BUTTON_BACKGROUND_COLOR,
     BUTTON_TEXT_COLOR,
     INPUT_BACKGROUND_COLOR,
@@ -386,7 +386,8 @@ class SettingsWindow(QDialog):
         if ffmpeg_path:
             self.ffmpeg_input.setText(ffmpeg_path)
         if yt_dlp_path:
-            self.yt_dlp_input.setText(yt_dlp_path)        # Restore browser selection if present
+            self.yt_dlp_input.setText(yt_dlp_path)
+        # Restore browser selection if present
         index = self.browser_combobox.findText(browser_cookies)
         if index >= 0:
             self.browser_combobox.setCurrentIndex(index)
@@ -468,7 +469,7 @@ class SettingsWindow(QDialog):
         
         # Refresh installation status
         self.check_installations()
-          # Clean up worker
+        # Clean up worker
         if self.installation_worker:
             self.installation_worker.deleteLater()
             self.installation_worker = None
