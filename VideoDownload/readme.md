@@ -71,9 +71,7 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    python -m pip install -r requirements.txt
    ```
 3. Run the application and install dependencies through the Settings tab
-4. To build with PyInstaller (if using src/ layout):
-   - Edit your .spec file to only include datas from src/ (see example in repo)
-   - Build with:
+4. To build with PyInstaller:
      ```pwsh
      python -m PyInstaller VideoDownloadToExecute.spec
      ```
