@@ -1,5 +1,11 @@
 # 📥 Video Download App
 
+**Features updated August 2025:**
+- 🚀 Playlist numbering: Oldest video gets 01_, newest gets N_, even for YouTube watch URLs with list=.
+- ⚡ Uses aria2/aria2c for all downloads (if installed) for maximum speed; falls back to yt-dlp/ffmpeg if not found.
+- 🧩 Download speed optimized: concurrent fragments, HTTP chunking, ffmpeg reconnect for HLS/DASH.
+- 🛠️ Auto-installs yt-dlp Python module if missing.
+
 <img src="icons/app_icon.ico" width="64" height="64" alt="Video Download App Icon" align="right">
 
 A PyQt5-based application for downloading videos, audio, and live streams from various platforms using yt-dlp, FFmpeg, and aria2c.
@@ -35,16 +41,19 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - 🔄 Automatic package updates when available
 
 3. **🔧 Integration with:**
-   - 🚀 yt-dlp for video downloading
+   - 🚀 yt-dlp for video downloading (auto-installed if missing)
    - 🎞️ FFmpeg for media processing
-   - ⚡ aria2c for accelerated downloads
+   - ⚡ aria2/aria2c for accelerated downloads (used by default if installed)
    
 4. **⚡ Platform-Specific Optimizations:**
    - 🎮 Enhanced Twitch downloads with superior audio quality
    - 🔄 Automatic audio synchronization for Twitch streams
    - 📱 YouTube age-restricted content support
+   - ⚡ Aria2/aria2c used for all eligible downloads for maximum speed
+   - 🧩 Increased fragment concurrency and chunking for fast downloads
+   - 🛠️ Auto-installs yt-dlp Python module if missing
 
-## 📥 Installation
+## 📥 Installation & Build
 
 ### 💿 Method 1: Using the Executable
 1. ⬇️ Download the latest [VideoDownload.exe](https://github.com/JaredJomar/Projects/raw/main/VideoDownload/VideoDownload.exe)
@@ -58,10 +67,16 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 ### 💻 Method 2: From Source
 1. Clone the repository
 2. Install Python requirements:
-   ```bash
-   pip install -r requirements.txt
+   ```pwsh
+   python -m pip install -r requirements.txt
    ```
 3. Run the application and install dependencies through the Settings tab
+4. To build with PyInstaller (if using src/ layout):
+   - Edit your .spec file to only include datas from src/ (see example in repo)
+   - Build with:
+     ```pwsh
+     python -m PyInstaller VideoDownloadToExecute.spec
+     ```
 
 ## ⚙️ Configuration
 
@@ -88,12 +103,12 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 3. **Benefits**: No need to restart downloads, saves bandwidth and time
 4. **Compatibility**: Works with all supported platforms and download types
 
-### 📋 Batch Download
-1. Create a text file with URLs (one per line)
-2. Click Browse next to URL field
-3. Select your text file
-4. Configure other options
-5. Click Download
+### 📋 Batch Download & Playlists
+1. Create a text file with URLs (one per line) or paste a YouTube playlist/watch URL with list=.
+2. Click Browse next to URL field or paste directly.
+3. Configure other options.
+4. Click Download.
+5. Playlist videos are auto-numbered (01_, 02_, …) oldest to newest, even for watch URLs with list=.
 
 ### 🔴 Live Stream & Twitch Content
 1. Paste live stream URL or Twitch video/clip URL
