@@ -188,7 +188,8 @@ class DownloadThread(QThread):
             "--add-metadata",                # Embed metadata into downloaded files
             "-o", output_template,           # Set output filename template
             "--ffmpeg-location", self._normalized_ffmpeg_path,  # Path to ffmpeg for video processing
-            "--concurrent-fragments", "5",   # Download 5 video fragments simultaneously (faster downloads)
+            "--concurrent-fragments", "15",  # More parallel fragments for HLS/DASH
+            "--http-chunk-size", "10M",      # Range requests chunking for direct HTTP
             "--no-part",                     # Don't create .part files during download
             "--progress",                    # Show download progress information
             "--restrict-filenames",          # Replace problematic characters in filenames
@@ -267,6 +268,24 @@ class DownloadThread(QThread):
         else:  # video only
             format_spec = "bestvideo" if self.resolution == "best" else f"bestvideo[height<={self.resolution}]"
             base_command.extend(["--format", format_spec])
+
+        # Prefer aria2 as external downloader when available (supports multi-connection HTTP)
+        try:
+            aria2_path = shutil.which('aria2') or shutil.which('aria2c')
+            if aria2_path:
+                # Use external downloader path to support custom names; apply args for aria2c
+                base_command.extend([
+                    "--external-downloader", aria2_path,
+                    "--downloader-args", "aria2c:-x16 -s16 -k1M --file-allocation=none --summary-interval=0"
+                ])
+                self.download_output.emit(f"⚡ Using aria2 external downloader: {aria2_path}")
+            else:
+                # Improve ffmpeg resilience when aria2 isn't used (for HLS/DASH)
+                base_command.extend([
+                    "--downloader-args", "ffmpeg:-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2"
+                ])
+        except Exception:
+            pass
         return base_command
 
     # --- Playlist numbering helpers ---
