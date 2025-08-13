@@ -179,6 +179,7 @@ class DownloadThread(QThread):
             "--no-cache-dir",                # Don't cache downloaded data (saves disk space)
             "--no-check-certificate",        # Skip SSL certificate verification for problematic sites
             "--add-metadata",                # Embed metadata into downloaded files
+            "--newline",                     # Ensure progress updates are newline-terminated for streaming
             "-o", output_template,           # Set output filename template
             "--ffmpeg-location", self._normalized_ffmpeg_path,  # Path to ffmpeg for video processing
             "--concurrent-fragments", "15",  # More parallel fragments for HLS/DASH
@@ -422,11 +423,14 @@ class DownloadThread(QThread):
     def execute_command(self, command, url=None, retry_with_cookies=False):
         try:
             # Launch process and stream output
+            # Reset per-execution progress tracker
+            self._last_progress = 0
             self.process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
+                bufsize=1,  # Line-buffered text mode to improve real-time output
                 creationflags=subprocess.CREATE_NO_WINDOW,
                 encoding='utf-8',
                 errors='replace'  # Handle encoding errors gracefully
@@ -491,16 +495,51 @@ class DownloadThread(QThread):
                 if line.startswith('[download]'):
                     if 'Destination:' in line:
                         self.download_output.emit(f"📥 {line.split('Destination: ')[1]}")
-                    elif 'of' in line and 'at' in line and 'ETA' in line:
-                        # Only emit progress for non-live streams
-                        if '/live/' not in line and 'twitch.tv' not in line:
-                            self.download_output.emit(f"⏳ {line}")
-                            match = re.search(r'(\d+(\.\d+)?)%', line)
-                            if match:
+                        # Reset stage progress on new destination (video/audio files)
+                        self._last_progress = 0
+                        try:
+                            self.download_progress.emit(0)
+                        except Exception:
+                            pass
+                    elif '%' in line:
+                        # Emit progress whenever a percentage is present
+                        self.download_output.emit(f"⏳ {line}")
+                        match = re.search(r'(\d+(?:\.\d+)?)%', line)
+                        if match:
+                            try:
                                 percentage = int(float(match.group(1)))
-                                self.download_progress.emit(percentage)
+                                # Avoid regressions and duplicate emits within the current stage
+                                if percentage >= getattr(self, '_last_progress', 0):
+                                    self._last_progress = percentage
+                                    self.download_progress.emit(percentage)
+                            except Exception:
+                                pass
                     elif '100% of' in line:
                         self.download_output.emit(f"✅ {line}")
+                        # Ensure we reflect completion of this stage
+                        try:
+                            self._last_progress = 100
+                            self.download_progress.emit(100)
+                        except Exception:
+                            pass
+                # Handle external downloader outputs (e.g., aria2c)
+                elif line.startswith('[#') or any(u in line for u in ['KiB/', 'MiB/', 'GiB/']):
+                    # Typical aria2 line: "[#b22048 59MiB/118MiB(50%) CN:16 DL:5MiB ETA:19s]"
+                    pct = None
+                    m = re.search(r'\((\d+(?:\.\d+)?)%\)', line)
+                    if not m:
+                        m = re.search(r'(\d+(?:\.\d+)?)%', line)
+                    if m:
+                        try:
+                            pct = int(float(m.group(1)))
+                        except Exception:
+                            pct = None
+                    if pct is not None:
+                        # Emit raw line to log and numeric progress to bar
+                        self.download_output.emit(f"⏳ {line}")
+                        if pct >= getattr(self, '_last_progress', 0):
+                            self._last_progress = pct
+                            self.download_progress.emit(pct)
                 elif line.startswith('[youtube]'):
                     if 'Live stream detected' in line:
                         self.download_output.emit("🔴 Live stream detected - Recording in progress...")
