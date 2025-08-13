@@ -1,20 +1,14 @@
 import subprocess
+import json
 import re
 import os
 import glob
 import signal
 import psutil
 import shutil
-import sys
 from datetime import datetime, timezone
 from math import inf
 from urllib.parse import urlparse, parse_qs
-try:
-    import yt_dlp  # type: ignore
-except Exception:  # Module may not be available; fall back to CLI-only path
-    yt_dlp = None  # noqa: N816
-
-from .helpers import ensure_python_module
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
@@ -66,7 +60,6 @@ class DownloadThread(QThread):
 
             # Allow disabling numbering via environment and only treat as playlist when entries > 1
             numbering_disabled = os.environ.get("VD_DISABLE_PLAYLIST_NUMBERING") == "1"
-            has_entries = isinstance(info, dict) and bool(info.get("entries"))
             entries_list = self._make_entries_list(info)
             # Consider it a playlist if entries > 1, or yt_dlp reports playlist_count > 1, or URL has list= param
             is_youtube_list_url = ("list=" in url.lower())
@@ -199,7 +192,8 @@ class DownloadThread(QThread):
             "--retry-sleep", "5",            # Wait 5 seconds between retry attempts
             "--no-overwrites",               # Never overwrite existing files
             url                              # The video URL to download
-        ]        # Only use browser cookies if necessary or forced
+        ]
+        # Only use browser cookies if necessary or forced
         use_cookies = False
         if force_cookies:
             use_cookies = self.browser_cookies != "None"
@@ -290,37 +284,29 @@ class DownloadThread(QThread):
 
     # --- Playlist numbering helpers ---
     def _extract_info(self, url: str) -> dict | None:
-        """Use yt_dlp Python API to extract info without downloading."""
-        if yt_dlp is None:
-            # Try to auto-install the module on demand
-            ok = ensure_python_module("yt_dlp", "yt-dlp", on_log=self.download_output.emit)
-            if ok:
-                try:
-                    import importlib
-                    importlib.invalidate_caches()
-                    import yt_dlp as _yt  # type: ignore
-                    globals()['yt_dlp'] = _yt
-                except Exception as e:
-                    self.download_output.emit(f"❌ Could not load yt_dlp after install: {e}")
-                    return None
-            else:
-                self.download_output.emit("ℹ️ Skipping playlist pre-extraction (yt_dlp module not available)")
-                return None
-        ydl_opts = {
-            'quiet': True,
-            'skip_download': True,
-            'nocheckcertificate': True,
-            'socket_timeout': 8,
-            'retries': 1,
-            'extractor_retries': 1,
-            'ignoreerrors': True,
-            'noplaylist': False,  # allow playlist extraction even for watch?v URLs with list= param
-            'extract_flat': 'in_playlist',  # faster to just get entries list
-        }
-        if yt_dlp is None:
-            return None
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore[attr-defined]
-            return ydl.extract_info(url, download=False)
+        """Use yt-dlp CLI to extract playlist info quickly without downloading.
+
+        Returns a dict with at least 'entries' when successful, else None.
+        """
+        try:
+            cmd = [
+                self._normalized_yt_dlp_path,
+                "--flat-playlist",
+                "--dump-single-json",
+                "--skip-download",
+                "--no-warnings",
+                "--no-check-certificate",
+                url,
+            ]
+            out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+            data = json.loads(out)
+            # Normalize minimal structure
+            if isinstance(data, dict):
+                return data
+        except Exception as e:
+            # Surface minimal note upstream but keep non-fatal
+            self.download_output.emit(f"ℹ️ Pre-extraction via CLI failed: {e}")
+        return None
 
     def _prefer_playlist_url(self, url: str) -> str:
         """If URL is a YouTube watch link with a list= param, return the playlist URL."""
@@ -668,7 +654,6 @@ class DownloadThread(QThread):
             try:
                 # On Windows, suspend the process
                 if os.name == 'nt':
-                    import psutil
                     parent = psutil.Process(self.process.pid)
                     parent.suspend()
                     # Also suspend child processes (ffmpeg, etc.)
@@ -681,16 +666,12 @@ class DownloadThread(QThread):
                     # On Unix-like systems, send SIGSTOP
                     os.kill(self.process.pid, signal.SIGSTOP)
                     # Also suspend child processes
-                    try:
-                        import psutil
-                        parent = psutil.Process(self.process.pid)
-                        for child in parent.children(recursive=True):
-                            try:
-                                os.kill(child.pid, signal.SIGSTOP)
-                            except (OSError, psutil.NoSuchProcess):
-                                pass
-                    except ImportError:
-                        pass
+                    parent = psutil.Process(self.process.pid)
+                    for child in parent.children(recursive=True):
+                        try:
+                            os.kill(child.pid, signal.SIGSTOP)
+                        except (OSError, psutil.NoSuchProcess):
+                            pass
                 
                 self.download_output.emit("⏸️ Download process paused")
             except Exception as e:
@@ -703,7 +684,6 @@ class DownloadThread(QThread):
             try:
                 # On Windows, resume the process
                 if os.name == 'nt':
-                    import psutil
                     parent = psutil.Process(self.process.pid)
                     parent.resume()
                     # Also resume child processes (ffmpeg, etc.)
@@ -716,16 +696,12 @@ class DownloadThread(QThread):
                     # On Unix-like systems, send SIGCONT
                     os.kill(self.process.pid, signal.SIGCONT)
                     # Also resume child processes
-                    try:
-                        import psutil
-                        parent = psutil.Process(self.process.pid)
-                        for child in parent.children(recursive=True):
-                            try:
-                                os.kill(child.pid, signal.SIGCONT)
-                            except (OSError, psutil.NoSuchProcess):
-                                pass
-                    except ImportError:
-                        pass
+                    parent = psutil.Process(self.process.pid)
+                    for child in parent.children(recursive=True):
+                        try:
+                            os.kill(child.pid, signal.SIGCONT)
+                        except (OSError, psutil.NoSuchProcess):
+                            pass
                 
                 self.download_output.emit("▶️ Download process resumed")
             except Exception as e:
