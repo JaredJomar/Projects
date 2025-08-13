@@ -4,7 +4,7 @@
 - 🚀 Playlist numbering: Oldest video gets 01_, newest gets N_, even for YouTube watch URLs with list=.
 - ⚡ Uses aria2/aria2c for all downloads (if installed) for maximum speed; falls back to yt-dlp/ffmpeg if not found.
 - 🧩 Download speed optimized: concurrent fragments, HTTP chunking, ffmpeg reconnect for HLS/DASH.
-- 🛠️ Auto-installs yt-dlp Python module if missing.
+
 
 <img src="icons/app_icon.ico" width="64" height="64" alt="Video Download App Icon" align="right">
 
@@ -41,7 +41,7 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - 🔄 Automatic package updates when available
 
 3. **🔧 Integration with:**
-   - 🚀 yt-dlp for video downloading (auto-installed if missing)
+   - 🚀 yt-dlp for video downloading
    - 🎞️ FFmpeg for media processing
    - ⚡ aria2/aria2c for accelerated downloads (used by default if installed)
    
@@ -51,7 +51,7 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - 📱 YouTube age-restricted content support
    - ⚡ Aria2/aria2c used for all eligible downloads for maximum speed
    - 🧩 Increased fragment concurrency and chunking for fast downloads
-   - 🛠️ Auto-installs yt-dlp Python module if missing
+
 
 ## 📥 Installation & Build
 
