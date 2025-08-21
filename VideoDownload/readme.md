@@ -1,10 +1,5 @@
 # 📥 Video Download App
 
-**Features updated August 2025:**
-- 🚀 Playlist numbering: Oldest video gets 01_, newest gets N_, even for YouTube watch URLs with list=.
-- ⚡ Uses aria2/aria2c for all downloads (if installed) for maximum speed; falls back to yt-dlp/ffmpeg if not found.
-- 🧩 Download speed optimized: concurrent fragments, HTTP chunking, ffmpeg reconnect for HLS/DASH.
-
 
 <img src="icons/app_icon.ico" width="64" height="64" alt="Video Download App Icon" align="right">
 
@@ -102,11 +97,11 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 4. **Compatibility**: Works with all supported platforms and download types
 
 ### 📋 Batch Download & Playlists
-1. Create a text file with URLs (one per line) or paste a YouTube playlist/watch URL with list=.
+1. Create a text file with URLs (one per line) or paste a YouTube playlist.
 2. Click Browse next to URL field or paste directly.
 3. Configure other options.
 4. Click Download.
-5. Playlist videos are auto-numbered (01_, 02_, …) oldest to newest, even for watch URLs with list=.
+5. Playlist videos are auto-numbered (01_, 02_, …) oldest to newest.
 
 ### 🔴 Live Stream & Twitch Content
 1. Paste live stream URL or Twitch video/clip URL
@@ -142,13 +137,6 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 3. **📁 Path Issues:**
    - Use Browse buttons to set correct paths
    - Ensure write permissions in download folder
-
-4. **🔒 App Freezes During Installation:**
-   - **✅ Fixed!** Installations now run in background threads
-   - Progress dialog shows real-time installation status
-   - UI remains fully responsive during package installations
-   - Multiple installations are prevented to avoid conflicts
-   - **🔄 Smart Updates**: Automatically checks for updates when clicking install buttons
 
 ## 📄 License
 
