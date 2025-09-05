@@ -14,39 +14,213 @@
 
     function getChannelName() {
         console.log('Getting channel name...');
-
-        // Try multiple selectors to find the channel name
+        // Normalizer: strip @, remove follower counts and common trailing tokens, split by separators
+        function normalizeName(raw) {
+            if (!raw || typeof raw !== 'string') return null;
+            let s = raw.trim();
+            // Replace line breaks and collapsing spaces
+            s = s.replace(/\s+/g, ' ');
+            // If contains separators like '·' or '•' or '-' or '|' take parts
+            const parts = s.split(/\u00B7|\u2022|\||-|·|•|—/).map(p => p.trim()).filter(Boolean);
+            // Prefer the part that looks most like a name: contains letters and not keywords like 'suscriptor' or 'videos' or numbers only
+            const badRegex = /suscripto|suscrib|videos?|vídeos?|subscrip|subscribers|views?|vistas?/i;
+            let candidate = null;
+            for (const part of parts) {
+                if (!part) continue;
+                if (badRegex.test(part)) continue;
+                // ignore parts that are mostly numeric or include 'M'/'K' only
+                const alpha = part.replace(/[0-9.,\sMKmk]+/g, '').trim();
+                if (alpha.length >= 1) {
+                    candidate = part;
+                    break;
+                }
+            }
+            if (!candidate) candidate = parts[0] || s;
+            // Remove trailing counts like "2,05 M de suscriptores" if still present
+            candidate = candidate.replace(/\b\d[0-9.,\s]*\s*[MKk]?\b(\s*(de)?\s*(suscriptores|subscribers|vistas|views))?/i, '').trim();
+            // Remove leading @
+            candidate = candidate.replace(/^@+/, '').trim();
+            // If it's still a long string containing both name and extra words, try to take first tokens
+            if (candidate.length > 60) {
+                candidate = candidate.split('\n')[0].split(',')[0].trim();
+            }
+            return candidate || null;
+        }
+        // Try multiple selectors to find the channel name (cover video pages, channel headers and owner renderers)
         const selectors = [
+            // Common video page owner/channel renderers
             'ytd-channel-name yt-formatted-string#text a',
             'ytd-channel-name yt-formatted-string#text',
             'ytd-video-owner-renderer ytd-channel-name yt-formatted-string#text a',
             'ytd-video-owner-renderer ytd-channel-name yt-formatted-string#text',
-            '#channel-name yt-formatted-string#text a',
-            '#channel-name yt-formatted-string#text',
             'ytd-video-owner-renderer yt-formatted-string#text a',
             'ytd-video-owner-renderer yt-formatted-string#text',
-            // Fallback selectors
+
+            // Channel page header variants (including "Videos" tab header)
+            'ytd-c4-tabbed-header-renderer yt-formatted-string#text a',
+            'ytd-c4-tabbed-header-renderer yt-formatted-string#text',
+            'ytd-channel-name#channel-name yt-formatted-string',
+            '#channel-name yt-formatted-string#text a',
+            '#channel-name yt-formatted-string#text',
+
+            // Generic fallbacks (prefer anchors that point to channels)
+            'a[href^="/@"], a[href*="/@"], a[href*="/channel/"], a[href*="/user/"], a[href*="/c/"]',
             '.ytd-channel-name a',
             '.ytd-channel-name',
             '#upload-info #channel-name a',
             '#upload-info #channel-name'
         ];
 
+        // Helper: ensure the matched element is actually inside a channel header/owner renderer or is a channel link
+        function isValidElement(el) {
+            if (!el) return false;
+            // If it's an anchor that links to a channel path, accept
+            if (el.tagName === 'A') {
+                const href = el.getAttribute('href') || '';
+                // ignore javascript:, mailto:, fragments
+                if (/^(javascript:|#|mailto:)/i.test(href)) return false;
+                // Match handles like /@DanPlan or /@DanPlan/videos, and /channel/ID, /user/name, /c/name
+                if (/(?:\/@[^\/]+)|(?:\/(?:channel|user|c)\/[^\/]+)/.test(href)) {
+                    // Skip obvious UI navigation labels (Videos, Inicio, Shorts, etc.) if the anchor text matches
+                    const uiBad = /^(videos?|vídeos?|inicio|shorts|mis\s+vídeos|about|playlists?)$/i;
+                    const txt = (el.textContent || '').trim();
+                    if (txt && uiBad.test(txt)) return false;
+                    return true;
+                }
+            }
+            // Accept if inside well-known channel containers
+            const container = el.closest && el.closest('ytd-channel-name, ytd-video-owner-renderer, ytd-c4-tabbed-header-renderer, #channel-name');
+            if (container) return true;
+            return false;
+        }
+
         for (const selector of selectors) {
-            console.log('Trying selector:', selector);
-            const element = document.querySelector(selector);
-            if (element && element.textContent.trim()) {
-                const channelName = element.textContent.trim();
-                console.log('Found channel name:', channelName, 'with selector:', selector);
-                return channelName;
+            try {
+                const element = document.querySelector(selector);
+                if (element && element.textContent && element.textContent.trim()) {
+                    // Validate context to avoid capturing unrelated UI strings
+                    if (!isValidElement(element)) {
+                        console.log('Skipping element for selector (not a channel context):', selector, element.textContent.trim());
+                    } else {
+                        const channelName = element.textContent.trim();
+                        const cleaned = normalizeName(channelName);
+                        console.log('Found channel name (raw):', channelName, 'with selector:', selector, '=> cleaned:', cleaned);
+                        if (cleaned) return cleaned;
+                    }
+                }
+            } catch (e) {
+                // Some selectors may throw on certain pages; ignore and continue
+                console.log('Selector error for', selector, e);
             }
         }
 
+        // Try JSON-LD structured data (common on YouTube pages)
+        try {
+            const ld = document.querySelector('script[type="application/ld+json"]');
+            if (ld) {
+                const json = JSON.parse(ld.textContent);
+                // JSON-LD may include author or publisher name
+                if (json && json.author && (json.author.name || (json.author[0] && json.author[0].name))) {
+                    const name = json.author.name || (json.author[0] && json.author[0].name);
+                    if (name && name.trim()) {
+                        const cleaned = normalizeName(name.trim());
+                        console.log('Found channel name from JSON-LD (raw):', name.trim(), '=> cleaned:', cleaned);
+                        if (cleaned) return cleaned;
+                    }
+                }
+                if (json && json.publisher && json.publisher.name) {
+                    const name = json.publisher.name;
+                    if (name && name.trim()) {
+                        const cleaned = normalizeName(name.trim());
+                        console.log('Found channel name from JSON-LD publisher (raw):', name.trim(), '=> cleaned:', cleaned);
+                        if (cleaned) return cleaned;
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('JSON-LD parse error', e);
+        }
+
+        // Try meta tags (some channel pages include itemprop/name or og:title)
+        const metaName = document.querySelector('meta[itemprop="name"], meta[property="og:site_name"], meta[property="og:title"], meta[name="title"]');
+        if (metaName && metaName.content && metaName.content.trim()) {
+            const name = metaName.content.trim();
+            // Guard against page titles that include "YouTube" only when on channel-like paths
+            if (name && name.length < 200) {
+                const cleaned = normalizeName(name);
+                console.log('Found channel name from meta tag (raw):', name, '=> cleaned:', cleaned);
+                if (cleaned) return cleaned;
+            }
+        }
+
+        // Heuristic: if we're on a channel "videos" page, the document.title often is "ChannelName - YouTube"
+        try {
+            const path = location.pathname || '';
+            if (path.includes('/videos') || /\/(channel|user|c|@)[^\/]+(\/videos)?/.test(path)) {
+                let title = (document.title || '').trim();
+                if (title) {
+                    // Split title into parts and remove parts that are clearly not the channel name
+                    // Example titles: "DanPlan - YouTube", "Videos - DanPlan - YouTube", "DanPlan - YouTube" (locale variants possible)
+                    const parts = title.split(/\s*-\s*/).map(p => p.trim()).filter(Boolean);
+                    // Filter out parts containing YouTube or generic words like "Videos" (Spanish: "Videos", "Vídeos")
+                    const badPatterns = [/youtube/i, /videos?/i, /vídeos?/i, /reproducciones/i];
+                    const candidates = parts.filter(p => !badPatterns.some(rx => rx.test(p)));
+                    // Choose the longest reasonable candidate
+                    const candidate = candidates.sort((a, b) => b.length - a.length)[0] || parts[0];
+                    const cleaned = (candidate || '').trim().replace(/^[\u2022\u00B7\s]+|[\u2022\u00B7\s]+$/g, '');
+                    if (cleaned && cleaned.length < 150) {
+                        const normalized = normalizeName(cleaned);
+                        console.log('Derived channel name from document.title parts (raw):', cleaned, '=> normalized:', normalized, 'original title:', title);
+                        if (normalized) return normalized;
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Title heuristic error', e);
+        }
+
+        // Try to extract from URL path (handles like /@DanPlan or /channel/ID or /user/name or /c/name)
+        try {
+            const path = location.pathname || '';
+            const segments = path.split('/').filter(Boolean);
+
+            // Direct handle like @DanPlan
+            const handleSeg = segments.find(s => s && s.startsWith('@'));
+            if (handleSeg) {
+                const name = decodeURIComponent(handleSeg.replace(/^@/, '').trim());
+                const cleaned = normalizeName(name);
+                if (cleaned && !/^(videos|about|playlists|community|channels|shorts)$/i.test(cleaned)) {
+                    console.log('Derived channel name from URL handle (raw):', name, '=> cleaned:', cleaned);
+                    return cleaned;
+                }
+            }
+
+            // Look for /channel/<id>, /user/<name>, /c/<name>
+            for (let i = 0; i < segments.length; i++) {
+                const key = segments[i] && segments[i].toLowerCase();
+                if ((key === 'channel' || key === 'user' || key === 'c') && segments[i + 1]) {
+                    let name = segments[i + 1];
+                    // Skip common subpaths
+                    if (/^(videos|about|playlists|community|channels|shorts)$/i.test(name)) continue;
+                    name = decodeURIComponent(name.replace(/^@/, '').trim());
+                    // Replace separators with spaces for readability
+                    name = name.replace(/[-_]+/g, ' ');
+                    const cleaned = normalizeName(name);
+                    if (cleaned) {
+                        console.log('Derived channel name from URL segment (raw):', name, '=> cleaned:', cleaned);
+                        return cleaned;
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('URL parse error', e);
+        }
+
         // If nothing found, try to get any text that looks like a channel name
-        const channelElements = document.querySelectorAll('[id*="channel"], [class*="channel"], [class*="owner"]');
+        const channelElements = document.querySelectorAll('[id*="channel"], [class*="channel"], [class*="owner"], [aria-label*="Channel"]');
         for (const element of channelElements) {
-            const text = element.textContent.trim();
-            if (text && text.length > 0 && text.length < 100 && !text.includes('suscriptor')) {
+            const text = element.textContent && element.textContent.trim();
+            if (text && text.length > 0 && text.length < 100 && !/suscriptor/i.test(text)) {
                 console.log('Found potential channel name:', text, 'from element:', element);
                 return text;
             }
