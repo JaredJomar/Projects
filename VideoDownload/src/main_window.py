@@ -11,10 +11,8 @@ from PyQt5.QtWidgets import (
     QLabel,
     QTextEdit,
     QComboBox,
-    QDesktopWidget,
 )
-from PyQt5.QtCore import QSettings, QSize, QPoint, Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QSettings, QSize, QPoint, Qt, QTimer
 from PyQt5.QtGui import QPalette, QColor, QIcon
 from .download_thread import DownloadThread
 from .settings_window import SettingsWindow
@@ -85,11 +83,23 @@ class MainWindow(QMainWindow):
         self.resize(600, 450)
         self.center_window()
 
+        # Defer heavy settings checks until the Settings tab is opened
+        self.tabs.currentChanged.connect(self.on_tab_changed)
+
+    def on_tab_changed(self, index):
+        widget = self.tabs.widget(index)
+        if widget is self.settingsTab:
+            # Run after the UI has a chance to render
+            QTimer.singleShot(0, getattr(self.settingsTab, 'ensure_checked', lambda: None))
+
     def center_window(self):
-        qtRectangle = self.frameGeometry()
-        centerPoint = QDesktopWidget().availableGeometry().center()
-        qtRectangle.moveCenter(centerPoint)
-        self.move(qtRectangle.topLeft())
+        screen = self.screen()
+        if screen is not None:
+            geo = screen.availableGeometry()
+            centerPoint = geo.center()
+            qtRectangle = self.frameGeometry()
+            qtRectangle.moveCenter(centerPoint)
+            self.move(qtRectangle.topLeft())
 
     def create_palette(self):
         palette = QPalette()
@@ -298,17 +308,19 @@ class MainWindow(QMainWindow):
         yt_dlp_path = self.settingsTab.yt_dlp_input.text().strip()  # Get yt-dlp path from settings
         custom_title = self.title_input.text().strip()  # Get custom title
         browser_cookies = self.settingsTab.browser_combobox.currentText()  # Get browser cookies setting
+        youtube_api_key = getattr(self.settingsTab, 'youtube_api_input', None)
+        youtube_api_key = youtube_api_key.text().strip() if youtube_api_key else ""
         
         # If the paths are empty, try to find them dynamically
         if not ffmpeg_path:
             ffmpeg_path = shutil.which('ffmpeg')
             if not ffmpeg_path:
-                ffmpeg_path = self.settingsTab.find_executable('ffmpeg')
+                ffmpeg_path = find_executable('ffmpeg')
                 
         if not yt_dlp_path:
             yt_dlp_path = shutil.which('yt-dlp')
             if not yt_dlp_path:
-                yt_dlp_path = self.settingsTab.find_executable('yt-dlp')
+                yt_dlp_path = find_executable('yt-dlp')
 
         # Validate the paths
         if not ffmpeg_path or not os.path.exists(ffmpeg_path):
@@ -332,7 +344,7 @@ class MainWindow(QMainWindow):
         self.progress_text.append(f"🎬 FFmpeg: {ffmpeg_path}")
 
         self.download_thread = DownloadThread(
-            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title, browser_cookies
+            url, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title, browser_cookies, youtube_api_key
         )
         self.download_thread.download_progress.connect(self.update_progress)
         self.download_thread.download_output.connect(self.update_progress_text)
