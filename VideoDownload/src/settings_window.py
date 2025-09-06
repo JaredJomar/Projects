@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QCheckBox,
     QComboBox,
+    QProgressBar,
 )
 from PyQt5.QtCore import QSettings, pyqtSignal, QThread
 from .helpers import (
@@ -19,6 +20,8 @@ from .helpers import (
     browse_for_executable,
     save_app_settings,
     load_app_settings,
+    get_subprocess_no_window_kwargs,
+    find_with_winget,
 )
 from .constants import (
     BUTTON_BACKGROUND_COLOR,
@@ -49,22 +52,40 @@ class InstallationWorker(QThread):
             "ffmpeg": {
                 "name": "FFmpeg",
                 "check_cmd": "ffmpeg",
-                "install_cmd": ["winget", "install", "Gyan.FFmpeg", "--silent"],
-                "upgrade_cmd": ["winget", "upgrade", "Gyan.FFmpeg", "--silent"],
+                "install_cmd": [
+                    "winget", "install", "--id", "Gyan.FFmpeg", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
+                "upgrade_cmd": [
+                    "winget", "upgrade", "--id", "Gyan.FFmpeg", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
                 "package_id": "Gyan.FFmpeg"
             },
             "ytdlp": {
                 "name": "yt-dlp",
                 "check_cmd": "yt-dlp",
-                "install_cmd": ["winget", "install", "yt-dlp.yt-dlp", "--silent"],
-                "upgrade_cmd": ["winget", "upgrade", "yt-dlp.yt-dlp", "--silent"],
+                "install_cmd": [
+                    "winget", "install", "--id", "yt-dlp.yt-dlp", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
+                "upgrade_cmd": [
+                    "winget", "upgrade", "--id", "yt-dlp.yt-dlp", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
                 "package_id": "yt-dlp.yt-dlp"
             },
             "aria2c": {
                 "name": "aria2c",
                 "check_cmd": "aria2c",
-                "install_cmd": ["winget", "install", "aria2.aria2", "--silent"],
-                "upgrade_cmd": ["winget", "upgrade", "aria2.aria2", "--silent"],
+                "install_cmd": [
+                    "winget", "install", "--id", "aria2.aria2", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
+                "upgrade_cmd": [
+                    "winget", "upgrade", "--id", "aria2.aria2", "--exact",
+                    "--silent", "--accept-package-agreements", "--accept-source-agreements"
+                ],
                 "package_id": "aria2.aria2"
             }
         }
@@ -83,35 +104,146 @@ class InstallationWorker(QThread):
         finally:
             self.installation_finished.emit(self.package_type, self.success, self.message)
     
+    def _emit_progress(self, text: str):
+        try:
+            # Normalize whitespace of carriage-returned progress updates
+            for part in str(text).replace("\r", "\n").splitlines():
+                part = part.strip()
+                if part:
+                    self.installation_progress.emit(part)
+        except Exception:
+            pass
+
+    def _run_with_progress(self, cmd: list, phase_label: str):
+        """Run a command, streaming output and emitting progress with percents.
+
+        Returns (returncode, tail_output:str)
+        """
+        try:
+            # Merge stderr into stdout so we don't miss progress lines
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                errors="replace",  # avoid garbled characters from codepage differences
+                bufsize=1,
+                universal_newlines=True,
+                **get_subprocess_no_window_kwargs(),
+            )
+        except FileNotFoundError as e:
+            self._emit_progress(f"Failed to start: {' '.join(cmd)}")
+            self._emit_progress(str(e))
+            return 127, str(e)
+
+        percent_last = -1
+        tail = []
+        try:
+            import re
+            percent_re = re.compile(r"(\d{1,3})%")
+        except Exception:
+            percent_re = None
+
+        if proc.stdout is not None:
+            for raw in proc.stdout:
+                line = raw.rstrip("\n")
+                if not line:
+                    continue
+                # Emit the raw line first (UI shows text updates)
+                self._emit_progress(line)
+                # track tail
+                tail.append(line)
+                if len(tail) > 100:
+                    tail.pop(0)
+                # Try to extract a percentage for the progress bar
+                if percent_re:
+                    m = percent_re.search(line)
+                    if m:
+                        try:
+                            pct = int(m.group(1))
+                            if pct != percent_last:
+                                percent_last = pct
+                                self.installation_progress.emit(f"{phase_label}: {pct}%")
+                        except Exception:
+                            pass
+
+        proc.wait()
+        return proc.returncode, "\n".join(tail)
+
+    def _locate_after_winget(self, check_cmd: str, package_id: str) -> str:
+        """Try multiple strategies to resolve the final executable path after an install/upgrade."""
+        # 1) Normal PATH/where discovery
+        p = find_executable(check_cmd)
+        if p:
+            return p
+        # 2) WinGet-managed locations/shims
+        p = find_with_winget(package_id, check_cmd)
+        if p:
+            return p
+        # 3) Fallback to system which
+        return shutil.which(check_cmd) or ""
+
     def _install_dependency(self, name, check_cmd, install_cmd, upgrade_cmd, package_id, extra_checks=None):
         """Generic method to install or update a dependency"""
         self.installation_progress.emit(f"Checking for existing {name} installation...")
-        executable_path = shutil.which(check_cmd)
-        
+        executable_path = self._locate_after_winget(check_cmd, package_id)
+
+        # Helper: check if winget is available
+        def winget_available() -> bool:
+            return bool(shutil.which('winget'))
+
         if executable_path:
-            self.installation_progress.emit(f"{name} found. Checking for updates...")
-            # Try to update existing installation
-            result = subprocess.run(upgrade_cmd, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                self.installation_progress.emit(f"{name} updated successfully!")
-                self.success = True
-                self.message = f"{name} updated at: {executable_path}"
+            # Already installed; attempt upgrade only if winget is present
+            if winget_available():
+                self.installation_progress.emit(f"{name} found. Checking for updates...")
+                try:
+                    rc, tail = self._run_with_progress(upgrade_cmd, f"Updating {name}")
+                    if rc == 0:
+                        self.installation_progress.emit(f"{name} updated successfully!")
+                        self.success = True
+                        self.message = f"{name} updated at: {executable_path}"
+                    else:
+                        # Treat non-zero as non-fatal if the tool remains present (e.g. no updates available)
+                        self.success = True
+                        self.message = (
+                            f"{name} installed at: {executable_path}. No update applied (winget rc {rc})."
+                        )
+                except FileNotFoundError:
+                    # Very unlikely here, but handle just in case
+                    self.success = True
+                    self.message = f"{name} installed at: {executable_path}. Winget not available to upgrade."
             else:
-                # Update failed, but it's already installed
                 self.success = True
-                self.message = f"{name} already up-to-date at: {executable_path}"
+                self.message = f"{name} installed at: {executable_path}. Winget not found; leaving as-is."
             return
         
         self.installation_progress.emit(f"Installing {name}...")
-        result = subprocess.run(install_cmd, capture_output=True, text=True)
+        # For fresh install, require winget; if missing, provide actionable message
+        if not winget_available():
+            self.success = False
+            self.message = (
+                f"Cannot install {name}: winget (App Installer) not found.\n"
+                "Install 'App Installer' from Microsoft Store, restart the app, or manually set the path in Settings."
+            )
+            return
+
+        try:
+            rc, tail = self._run_with_progress(install_cmd, f"Installing {name}")
+        except FileNotFoundError as e:
+            # Defensive: translate WinError 2 into a clear message
+            self.success = False
+            self.message = (
+                f"Failed to run installer for {name}: {str(e)}.\n"
+                "winget is not available. Install 'App Installer' or add winget to PATH, then retry."
+            )
+            return
         
-        if result.returncode == 0:
+        if rc == 0:
             self.installation_progress.emit("Waiting for installation to complete...")
             time.sleep(3)  # Give time for installation to complete
             
             # Check if installation was successful
-            executable_path = shutil.which(check_cmd)
+            executable_path = self._locate_after_winget(check_cmd, package_id)
             if executable_path:
                 self.success = True
                 self.message = f"{name} successfully installed at: {executable_path}"
@@ -128,8 +260,31 @@ class InstallationWorker(QThread):
                     self.success = False
                     self.message = f"{name} installed but not found in PATH. Manual path setting required."
         else:
-            self.success = False
-            self.message = f"Failed to install {name}: {result.stderr}"
+            # Even if winget returned non-zero, treat as success if the executable is now present
+            self.installation_progress.emit("Verifying installation state after winget...")
+            executable_path = self._locate_after_winget(check_cmd, package_id)
+            if executable_path:
+                self.success = True
+                self.message = (
+                    f"{name} installed or already present at: {executable_path} (winget rc {rc})."
+                )
+            else:
+                # Try additional checks
+                found_path = None
+                if extra_checks and callable(extra_checks):
+                    found_path = extra_checks()
+                if found_path:
+                    self.success = True
+                    self.message = (
+                        f"{name} installed or already present at: {found_path} (winget rc {rc})."
+                    )
+                else:
+                    self.success = False
+                    # Include tail of output to aid debugging
+                    self.message = (
+                        f"Failed to install {name}: winget returned {rc}.\n"
+                        f"Last output:\n{tail}"
+                    )
 
 
 class SettingsWindow(QDialog):
@@ -142,6 +297,8 @@ class SettingsWindow(QDialog):
         self.setMinimumSize(400, 300)
 
         self.settings = QSettings("YourCompany", "VideoDownloadApp")
+        # Defer expensive installation checks until the tab is actually shown
+        self._checks_initialized = False
         
         # Initialize worker thread variables
         self.installation_worker = None
@@ -280,6 +437,33 @@ class SettingsWindow(QDialog):
 
         layout.addLayout(ytdlp_layout)
 
+        # YouTube Data API v3 Key
+        api_layout = QHBoxLayout()
+        api_label = QLabel("<b>YouTube API v3 Key:</b>")
+        api_label.setStyleSheet("color: white;")
+        api_label.setToolTip(
+            "Opcional: añade tu clave de YouTube Data API v3.\n"
+            "Se usará para mejorar la detección/listado de playlists y evitar límites."
+        )
+        api_layout.addWidget(api_label)
+
+        self.youtube_api_input = QLineEdit()
+        self.youtube_api_input.setEchoMode(QLineEdit.Password)
+        self.youtube_api_input.setPlaceholderText("AIza... o clave del proyecto")
+        self.youtube_api_input.setStyleSheet(
+            f"QLineEdit {{ background-color: {INPUT_BACKGROUND_COLOR}; color: {INPUT_TEXT_COLOR}; font-weight: bold; }}")
+        api_layout.addWidget(self.youtube_api_input)
+
+        self.api_show_checkbox = QCheckBox("Mostrar")
+        self.api_show_checkbox.setStyleSheet("color: white;")
+        self.api_show_checkbox.setToolTip("Mostrar/ocultar la clave")
+        self.api_show_checkbox.stateChanged.connect(
+            lambda s: self.youtube_api_input.setEchoMode(QLineEdit.Normal if s else QLineEdit.Password)
+        )
+        api_layout.addWidget(self.api_show_checkbox)
+
+        layout.addLayout(api_layout)
+
         spacer2 = QSpacerItem(20, 20, QSizePolicy.Minimum,
                               QSizePolicy.Expanding)
         layout.addItem(spacer2)
@@ -290,11 +474,87 @@ class SettingsWindow(QDialog):
             f"QPushButton {{ background-color: {BUTTON_BACKGROUND_COLOR}; color: {BUTTON_TEXT_COLOR}; font-weight: bold; }}")
         layout.addWidget(save_button)
 
-        # Load settings first, then check installations
+        # Load settings first
         self.load_settings()
-        
-        # Now check installations after input fields have been created
-        self.check_installations()
+
+        # Do NOT run heavy checks here to avoid slowing app startup.
+        # They will be triggered when the Settings tab is opened.
+
+    def ensure_checked(self):
+        """Run installation checks once when the tab is first shown, in background."""
+        if self._checks_initialized:
+            return
+        self._checks_initialized = True
+
+        # Show interim status (non-blocking)
+        try:
+            self.ffmpeg_status.setText("Checking…")
+            self.ffmpeg_status.setStyleSheet("color: #cccccc;")
+            self.ytdlp_status.setText("Checking…")
+            self.ytdlp_status.setStyleSheet("color: #cccccc;")
+            self.aria2_status.setText("Checking…")
+            self.aria2_status.setStyleSheet("color: #cccccc;")
+        except Exception:
+            pass
+
+        # Start background worker
+        self._check_worker = _DependencyCheckWorker(self)
+        self._check_worker.results_ready.connect(self._on_checks_ready)
+        self._check_worker.finished.connect(lambda: setattr(self, '_check_worker', None))
+        self._check_worker.start()
+
+    def _on_checks_ready(self, results: dict):
+        """Update UI with background check results (runs in GUI thread)."""
+        ffmpeg_path = results.get('ffmpeg_path')
+        ytdlp_path = results.get('yt_dlp_path')  # correct key name
+        aria2c_installed = results.get('aria2c_installed', False)
+
+        # Honor existing valid paths in inputs if discovery failed
+        try:
+            if not ffmpeg_path:
+                existing = self.ffmpeg_input.text()
+                if existing and os.path.exists(existing):
+                    ffmpeg_path = existing
+            if not ytdlp_path:
+                existing = self.yt_dlp_input.text()
+                if existing and os.path.exists(existing):
+                    ytdlp_path = existing
+        except Exception:
+            pass
+
+        if ffmpeg_path and not self.ffmpeg_input.text():
+            self.ffmpeg_input.setText(ffmpeg_path)
+            self.settings.setValue("ffmpeg_path", ffmpeg_path)
+        if ytdlp_path and not self.yt_dlp_input.text():
+            self.yt_dlp_input.setText(ytdlp_path)
+            self.settings.setValue("yt_dlp_path", ytdlp_path)
+
+        # Update status labels
+        if ffmpeg_path:
+            self.ffmpeg_status.setText("✔ Installed")
+            self.ffmpeg_status.setStyleSheet("color: #00ff00;")
+        else:
+            self.ffmpeg_status.setText("✖ Not Installed")
+            self.ffmpeg_status.setStyleSheet("color: #ff0000;")
+
+        if ytdlp_path:
+            self.ytdlp_status.setText("✔ Installed")
+            self.ytdlp_status.setStyleSheet("color: #00ff00;")
+        else:
+            self.ytdlp_status.setText("✖ Not Installed")
+            self.ytdlp_status.setStyleSheet("color: #ff0000;")
+
+        if aria2c_installed:
+            self.aria2_status.setText("✔ Installed")
+            self.aria2_status.setStyleSheet("color: #00ff00;")
+        else:
+            self.aria2_status.setText("✖ Not Installed")
+            self.aria2_status.setStyleSheet("color: #ff0000;")
+
+        # Persist selected browser choice in settings for completeness
+        self.settings.setValue("browser_cookies", self.browser_combobox.currentText())
+
+        # Note: keep check_installations() available for explicit refresh after installs
 
     def browse_ffmpeg(self):
         browse_for_executable(self, self.ffmpeg_input, "ffmpeg")
@@ -306,7 +566,8 @@ class SettingsWindow(QDialog):
         settings_data = {
             "ffmpeg_path": self.ffmpeg_input.text(),
             "yt_dlp_path": self.yt_dlp_input.text(),
-            "browser_cookies": self.browser_combobox.currentText()
+            "browser_cookies": self.browser_combobox.currentText(),
+            "youtube_api_key": self.youtube_api_input.text(),
         }
         save_app_settings(self.settings, settings_data)
         self.settings_saved.emit()  # Emit the custom signal
@@ -319,6 +580,8 @@ class SettingsWindow(QDialog):
             self.ffmpeg_input.setText(settings_data["ffmpeg_path"])
         if settings_data.get("yt_dlp_path"):
             self.yt_dlp_input.setText(settings_data["yt_dlp_path"])
+        if settings_data.get("youtube_api_key"):
+            self.youtube_api_input.setText(settings_data["youtube_api_key"])
         
         # Restore browser selection if present
         browser_cookies = settings_data.get("browser_cookies", "None")
@@ -376,23 +639,13 @@ class SettingsWindow(QDialog):
         if success:
             if package_type == "ffmpeg":
                 # Try to find FFmpeg path
-                ffmpeg_path = shutil.which('ffmpeg')
-                if not ffmpeg_path:
-                    ffmpeg_path = self.get_dependency_path("ffmpeg")
+                ffmpeg_path = shutil.which('ffmpeg') or find_executable('ffmpeg')
                 if ffmpeg_path:
                     self.ffmpeg_input.setText(ffmpeg_path)
                     self.settings.setValue("ffmpeg_path", ffmpeg_path)
             elif package_type == "ytdlp":
                 # Try to find yt-dlp path
-                ytdlp_path = shutil.which('yt-dlp')
-                if not ytdlp_path:
-                    ytdlp_path = self.get_dependency_path("yt-dlp")
-                    # Try default winget path as fallback
-                    if not ytdlp_path:
-                        default_path = os.path.expandvars(
-                            "%USERPROFILE%/AppData/Local/Microsoft/WinGet/Packages/yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe/yt-dlp.exe")
-                        if os.path.exists(default_path):
-                            ytdlp_path = default_path
+                ytdlp_path = shutil.which('yt-dlp') or find_executable('yt-dlp')
                 if ytdlp_path:
                     self.yt_dlp_input.setText(ytdlp_path)
                     self.settings.setValue("yt_dlp_path", ytdlp_path)
@@ -408,84 +661,7 @@ class SettingsWindow(QDialog):
             self.installation_worker.deleteLater()
             self.installation_worker = None
 
-    def get_dependency_path(self, dependency):
-        try:
-            output = subprocess.check_output(
-                ["where", dependency], universal_newlines=True)
-            paths = output.strip().split("\n")
-            if paths:
-                return paths[0]
-        except subprocess.CalledProcessError:
-            return ""
-
-    def find_executable(self, executable_name):
-        """Search for an executable in common installation directories"""
-        # First check if it's in PATH
-        path = shutil.which(executable_name)
-        if path:
-            return path
-            
-        # Try using the where command (Windows specific)
-        try:
-            path = self.get_dependency_path(executable_name)
-            if path:
-                return path
-        except Exception:
-            pass
-            
-        # Common WinGet installation paths for popular tools
-        if executable_name == 'ffmpeg':
-            possible_paths = [
-                # WinGet installation paths
-                os.path.join(os.environ.get('LOCALAPPDATA', ''), 
-                             'Microsoft', 'WinGet', 'Packages', 
-                             'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 
-                             'ffmpeg.exe'),
-                # Check in Program Files
-                os.path.join(os.environ.get('PROGRAMFILES', ''), 
-                             'ffmpeg', 'bin', 'ffmpeg.exe'),
-                # Also check for FFmpeg in temp path
-                os.path.join(os.environ.get('TEMP', ''), 
-                             'ffmpeg', 'bin', 'ffmpeg.exe')
-            ]
-        elif executable_name == 'yt-dlp':
-            possible_paths = [
-                # WinGet installation paths
-                os.path.join(os.environ.get('LOCALAPPDATA', ''), 
-                             'Microsoft', 'WinGet', 'Packages', 
-                             'yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe', 
-                             'yt-dlp.exe'),
-                # Check in Program Files
-                os.path.join(os.environ.get('PROGRAMFILES', ''), 
-                             'yt-dlp', 'yt-dlp.exe'),
-                # Check in user directory
-                os.path.join(os.environ.get('USERPROFILE', ''), 
-                             'AppData', 'Local', 'yt-dlp', 'yt-dlp.exe')
-            ]
-        else:
-            return None
-            
-        # Check all possible paths
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-                
-        # Try to search in common directories using glob
-        import glob
-        for pattern in [
-            f"{os.environ.get('LOCALAPPDATA', '')}/**/*/bin/{executable_name}.exe",
-            f"{os.environ.get('PROGRAMFILES', '')}/**/{executable_name}.exe",
-            f"{os.environ.get('PROGRAMFILES(X86)', '')}/**/{executable_name}.exe",
-            f"{os.environ.get('USERPROFILE', '')}/AppData/Local/**/{executable_name}.exe"
-        ]:
-            try:
-                matches = glob.glob(pattern, recursive=True)
-                if matches:
-                    return matches[0]
-            except Exception:
-                pass
-                
-        return None
+    # Duplicate path discovery methods removed in favor of helpers.find_executable
 
     def check_installations(self):
         """Check the installation status of all required packages"""
@@ -497,11 +673,40 @@ class SettingsWindow(QDialog):
     def update_status_label(self, label, installed):
         """Update the status label with appropriate icon and text"""
         if installed:
-            label.setText("✅ Installed")
+            label.setText("✔ Installed")
             label.setStyleSheet("color: #00ff00;")  # Green color
         else:
-            label.setText("❌ Not Installed")
+            label.setText("✖ Not Installed")
             label.setStyleSheet("color: #ff0000;")  # Red color
+
+
+class _DependencyCheckWorker(QThread):
+    """Background worker to probe dependency presence without blocking the UI."""
+    results_ready = pyqtSignal(dict)
+
+    def __init__(self, parent: SettingsWindow):
+        super().__init__(parent)
+        self._parent = parent
+
+    def run(self):
+        # Import here to avoid circulars at module import time
+        from .helpers import find_executable
+
+        results = {}
+        try:
+            results['ffmpeg_path'] = find_executable('ffmpeg')
+        except Exception:
+            results['ffmpeg_path'] = None
+        try:
+            results['yt_dlp_path'] = find_executable('yt-dlp')
+        except Exception:
+            results['yt_dlp_path'] = None
+        try:
+            results['aria2c_installed'] = bool(find_executable('aria2c'))
+        except Exception:
+            results['aria2c_installed'] = False
+
+        self.results_ready.emit(results)
 
 
 class InstallationProgressDialog(QDialog):
@@ -516,7 +721,12 @@ class InstallationProgressDialog(QDialog):
         
         self.status_label = QLabel("Preparing installation...")
         layout.addWidget(self.status_label)
-        
+
+        # Visual progress indicator (indeterminate by default)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)  # Busy/indeterminate until we have a percentage
+        layout.addWidget(self.progress_bar)
+
         self.progress_label = QLabel("")
         layout.addWidget(self.progress_label)
         
@@ -532,3 +742,16 @@ class InstallationProgressDialog(QDialog):
     def update_progress(self, message):
         """Update the progress message"""
         self.progress_label.setText(message)
+
+        # If the message contains a percentage, switch to determinate mode and update value
+        try:
+            import re
+            match = re.search(r"(\d{1,3})%", message)
+            if match:
+                percent = max(0, min(100, int(match.group(1))))
+                if self.progress_bar.maximum() == 0:  # currently indeterminate
+                    self.progress_bar.setRange(0, 100)
+                self.progress_bar.setValue(percent)
+        except Exception:
+            # Best-effort parsing only; keep bar indeterminate on any error
+            pass
