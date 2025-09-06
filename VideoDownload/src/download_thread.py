@@ -1,14 +1,11 @@
 import subprocess
-import json
 import re
 import os
 import glob
 import signal
 import psutil
 import shutil
-from datetime import datetime, timezone
-from math import inf
-from urllib.parse import urlparse, parse_qs
+import sys
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
@@ -18,7 +15,7 @@ class DownloadThread(QThread):
     download_complete = pyqtSignal()
     download_location_complete = pyqtSignal(str)
 
-    def __init__(self, urls, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title="", browser_cookies="None"):
+    def __init__(self, urls, output_folder, ffmpeg_path, yt_dlp_path, download_type, resolution, custom_title="", browser_cookies="None", youtube_api_key=""):
         super().__init__()
         self.urls = urls.split("\n") if "\n" in urls else [urls]
         # Store original paths for test compatibility 
@@ -34,97 +31,28 @@ class DownloadThread(QThread):
         self.resolution = resolution
         self.custom_title = custom_title
         self.browser_cookies = browser_cookies
+        self.youtube_api_key = youtube_api_key
         self.running = True
         self.is_paused = False  # Add pause state tracking
+        # Track if cookie-based downloads have failed and we should avoid cookies
+        self.cookies_failed = False
 
     def run(self):
         for url in self.urls:
             if not self.running:
                 return
 
-            # Announce per-URL processing start
-            self.download_output.emit(f"🔎 Preparing: {url}")
-
-            # Try to enumerate playlist and apply numbering if applicable
-            try:
-                self.download_output.emit("🧭 Pre-extracting playlist metadata (fast)…")
-                # If YouTube watch URL contains list=, prefer the actual playlist URL for extraction
-                playlist_probe_url = self._prefer_playlist_url(url)
-                if playlist_probe_url != url:
-                    self.download_output.emit(f"📃 Using playlist URL for detection: {playlist_probe_url}")
-                info = self._extract_info(playlist_probe_url)
-                self.download_output.emit("🧭 Pre-extraction complete")
-            except Exception as e:
-                info = None
-                self.download_output.emit(f"ℹ️ Could not pre-extract info for sorting/numbering: {e}")
-
-            # Allow disabling numbering via environment and only treat as playlist when entries > 1
-            numbering_disabled = os.environ.get("VD_DISABLE_PLAYLIST_NUMBERING") == "1"
-            entries_list = self._make_entries_list(info)
-            # Consider it a playlist if entries > 1, or yt_dlp reports playlist_count > 1, or URL has list= param
-            is_youtube_list_url = ("list=" in url.lower())
-            playlist_count = 0
-            if isinstance(info, dict):
+            # Special handling for YouTube playlists with API key
+            if self.youtube_api_key and self.is_youtube_playlist(url):
                 try:
-                    playlist_count = int(info.get('playlist_count') or 0)
-                except Exception:
-                    playlist_count = 0
-            is_playlist = (len(entries_list) > 1) or (playlist_count > 1) or is_youtube_list_url
-
-            if not numbering_disabled and is_playlist:
-                # Playlist handling with numbering
-                try:
-                    entries = entries_list
-                    # Ensure we have a flat list of entry dicts
-                    flat_entries = []
-                    for idx, entry in enumerate(entries):
-                        if isinstance(entry, dict):
-                            entry["_orig_pos"] = idx
-                            flat_entries.append(entry)
-                    sorted_entries = self._sort_entries_by_date(flat_entries)
-
-                    # Determine next number and pad width
-                    next_number = self._determine_next_number(self._normalized_output_folder)
-                    pad = self._decide_zero_pad(next_number, len(sorted_entries))
-
-                    self.download_output.emit(
-                        f"📚 Playlist detected: {len(sorted_entries)} items. Numbering will start at {next_number:0{pad}d}"
-                    )
-
-                    current = next_number
-                    for entry in sorted_entries:
-                        if not self.running:
-                            return
-                        # Find a free prefix (avoid collisions)
-                        number_to_use = self._find_free_number(self._normalized_output_folder, current, pad)
-                        prefix = f"{number_to_use:0{pad}d}_"
-
-                        # Choose a concrete URL for the item
-                        entry_url = (
-                            entry.get("webpage_url")
-                            or entry.get("original_url")
-                            or entry.get("url")
-                            or url  # fallback
-                        )
-
-                        # Build outtmpl with our prefix
-                        outtmpl = os.path.join(self._normalized_output_folder, f"{prefix}%(title)s.%(ext)s")
-                        command = self.construct_command(entry_url, outtmpl_override=outtmpl)
-                        self.download_output.emit(f"⬇️ Downloading as {prefix}%(title)s.%(ext)s")
-                        self.execute_command(command, url=entry_url)
-
-                        # Move to next number for next item
-                        current = number_to_use + 1
-
+                    self.process_youtube_playlist(url)
+                    continue
                 except Exception as e:
-                    self.download_output.emit(f"❌ Playlist processing failed, falling back to single download: {e}")
-                    command = self.construct_command(url)
-                    self.execute_command(command, url=url)
-            else:
-                # Single URL (non-playlist) — keep existing naming
-                self.download_output.emit("➡️ No playlist detected; starting single download")
-                command = self.construct_command(url)
-                self.execute_command(command, url=url)
+                    # Fallback to normal handling on any API failure
+                    self.download_output.emit(f"⚠️ Playlist API fallback: {str(e)}")
+
+            command = self.construct_command(url)
+            self.execute_command(command, url=url)
 
         if self.running:
             # Emit final progress update to ensure progress bar reaches 100%
@@ -152,7 +80,243 @@ class DownloadThread(QThread):
             
         return path
 
-    def construct_command(self, url, force_cookies=False, outtmpl_override: str | None = None):
+    # ------------- YouTube Playlist Helpers -------------
+    def is_youtube_playlist(self, url: str) -> bool:
+        u = url.lower()
+        return ("youtube.com/playlist" in u or "list=" in u) and ("youtube.com" in u or "youtu.be" in u)
+
+    def _extract_playlist_id(self, url: str) -> str:
+        try:
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query)
+            if 'list' in qs:
+                return qs['list'][0]
+        except Exception:
+            pass
+        # Fallback: simple regex
+        m = re.search(r'[?&]list=([A-Za-z0-9_-]+)', url)
+        return m.group(1) if m else ""
+
+    def fetch_youtube_playlist_items(self, playlist_id: str):
+        """Fetch playlist items using YouTube Data API v3 and order by actual upload date (older -> newest).
+
+        In frozen executables, SSL certificate bundles may be missing. We try to use certifi if available
+        and gracefully fall back to an unverified SSL context to preserve functionality.
+        """
+        import json
+        import ssl
+        from urllib.request import urlopen
+        from urllib.parse import urlencode
+        from datetime import datetime
+
+        def _urlopen(url: str):
+            ctx = None
+            try:
+                # Prefer verified context using certifi if present
+                try:
+                    import certifi  # type: ignore
+                    ctx = ssl.create_default_context(cafile=certifi.where())
+                except Exception:
+                    # Fallback to default context which may use system store
+                    ctx = ssl.create_default_context()
+            except Exception:
+                # Last resort: unverified context (avoid breaking functionality in frozen builds)
+                try:
+                    ctx = ssl._create_unverified_context()
+                except Exception:
+                    ctx = None
+            if ctx is not None:
+                return urlopen(url, context=ctx)
+            return urlopen(url)
+
+        items = []
+        page_token = None
+        video_ids_in_playlist_order = []
+        id_to_meta = {}
+        # First fetch playlist entries (gives us videoIds and titles)
+        while True:
+            params = {
+                'part': 'snippet',
+                'maxResults': 50,
+                'playlistId': playlist_id,
+                'key': self.youtube_api_key,
+            }
+            if page_token:
+                params['pageToken'] = page_token
+            url = f"https://www.googleapis.com/youtube/v3/playlistItems?{urlencode(params)}"
+            with _urlopen(url) as resp:
+                data = json.loads(resp.read().decode('utf-8', errors='ignore'))
+            for it in data.get('items', []):
+                sn = it.get('snippet', {})
+                vid = sn.get('resourceId', {}).get('videoId')
+                title = sn.get('title') or ''
+                if vid:
+                    video_ids_in_playlist_order.append(vid)
+                    id_to_meta[vid] = {'title': title}
+            page_token = data.get('nextPageToken')
+            if not page_token:
+                break
+
+        if not video_ids_in_playlist_order:
+            return []
+
+        # Fetch upload dates for videos in chunks of 50
+        def chunks(lst, n):
+            for i in range(0, len(lst), n):
+                yield lst[i:i + n]
+
+        for batch in chunks(video_ids_in_playlist_order, 50):
+            params = {
+                'part': 'snippet',  # snippet.publishedAt is the upload date
+                'id': ','.join(batch),
+                'key': self.youtube_api_key,
+                'maxResults': 50,
+            }
+            url = f"https://www.googleapis.com/youtube/v3/videos?{urlencode(params)}"
+            with _urlopen(url) as resp:
+                vdata = json.loads(resp.read().decode('utf-8', errors='ignore'))
+            for v in vdata.get('items', []):
+                vid = v.get('id')
+                sn = v.get('snippet', {})
+                published = sn.get('publishedAt')  # ISO 8601
+                if vid in id_to_meta:
+                    id_to_meta[vid]['publishedAt'] = published
+
+        # Build items list and sort by upload date ascending, fallback to playlist order if missing
+        for idx, vid in enumerate(video_ids_in_playlist_order):
+            meta = id_to_meta.get(vid, {})
+            items.append({
+                'videoId': vid,
+                'title': meta.get('title', ''),
+                'publishedAt': meta.get('publishedAt'),
+                'playlistIndex': idx,
+            })
+
+        def parse_dt(s):
+            if not s:
+                return None
+            try:
+                # Handle trailing Z
+                if s.endswith('Z'):
+                    s = s[:-1] + '+00:00'
+                return datetime.fromisoformat(s)
+            except Exception:
+                return None
+
+        # Sort by upload date ascending; if missing date, place after dated entries keeping playlist order
+        def sort_key(x):
+            dt = parse_dt(x.get('publishedAt'))
+            has_date = 0 if dt is not None else 1  # 0 = has date, 1 = missing
+            return (has_date, dt or datetime.max, x['playlistIndex'])
+
+        items.sort(key=sort_key)
+        return items
+
+    def normalize_title_for_compare(self, name: str) -> str:
+        base = name or ''
+        # Remove extension if present
+        base = re.sub(r'\.[A-Za-z0-9]{1,5}$', '', base)
+        # Remove leading numeric enumeration like "001 - ", "12_", "3) "
+        base = re.sub(r'^\s*\d+\s*[-_.)]\s*', '', base)
+        # Remove trailing resolution markers like _1080p or _640x360
+        base = re.sub(r'_[0-9]{3,4}p$', '', base, flags=re.IGNORECASE)
+        base = re.sub(r'_\d{2,4}x\d{2,4}$', '', base, flags=re.IGNORECASE)
+        # Sanitize and mimic --restrict-filenames basic effects
+        base = self.sanitize_path(base)
+        base = re.sub(r'\s+', '_', base)  # spaces to underscores
+        # Lowercase for stable comparison
+        return base.strip().lower()
+
+    def collect_existing_titles(self):
+        exts = ('.mp4', '.mkv', '.webm', '.mp3', '.m4a', '.wav', '.mov', '.flv')
+        existing = []
+        max_num = 0
+        try:
+            for fn in os.listdir(self._normalized_output_folder):
+                if not fn.lower().endswith(exts):
+                    continue
+                # Track max leading number if present
+                m = re.match(r'\s*(\d+)\s*[-_.)]', fn)
+                if m:
+                    try:
+                        max_num = max(max_num, int(m.group(1)))
+                    except ValueError:
+                        pass
+                # Compare against just the base name without extension
+                base = os.path.splitext(fn)[0]
+                existing.append(self.normalize_title_for_compare(base))
+        except Exception:
+            pass
+        return set(existing), max_num
+
+    def _title_exists(self, candidate_norm: str, existing_norms: set) -> bool:
+        """Robust check: exact or substring containment either way."""
+        if candidate_norm in existing_norms:
+            return True
+        for ex in existing_norms:
+            if not ex or not candidate_norm:
+                continue
+            if candidate_norm in ex or ex in candidate_norm:
+                return True
+        return False
+
+    def process_youtube_playlist(self, url: str):
+        playlist_id = self._extract_playlist_id(url)
+        if not playlist_id:
+            raise ValueError('Could not extract playlistId')
+
+        self.download_output.emit('🎵 Fetching playlist items via API...')
+        items = self.fetch_youtube_playlist_items(playlist_id)
+        total = len(items)
+        if total == 0:
+            self.download_output.emit('⚠️ Playlist is empty')
+            return
+
+        # items are already ordered by upload date older -> newest
+        existing_titles, max_enum = self.collect_existing_titles()
+        pad = max(3, len(str(total)))
+
+        # Build list to download skipping existing by title (ignoring numbers)
+        to_download = []
+        for i, it in enumerate(items, start=1):
+            title_norm = self.normalize_title_for_compare(it.get('title', ''))
+            if self._title_exists(title_norm, existing_titles):
+                continue
+            # Next enumeration continues from max existing number
+            enum_num = max_enum + len(to_download) + 1
+            to_download.append((enum_num, it))
+
+        if not to_download:
+            self.download_output.emit('✅ No new videos to download')
+            return
+
+        # Download each video with enumerated filename
+        for enum_num, it in to_download:
+            if not self.running:
+                return
+            vid = it['videoId']
+            video_url = f"https://www.youtube.com/watch?v={vid}"
+            # Build base command then replace output template
+            command = self.construct_command(video_url)
+            # Create per-item output template
+            num_str = str(enum_num).zfill(pad)
+            if self.download_type == "audio":
+                item_template = f"{self._normalized_output_folder}\\{num_str} - %(title)s.%(ext)s"
+            else:
+                item_template = f"{self._normalized_output_folder}\\{num_str} - %(title)s_%(resolution)s.%(ext)s"
+            # Replace the -o template in command
+            try:
+                o_idx = command.index('-o')
+                command[o_idx + 1] = item_template
+            except ValueError:
+                # If not found, append
+                command.extend(['-o', item_template])
+
+            self.download_output.emit(f"⬇️ {num_str} - {it.get('title','(untitled)')}")
+            self.execute_command(command, url=video_url)
+
+    def construct_command(self, url, force_cookies=False, skip_cookies=False):
         if not url.startswith(('http://', 'https://', 'ftp://')):
             url = f'https://{url}'
         output_path = self._normalized_output_folder
@@ -165,43 +329,39 @@ class DownloadThread(QThread):
         if safe_title:
             safe_title = self.sanitize_path(safe_title)
             
-        if outtmpl_override:
-            output_template = outtmpl_override
-        else:
-            output_template = (
-                f"{output_path}\\{safe_title}.%(ext)s" 
-                if safe_title 
-                else f"{output_path}\\%(title)s_%(resolution)s.%(ext)s"
-            )
+        output_template = (
+            f"{output_path}\\{safe_title}.%(ext)s" 
+            if safe_title 
+            else f"{output_path}\\%(title)s_%(resolution)s.%(ext)s"
+        )
         
         base_command = [
             self._normalized_yt_dlp_path,    # Path to yt-dlp executable
             "--no-cache-dir",                # Don't cache downloaded data (saves disk space)
             "--no-check-certificate",        # Skip SSL certificate verification for problematic sites
             "--add-metadata",                # Embed metadata into downloaded files
-            "--newline",                     # Ensure progress updates are newline-terminated for streaming
             "-o", output_template,           # Set output filename template
             "--ffmpeg-location", self._normalized_ffmpeg_path,  # Path to ffmpeg for video processing
-            "--concurrent-fragments", "15",  # More parallel fragments for HLS/DASH
-            "--http-chunk-size", "10M",      # Range requests chunking for direct HTTP
+            "--concurrent-fragments", "5",   # Download 5 video fragments simultaneously (faster downloads)
             "--no-part",                     # Don't create .part files during download
             "--progress",                    # Show download progress information
             "--restrict-filenames",          # Replace problematic characters in filenames
             "--no-continue",                 # Don't resume partially downloaded files (prevents HTTP 416 errors)
+            "--no-overwrites",               # Do not overwrite files that already exist; skip them
             "--ignore-errors",               # Continue downloading other videos if one fails
             "--retries", "10",               # Retry failed downloads up to 10 times
             "--retry-sleep", "5",            # Wait 5 seconds between retry attempts
-            "--no-overwrites",               # Never overwrite existing files
             url                              # The video URL to download
         ]
-        # Only use browser cookies if necessary or forced
+        # Only use browser cookies if necessary or forced, unless disabled after failures
         use_cookies = False
-        if force_cookies:
-            use_cookies = self.browser_cookies != "None"
-        else:
-            if self.browser_cookies != "None":
-                if "youtube.com" in url.lower() or "private" in url.lower():
-                    use_cookies = True
+        if not skip_cookies and not self.cookies_failed:
+            if force_cookies:
+                use_cookies = self.browser_cookies != "None"
+            else:
+                if self.browser_cookies != "None":
+                    if "youtube.com" in url.lower() or "private" in url.lower():
+                        use_cookies = True
         
         if use_cookies:
             browser = self.browser_cookies.lower() if self.browser_cookies and self.browser_cookies != "None" else ""
@@ -217,7 +377,11 @@ class DownloadThread(QThread):
                 "--audio-quality", "0",  # Use highest audio quality
                 "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
                 # Specify path for temporary files
-                "--paths", f"temp:{self._normalized_output_folder}"  # Specify temp file location
+                "--paths", f"temp:{self._normalized_output_folder}",  # Specify temp file location
+                # Force a modern client to avoid "not available on this app" errors
+                "--extractor-args", "youtube:player_client=android",
+                # Use a modern desktop user agent for requests that use UA
+                "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
             ])
             if '/live/' in url.lower() or 'livestream' in url.lower():
                 self.download_output.emit("🔴 YouTube live stream detected - Using enhanced audio processing")
@@ -263,152 +427,7 @@ class DownloadThread(QThread):
         else:  # video only
             format_spec = "bestvideo" if self.resolution == "best" else f"bestvideo[height<={self.resolution}]"
             base_command.extend(["--format", format_spec])
-
-        # Prefer aria2 as external downloader when available (supports multi-connection HTTP)
-        try:
-            aria2_path = shutil.which('aria2') or shutil.which('aria2c')
-            if aria2_path:
-                # Use external downloader path to support custom names; apply args for aria2c
-                base_command.extend([
-                    "--external-downloader", aria2_path,
-                    "--downloader-args", "aria2c:-x16 -s16 -k1M --file-allocation=none --summary-interval=0"
-                ])
-                self.download_output.emit(f"⚡ Using aria2 external downloader: {aria2_path}")
-            else:
-                # Improve ffmpeg resilience when aria2 isn't used (for HLS/DASH)
-                base_command.extend([
-                    "--downloader-args", "ffmpeg:-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 2"
-                ])
-        except Exception:
-            pass
         return base_command
-
-    # --- Playlist numbering helpers ---
-    def _extract_info(self, url: str) -> dict | None:
-        """Use yt-dlp CLI to extract playlist info quickly without downloading.
-
-        Returns a dict with at least 'entries' when successful, else None.
-        """
-        try:
-            cmd = [
-                self._normalized_yt_dlp_path,
-                "--flat-playlist",
-                "--dump-single-json",
-                "--skip-download",
-                "--no-warnings",
-                "--no-check-certificate",
-                url,
-            ]
-            out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
-            data = json.loads(out)
-            # Normalize minimal structure
-            if isinstance(data, dict):
-                return data
-        except Exception as e:
-            # Surface minimal note upstream but keep non-fatal
-            self.download_output.emit(f"ℹ️ Pre-extraction via CLI failed: {e}")
-        return None
-
-    def _prefer_playlist_url(self, url: str) -> str:
-        """If URL is a YouTube watch link with a list= param, return the playlist URL."""
-        try:
-            parsed = urlparse(url)
-            if parsed.netloc.lower().endswith("youtube.com"):
-                qs = parse_qs(parsed.query)
-                list_ids = qs.get('list') or []
-                if list_ids:
-                    list_id = list_ids[0]
-                    return f"https://www.youtube.com/playlist?list={list_id}"
-        except Exception:
-            pass
-        return url
-
-    def _make_entries_list(self, info: dict | None) -> list[dict]:
-        """Normalize info['entries'] to a list of dicts; return [] if unavailable."""
-        if not isinstance(info, dict):
-            return []
-        entries = info.get('entries')
-        if entries is None:
-            return []
-        if isinstance(entries, list):
-            return entries
-        try:
-            return list(entries)
-        except Exception:
-            return []
-
-    def _normalize_date_value(self, entry: dict) -> int | float:
-        """Return YYYYMMDD as int; fallback to +inf if unavailable."""
-        # Highest precedence: upload_date as YYYYMMDD string
-        upload_date = entry.get('upload_date') or entry.get('playlist_uploader_date')
-        if upload_date:
-            try:
-                return int(str(upload_date)[:8])  # guard against malformed
-            except Exception:
-                pass
-        # Next: timestamp or release_timestamp (unix seconds)
-        ts = entry.get('timestamp') or entry.get('release_timestamp')
-        if ts:
-            try:
-                dt = datetime.fromtimestamp(int(ts), tz=timezone.utc)
-                return int(dt.strftime('%Y%m%d'))
-            except Exception:
-                pass
-        return inf
-
-    def _sort_entries_by_date(self, entries: list[dict]) -> list[dict]:
-        """Sort from oldest to newest using date, then playlist_index; stable fallback to original order."""
-        def key(e: dict):
-            date_val = self._normalize_date_value(e)
-            pidx = e.get('playlist_index')
-            try:
-                pidx = int(pidx) if pidx is not None else inf
-            except Exception:
-                pidx = inf
-            orig = e.get('_orig_pos', 0)
-            return (date_val, pidx, orig)
-
-        # Python's sort is stable; this preserves original order when keys tie
-        return sorted(entries, key=key)
-
-    def _determine_next_number(self, folder: str) -> int:
-        """Scan destination folder for existing leading numbers and return next."""
-        try:
-            files = os.listdir(folder)
-        except Exception:
-            return 1
-        nums = []
-        pattern = re.compile(r'^(\d{2,})\s*[_\-\s]')
-        for name in files:
-            m = pattern.match(name)
-            if m:
-                try:
-                    nums.append(int(m.group(1)))
-                except Exception:
-                    pass
-        return (max(nums) + 1) if nums else 1
-
-    def _decide_zero_pad(self, next_number: int, count: int) -> int:
-        last_planned = max(next_number + max(count - 1, 0), next_number)
-        return max(2, len(str(last_planned)))
-
-    def _prefix_in_use(self, folder: str, prefix: str) -> bool:
-        """Return True if any file in folder starts with the given prefix."""
-        try:
-            for name in os.listdir(folder):
-                if name.startswith(prefix):
-                    return True
-        except Exception:
-            pass
-        return False
-
-    def _find_free_number(self, folder: str, start_number: int, pad: int) -> int:
-        n = start_number
-        while True:
-            prefix = f"{n:0{pad}d}_"
-            if not self._prefix_in_use(folder, prefix):
-                return n
-            n += 1
 
     # The following methods are replaced by the construct_command method above but kept for backward compatibility
     def construct_video_command(self, url):
@@ -420,24 +439,42 @@ class DownloadThread(QThread):
     def construct_video_with_audio_command(self, url):
         return self.construct_command(url)
 
-    def execute_command(self, command, url=None, retry_with_cookies=False):
+    def _preserve_output_template(self, src_cmd, dst_cmd):
+        """Ensure dst_cmd uses the same -o template as src_cmd (used on retries)."""
         try:
-            # Launch process and stream output
-            # Reset per-execution progress tracker
-            self._last_progress = 0
+            s_idx = src_cmd.index('-o')
+            src_tpl = src_cmd[s_idx + 1]
+        except ValueError:
+            return dst_cmd
+        # Put/replace in dst
+        try:
+            d_idx = dst_cmd.index('-o')
+            dst_cmd[d_idx + 1] = src_tpl
+        except ValueError:
+            dst_cmd.extend(['-o', src_tpl])
+        return dst_cmd
+
+    def execute_command(self, command, url=None, retry_with_cookies=False, attempted_no_cookies=False):
+        try:
+            # Set encoding for the subprocess to handle non-ASCII characters
+            if os.name == 'nt':  # Windows
+                try:
+                    if hasattr(sys.stdout, 'reconfigure'):
+                        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+                except Exception:
+                    pass  # Ignore if sys.stdout does not support reconfigure
+                
             self.process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-                bufsize=1,  # Line-buffered text mode to improve real-time output
                 creationflags=subprocess.CREATE_NO_WINDOW,
                 encoding='utf-8',
                 errors='replace'  # Handle encoding errors gracefully
             )
             error_detected = False
-            stream = self.process.stdout
-            for line in (stream or []):
+            for line in self.process.stdout:
                 if not self.running:
                     self.process.terminate()
                     return
@@ -450,6 +487,20 @@ class DownloadThread(QThread):
                     'use --cookies-from-browser or --cookies for the authentication' in line.lower()
                 ):
                     error_detected = True
+                # Detect YouTube client restriction error and fallback to no cookies once
+                if 'not available on this app' in line.lower() or 'watch on the latest version of youtube' in line.lower():
+                    if '--cookies-from-browser' in command and url and not attempted_no_cookies:
+                        self.download_output.emit('⚠️ YouTube client restriction detected. Retrying without cookies...')
+                        # Stop current process
+                        self.process.terminate()
+                        self.wait_with_timeout(self.process, 2)
+                        # Disable cookies for the rest of this session
+                        self.cookies_failed = True
+                        # Rebuild command skipping cookies and retry once
+                        fresh_command = self.construct_command(url, force_cookies=False, skip_cookies=True)
+                        fresh_command = self._preserve_output_template(command, fresh_command)
+                        self.execute_command(fresh_command, url=url, retry_with_cookies=False, attempted_no_cookies=True)
+                        return
                 # Error detection for HTTP 416 issues (range errors)
                 if 'HTTP Error 416' in line:
                     self.download_output.emit("⚠️ Range request issue detected - Attempting to restart download...")
@@ -460,6 +511,7 @@ class DownloadThread(QThread):
                         self.wait_with_timeout(self.process, 2)
                         # Create a fresh command with explicit no-continue flag
                         fresh_command = self.construct_command(url, force_cookies=retry_with_cookies)
+                        fresh_command = self._preserve_output_template(command, fresh_command)
                         # Restart with fresh command
                         self.download_output.emit("🔄 Restarting download with fresh connection...")
                         self.execute_command(fresh_command, url=url, retry_with_cookies=retry_with_cookies)
@@ -495,51 +547,16 @@ class DownloadThread(QThread):
                 if line.startswith('[download]'):
                     if 'Destination:' in line:
                         self.download_output.emit(f"📥 {line.split('Destination: ')[1]}")
-                        # Reset stage progress on new destination (video/audio files)
-                        self._last_progress = 0
-                        try:
-                            self.download_progress.emit(0)
-                        except Exception:
-                            pass
-                    elif '%' in line:
-                        # Emit progress whenever a percentage is present
-                        self.download_output.emit(f"⏳ {line}")
-                        match = re.search(r'(\d+(?:\.\d+)?)%', line)
-                        if match:
-                            try:
+                    elif 'of' in line and 'at' in line and 'ETA' in line:
+                        # Only emit progress for non-live streams
+                        if '/live/' not in line and 'twitch.tv' not in line:
+                            self.download_output.emit(f"⏳ {line}")
+                            match = re.search(r'(\d+(\.\d+)?)%', line)
+                            if match:
                                 percentage = int(float(match.group(1)))
-                                # Avoid regressions and duplicate emits within the current stage
-                                if percentage >= getattr(self, '_last_progress', 0):
-                                    self._last_progress = percentage
-                                    self.download_progress.emit(percentage)
-                            except Exception:
-                                pass
+                                self.download_progress.emit(percentage)
                     elif '100% of' in line:
                         self.download_output.emit(f"✅ {line}")
-                        # Ensure we reflect completion of this stage
-                        try:
-                            self._last_progress = 100
-                            self.download_progress.emit(100)
-                        except Exception:
-                            pass
-                # Handle external downloader outputs (e.g., aria2c)
-                elif line.startswith('[#') or any(u in line for u in ['KiB/', 'MiB/', 'GiB/']):
-                    # Typical aria2 line: "[#b22048 59MiB/118MiB(50%) CN:16 DL:5MiB ETA:19s]"
-                    pct = None
-                    m = re.search(r'\((\d+(?:\.\d+)?)%\)', line)
-                    if not m:
-                        m = re.search(r'(\d+(?:\.\d+)?)%', line)
-                    if m:
-                        try:
-                            pct = int(float(m.group(1)))
-                        except Exception:
-                            pct = None
-                    if pct is not None:
-                        # Emit raw line to log and numeric progress to bar
-                        self.download_output.emit(f"⏳ {line}")
-                        if pct >= getattr(self, '_last_progress', 0):
-                            self._last_progress = pct
-                            self.download_progress.emit(pct)
                 elif line.startswith('[youtube]'):
                     if 'Live stream detected' in line:
                         self.download_output.emit("🔴 Live stream detected - Recording in progress...")
@@ -582,11 +599,7 @@ class DownloadThread(QThread):
                     # Filter out technical noise but keep important messages
                     self.download_output.emit(line)
             
-            if stream:
-                try:
-                    stream.close()
-                except Exception:
-                    pass
+            self.process.stdout.close()
             self.process.wait()
             
             # If error detected and not already retried with cookies, retry
@@ -693,6 +706,7 @@ class DownloadThread(QThread):
             try:
                 # On Windows, suspend the process
                 if os.name == 'nt':
+                    import psutil
                     parent = psutil.Process(self.process.pid)
                     parent.suspend()
                     # Also suspend child processes (ffmpeg, etc.)
@@ -705,12 +719,16 @@ class DownloadThread(QThread):
                     # On Unix-like systems, send SIGSTOP
                     os.kill(self.process.pid, signal.SIGSTOP)
                     # Also suspend child processes
-                    parent = psutil.Process(self.process.pid)
-                    for child in parent.children(recursive=True):
-                        try:
-                            os.kill(child.pid, signal.SIGSTOP)
-                        except (OSError, psutil.NoSuchProcess):
-                            pass
+                    try:
+                        import psutil
+                        parent = psutil.Process(self.process.pid)
+                        for child in parent.children(recursive=True):
+                            try:
+                                os.kill(child.pid, signal.SIGSTOP)
+                            except (OSError, psutil.NoSuchProcess):
+                                pass
+                    except ImportError:
+                        pass
                 
                 self.download_output.emit("⏸️ Download process paused")
             except Exception as e:
@@ -723,6 +741,7 @@ class DownloadThread(QThread):
             try:
                 # On Windows, resume the process
                 if os.name == 'nt':
+                    import psutil
                     parent = psutil.Process(self.process.pid)
                     parent.resume()
                     # Also resume child processes (ffmpeg, etc.)
@@ -735,12 +754,16 @@ class DownloadThread(QThread):
                     # On Unix-like systems, send SIGCONT
                     os.kill(self.process.pid, signal.SIGCONT)
                     # Also resume child processes
-                    parent = psutil.Process(self.process.pid)
-                    for child in parent.children(recursive=True):
-                        try:
-                            os.kill(child.pid, signal.SIGCONT)
-                        except (OSError, psutil.NoSuchProcess):
-                            pass
+                    try:
+                        import psutil
+                        parent = psutil.Process(self.process.pid)
+                        for child in parent.children(recursive=True):
+                            try:
+                                os.kill(child.pid, signal.SIGCONT)
+                            except (OSError, psutil.NoSuchProcess):
+                                pass
+                    except ImportError:
+                        pass
                 
                 self.download_output.emit("▶️ Download process resumed")
             except Exception as e:
