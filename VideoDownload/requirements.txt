@@ -2,3 +2,4 @@ PyQt5
 psutil
 yt-dlp
 pyinstaller
+browser-cookie3
