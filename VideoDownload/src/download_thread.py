@@ -36,6 +36,9 @@ class DownloadThread(QThread):
         self.is_paused = False  # Add pause state tracking
         # Track if cookie-based downloads have failed and we should avoid cookies
         self.cookies_failed = False
+        # Track success across URLs to decide whether to emit completion
+        self._any_success = False
+        self.last_command_succeeded = False
 
     def run(self):
         for url in self.urls:
@@ -53,11 +56,17 @@ class DownloadThread(QThread):
 
             command = self.construct_command(url)
             self.execute_command(command, url=url)
+            # Record whether this URL succeeded
+            if getattr(self, 'last_command_succeeded', False):
+                self._any_success = True
 
-        if self.running:
-            # Emit final progress update to ensure progress bar reaches 100%
+        if self.running and self._any_success:
+            # Emit final progress update to ensure progress bar reaches 100% only on success
             self.download_progress.emit(100)
             self.download_complete.emit()
+        elif self.running and not self._any_success:
+            # Inform user and avoid signaling completion when nothing was downloaded
+            self.download_output.emit("❌ No downloadable media found or all URLs failed.")
 
     def sanitize_path(self, path):
         """
@@ -338,7 +347,7 @@ class DownloadThread(QThread):
         base_command = [
             self._normalized_yt_dlp_path,    # Path to yt-dlp executable
             "--no-cache-dir",                # Don't cache downloaded data (saves disk space)
-            "--no-check-certificate",        # Skip SSL certificate verification for problematic sites
+            "--no-check-certificates",       # Skip SSL certificate verification for problematic sites
             "--add-metadata",                # Embed metadata into downloaded files
             "-o", output_template,           # Set output filename template
             "--ffmpeg-location", self._normalized_ffmpeg_path,  # Path to ffmpeg for video processing
@@ -371,26 +380,26 @@ class DownloadThread(QThread):
         
         # Add specific parameters for different platforms
         if 'youtube.com' in url.lower():
-            base_command.append("--live-from-start")
+            # --live-from-start only for live: moved below
             # Add safer audio handling to avoid "Function not implemented" errors
             base_command.extend([
                 "--audio-quality", "0",  # Use highest audio quality
-                "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
+                # --hls-use-mpegts only for live (moved below)
                 # Specify path for temporary files
                 "--paths", f"temp:{self._normalized_output_folder}",  # Specify temp file location
-                # Force a modern client to avoid "not available on this app" errors
-                "--extractor-args", "youtube:player_client=android",
                 # Use a modern desktop user agent for requests that use UA
                 "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
             ])
             if '/live/' in url.lower() or 'livestream' in url.lower():
+                base_command.append("--live-from-start")
                 self.download_output.emit("🔴 YouTube live stream detected - Using enhanced audio processing")
+                base_command.extend(["--hls-use-mpegts"])
         elif 'twitch.tv' in url.lower():
             # Common Twitch parameters for both live and VOD
             base_command.extend([
                 "--wait-for-video", "5",  # Wait up to 5 seconds for live stream
                 "--downloader", "ffmpeg",  # Use ffmpeg directly for downloading
-                "--hls-use-mpegts",  # Use MPEG transport stream for better compatibility
+                # --hls-use-mpegts only for live (moved below)
                 "--audio-quality", "0",  # Use highest audio quality
                 # Use paths command for temp files
                 "--paths", f"temp:{self._normalized_output_folder}",  # Use output folder for temp files
@@ -408,7 +417,7 @@ class DownloadThread(QThread):
                 self.download_output.emit("📺 Twitch VOD detected - Using VOD-specific settings")
             else:
                 # This is likely a live stream
-                base_command.append("--live-from-start")
+                # --live-from-start only for live: moved below
                 self.download_output.emit("🔴 Twitch live stream detected - Will record from beginning")
             
             # For Twitch, if we're downloading video with audio, use this specific format
@@ -454,7 +463,7 @@ class DownloadThread(QThread):
             dst_cmd.extend(['-o', src_tpl])
         return dst_cmd
 
-    def execute_command(self, command, url=None, retry_with_cookies=False, attempted_no_cookies=False):
+    def execute_command(self, command, url=None, retry_with_cookies=False, attempted_no_cookies=False, fallback_stage=0):
         try:
             # Set encoding for the subprocess to handle non-ASCII characters
             if os.name == 'nt':  # Windows
@@ -487,20 +496,44 @@ class DownloadThread(QThread):
                     'use --cookies-from-browser or --cookies for the authentication' in line.lower()
                 ):
                     error_detected = True
-                # Detect YouTube client restriction error and fallback to no cookies once
+                                # Detect YouTube client restriction error; prefer alternate client with cookies over dropping cookies
                 if 'not available on this app' in line.lower() or 'watch on the latest version of youtube' in line.lower():
-                    if '--cookies-from-browser' in command and url and not attempted_no_cookies:
-                        self.download_output.emit('⚠️ YouTube client restriction detected. Retrying without cookies...')
-                        # Stop current process
-                        self.process.terminate()
+                    if url and fallback_stage <= 1:
+                        try:
+                            self.process.terminate()
+                        except Exception:
+                            pass
                         self.wait_with_timeout(self.process, 2)
-                        # Disable cookies for the rest of this session
-                        self.cookies_failed = True
-                        # Rebuild command skipping cookies and retry once
-                        fresh_command = self.construct_command(url, force_cookies=False, skip_cookies=True)
-                        fresh_command = self._preserve_output_template(command, fresh_command)
-                        self.execute_command(fresh_command, url=url, retry_with_cookies=False, attempted_no_cookies=True)
-                        return
+                        # Stage 0 -> retry default (tv,web_safari,web) without cookies; Stage 1 -> retry tv-only without cookies
+                        if fallback_stage == 0:
+                            self.download_output.emit('⚠️ YouTube restriction: Retrying with default clients (no cookies)…')
+                            self.cookies_failed = True
+                            fresh_command = self.construct_command(url, force_cookies=False, skip_cookies=True)
+                            fresh_command = self._preserve_output_template(command, fresh_command)
+                            # Ensure we use default clients excluding mobile
+                            try:
+                                ei = fresh_command.index("--extractor-args")
+                                del fresh_command[ei:ei+2]
+                            except ValueError:
+                                pass
+                            fresh_command.extend(["--extractor-args", "youtube:player_client=default,-ios,-android"])
+                            self.execute_command(fresh_command, url=url, retry_with_cookies=False, attempted_no_cookies=True, fallback_stage=1)
+                            return
+                        else:  # fallback_stage == 1
+                            self.download_output.emit('⚠️ YouTube restriction: Retrying with TV client (no cookies)…')
+                            self.cookies_failed = True
+                            fresh_command = self.construct_command(url, force_cookies=False, skip_cookies=True)
+                            fresh_command = self._preserve_output_template(command, fresh_command)
+                            try:
+                                ei = fresh_command.index("--extractor-args")
+                                del fresh_command[ei:ei+2]
+                            except ValueError:
+                                pass
+                            fresh_command.extend(["--extractor-args", "youtube:player_client=tv,tv_embedded"])
+                            self.execute_command(fresh_command, url=url, retry_with_cookies=False, attempted_no_cookies=True, fallback_stage=2)
+                            return
+                # (secondary retries handled by fallback_stage above)
+
                 # Error detection for HTTP 416 issues (range errors)
                 if 'HTTP Error 416' in line:
                     self.download_output.emit("⚠️ Range request issue detected - Attempting to restart download...")
@@ -584,7 +617,8 @@ class DownloadThread(QThread):
                     self.download_output.emit("🔄 Processing recording...")
                 elif line.startswith('[Metadata]'):
                     self.download_output.emit("📝 Adding metadata...")
-                elif 'Error' in line.lower():
+                elif 'error:' in line.lower() or line.strip().startswith('ERROR:'):
+                    error_detected = True
                     self.download_output.emit(f"❌ Error: {line}")
                 elif not any(x in line for x in [
                     'hls @', 
@@ -601,6 +635,12 @@ class DownloadThread(QThread):
             
             self.process.stdout.close()
             self.process.wait()
+            # Set last command success based on return code and lack of detected errors
+            try:
+                rc = self.process.returncode
+            except Exception:
+                rc = None
+            self.last_command_succeeded = (rc == 0 and not error_detected)
             
             # If error detected and not already retried with cookies, retry
             if error_detected and not retry_with_cookies and self.browser_cookies != "None":
@@ -768,3 +808,4 @@ class DownloadThread(QThread):
                 self.download_output.emit("▶️ Download process resumed")
             except Exception as e:
                 self.download_output.emit(f"❌ Error resuming download: {str(e)}")
+
