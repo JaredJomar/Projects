@@ -56,8 +56,14 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 3. ⚙️ Go to the Settings tab
 4. 🔧 Use the installation buttons to install/update required dependencies:
    - Install/Update FFmpeg
-   - Install/Update yt-dlp
+   - Install/Update yt-dlp (also auto-installs Python extras for improved compatibility)
    - Install/Update aria2c
+
+> Note: When you install or update yt-dlp from Settings, the app also ensures
+> the Python package `yt-dlp[default,curl-cffi]` is installed in your current
+> Python environment. This enables advanced HTTP impersonation and broader site
+> compatibility without adding new buttons or steps. The app still uses the
+> winget-installed `yt-dlp` binary path by default.
 
 ### 💻 Method 2: From Source
 1. Clone the repository
@@ -122,6 +128,19 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
 
 > **Note:** Cookies are only used when required for authentication or age-restricted content
 
+### 🎬 YouTube Quality and Client Strategy
+- The app targets your selected resolution (e.g., 1080) using yt-dlp’s format
+  selection.
+- For YouTube, it prefers yt-dlp’s default desktop/TV clients to expose full
+  format lists (1080p+). If YouTube returns a client restriction (e.g. “Watch
+  on the latest version of YouTube”), the app automatically retries using
+  alternate clients without cookies to maximize the chance of success.
+- Mobile clients (Android/iOS) don’t support cookies and may be capped (≤720p)
+  or require additional tokens. The app avoids them unless absolutely necessary.
+- Tip: If you are not getting 1080p on a restricted video, try setting
+  Browser Cookies to “None” and retry; this can unlock higher formats in some
+  cases.
+
 ## ❗ Troubleshooting
 
 1. **📦 Dependencies Not Found:**
@@ -133,6 +152,11 @@ A PyQt5-based application for downloading videos, audio, and live streams from v
    - Check internet connection
    - Verify URL is valid
    - Look for errors in progress log
+   - “Unsupported URL” messages mean the page has no downloadable media;
+     the app will no longer mark such cases as Completed.
+   - If you see “The following content is not available on this app” the app
+     will try alternate client strategies automatically. You can also toggle
+     cookies off to try an anonymous fetch which sometimes yields higher formats.
 
 3. **📁 Path Issues:**
    - Use Browse buttons to set correct paths
