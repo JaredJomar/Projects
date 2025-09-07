@@ -30,6 +30,7 @@ from .constants import (
     INPUT_TEXT_COLOR,
 )
 import os
+import sys
 import subprocess
 import shutil
 import time
@@ -215,6 +216,10 @@ class InstallationWorker(QThread):
             else:
                 self.success = True
                 self.message = f"{name} installed at: {executable_path}. Winget not found; leaving as-is."
+
+            # If yt-dlp was handled, also ensure Python extras are available
+            if check_cmd == 'yt-dlp':
+                self._ensure_ytdlp_extras()
             return
         
         self.installation_progress.emit(f"Installing {name}...")
@@ -247,6 +252,9 @@ class InstallationWorker(QThread):
             if executable_path:
                 self.success = True
                 self.message = f"{name} successfully installed at: {executable_path}"
+                # Also ensure Python extras for yt-dlp
+                if check_cmd == 'yt-dlp':
+                    self._ensure_ytdlp_extras()
             else:
                 # Try additional checks if provided
                 found_path = None
@@ -256,6 +264,8 @@ class InstallationWorker(QThread):
                 if found_path:
                     self.success = True
                     self.message = f"{name} successfully installed at: {found_path}"
+                    if check_cmd == 'yt-dlp':
+                        self._ensure_ytdlp_extras()
                 else:
                     self.success = False
                     self.message = f"{name} installed but not found in PATH. Manual path setting required."
@@ -268,6 +278,8 @@ class InstallationWorker(QThread):
                 self.message = (
                     f"{name} installed or already present at: {executable_path} (winget rc {rc})."
                 )
+                if check_cmd == 'yt-dlp':
+                    self._ensure_ytdlp_extras()
             else:
                 # Try additional checks
                 found_path = None
@@ -278,6 +290,8 @@ class InstallationWorker(QThread):
                     self.message = (
                         f"{name} installed or already present at: {found_path} (winget rc {rc})."
                     )
+                    if check_cmd == 'yt-dlp':
+                        self._ensure_ytdlp_extras()
                 else:
                     self.success = False
                     # Include tail of output to aid debugging
@@ -285,6 +299,28 @@ class InstallationWorker(QThread):
                         f"Failed to install {name}: winget returned {rc}.\n"
                         f"Last output:\n{tail}"
                     )
+
+    def _ensure_ytdlp_extras(self):
+        """Install/upgrade yt-dlp with extras in the current Python env.
+
+        This allows use of optional deps like curl_cffi when invoking the Python package,
+        while still keeping the winget-installed CLI available. Does not change the
+        selected yt-dlp path in settings.
+        """
+        try:
+            py = sys.executable or 'python'
+        except Exception:
+            py = 'python'
+        self.installation_progress.emit("Ensuring Python extras for yt-dlp (default,curl-cffi)...")
+        cmd = [py, '-m', 'pip', 'install', '-U', 'yt-dlp[default,curl-cffi]']
+        rc, tail = self._run_with_progress(cmd, "Installing yt-dlp extras")
+        if rc == 0:
+            self.installation_progress.emit("yt-dlp Python extras installed successfully.")
+        else:
+            # Do not fail the main installation; just warn the user
+            self.installation_progress.emit(
+                f"Warning: Failed to install yt-dlp extras via pip (rc {rc}). You can install manually: pip install -U \"yt-dlp[default,curl-cffi]\""
+            )
 
 
 class SettingsWindow(QDialog):
