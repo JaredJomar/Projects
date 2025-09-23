@@ -47,13 +47,12 @@ pip install -r requirements.txt
 ```
 
 ## Running the App
-From the project root:
+From the project:
 ```bash
-python -m pdf_combiner
+python -u pdf_combiner\main.py
 ```
 
 Other options:
-- `python PdfCombiner.py`
 - On Windows: double-click `Run_PdfCombiner.bat`
 
 ## Usage Highlights
