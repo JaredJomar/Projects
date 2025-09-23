@@ -1,3 +1,3 @@
 @echo off
 cd /d %~dp0
-start pythonw PdfCombiner.py
+start pythonw pdf_combiner/main.py

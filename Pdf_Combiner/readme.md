@@ -1,87 +1,74 @@
-# 📑 PDF Tool
-A powerful and modern PDF utility tool built with Python and PyQt6, offering comprehensive PDF manipulation features through an intuitive dark-themed interface.
+# PDF Toolkit
+A modern PyQt6 desktop application for combining, splitting, converting, and previewing PDFs with a responsive dark UI and background processing.
 
-![PDF Tool Interface](main.png)
+![PDF Toolkit Interface](main.png)
 
-## ✨ Features
+## Features
+- Manage multiple PDFs with drag-and-drop from Explorer/Finder, reordering, and checkbox selection
+- Live preview with page navigation and per-file page memory
+- Merge, split, extract, rotate, compress, and convert (Word/Excel/PowerPoint/Text)
+- Background workers with progress dialogs keep the UI responsive
+- Remembers recently used folders and restores window layout
 
-### 📁 File Management
-- 🔍 Select multiple PDF files via browse dialog
-- 🖱️ Drag and drop PDF files directly into the application
-- 🔄 Drag and drop support for reordering files
-- ☑️ File list with checkboxes for selective operations
-- 👀 Real-time PDF preview with page navigation
-- 📌 "Select All" function for batch operations
-- 🗂️ Remember last used directory
+## Project Structure
+```
+Pdf_Combiner/
+|-- pdf_combiner/
+|   |-- __init__.py
+|   |-- __main__.py
+|   |-- main.py               # Application entry point
+|   |-- services/
+|   |   |-- pdf_ops.py        # Pure PDF manipulation helpers
+|   |-- ui/
+|       |-- main_window.py    # PyQt6 MainWindow implementation
+|       |-- preview.py        # PDF preview rendering utilities
+|       |-- workers.py        # Background worker wrapper
+|       |-- widgets.py        # Drag-and-drop enabled file list
+|-- prototype/
+|   |-- PdfCombiner_Tkinter.py  # Legacy Tkinter prototype
+|-- requirements.txt
+|-- README.md
+|-- Run_PdfCombiner.bat
+```
 
-### 📄 PDF Operations
-- 🔗 Combine multiple PDFs into a single file
-- ✂️ Split PDFs into individual pages (with organized folder)
-- 📑 Extract specific pages (supports ranges like "1,3,5-10")
-- 🔄 Rotate PDF pages (90°, 180°, 270°)
-- 🗜️ Compress PDFs to reduce file size
-- 🔄 Convert PDFs to other formats:
-  - 📝 Word (.docx)
-  - 📊 Excel (.xlsx)
-  - 📎 PowerPoint (.pptx)
-  - 📄 Text (.txt)
+## Requirements
+- Python 3.10+
+- PyQt6
+- PyPDF2
+- PyMuPDF (fitz)
+- pdf2docx
+- tabula-py (requires Java for Excel export)
+- pdfplumber
+- python-pptx
 
-### 🎨 User Interface
-- 🌙 Modern dark theme interface
-- 👀 Real-time PDF preview
-- ⬅️➡️ Page navigation controls
-- 📊 Status bar for operation feedback
-- 📏 Resizable split-view layout
+Install everything with:
+```bash
+pip install -r requirements.txt
+```
 
-## 🚀 Usage
+## Running the App
+From the project root:
+```bash
+python -m pdf_combiner
+```
 
-### 📁 File Selection
-1. Click "Browse PDF Files" or drag and drop PDFs
-2. Use checkboxes to select files for operations
-3. Reorder files using drag and drop or arrow buttons
-4. Set output directory to save results
+Other options:
+- `python PdfCombiner.py`
+- On Windows: double-click `Run_PdfCombiner.bat`
 
-### 📄 PDF Operations
-- **🔗 Combine:** Select multiple PDFs and click "Merge Selected PDFs"
-- **✂️ Split:** Select a PDF and click "Split PDF" (creates a folder with all pages)
-- **📑 Extract:** Enter page numbers and click "Extract Pages"
-- **🔄 Rotate:** Enter rotation angle and click "Rotate PDF"
-- **🗜️ Compress:** Select a PDF and click "Compress PDF"
-- **🔄 Convert:** Choose output format and click "Convert PDF"
+## Usage Highlights
+1. Click **Add PDF Files...** or drag PDFs from your file explorer into the list.
+2. Reorder via drag and drop or the move buttons; toggle checkboxes to target specific documents.
+3. Set an output folder for operations that create files.
+4. Use the **Operations** panel for merge, split, extract, rotate, compress, and convert.
+5. The preview pane shows the active PDF with quick page navigation; resizing updates the preview automatically.
 
-### 👀 Preview
-- Click any file to preview its contents
-- Use navigation buttons or enter page numbers
-- Preview updates automatically when selecting different files
+### Conversion Notes
+- Excel conversion uses `tabula-py` and needs a Java runtime available on your PATH.
+- Outputs receive descriptive suffixes such as `_compressed`, `_rotated`, or keep the original stem for conversions.
 
-## 📋 Requirements
+## Prototype UI
+The legacy Tkinter implementation is preserved under `prototype/` for reference. It is not wired into the current launcher.
 
-- 🐍 Python 3.x
-- 🖼️ PyQt6 (GUI framework)
-- 📄 PyPDF2 (basic PDF manipulation)
-- 📊 PyMuPDF (advanced PDF rendering and manipulation)
-- 🔄 Additional libraries for conversion features:
-  - 📝 pdf2docx (Word conversion)
-  - 📊 tabula-py (Excel conversion)
-  - 📎 python-pptx (PowerPoint conversion)
-  - 📄 pdfplumber (text extraction)
-
-## 🔧 Installation
-
-1. Install Python: [Python Official Website](https://www.python.org/downloads/)
-2. Install required libraries:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## ⚠️ Notes
-
-- ☕ Java is required for Excel conversion (using tabula-py)
-- ⏳ Some operations may take longer for large PDF files
-- 🗄️ Splitting a PDF creates a folder with all individual pages
-- 💾 The program remembers last used directory
-- 🛠️ Processed files are named with descriptive suffixes (_compressed, _rotated, etc.)
-
-## 📄 License
-
+## License
 [MIT](https://choosealicense.com/licenses/mit/)
