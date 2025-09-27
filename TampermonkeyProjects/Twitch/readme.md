@@ -53,7 +53,7 @@ The script automatically:
 ## Version History
 
 ### v0.5.5
-- Use dynamic "here" link or legacygames.com link when navigating to Legacy Games (fallback to previous URL)
+- Use dynamic "here" link instead of static URL for Legacy Games navigation
 
 ### v0.5.4
 - Added comprehensive settings dialog with toggle switches
