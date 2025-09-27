@@ -13,7 +13,7 @@
 (function () {
     'use strict';
 
-    // Add logger configuration
+    // Logger utility: styled console output with timestamps for easier debugging
     const Logger = {
         styles: {
             info: 'color: #2196F3; font-weight: bold',
@@ -39,13 +39,15 @@
         }
     };
 
-    // Configuration: adjust wait time, target tags, and blacklist phrases as needed.
+    // Configuration: tweak timing, target element tags, and CSS selectors used to
+    // detect unwanted content. Change these values to adapt to layout/markup
+    // updates on Instagram.
     const CONFIG = {
-        waitLength: 500, // delay after a click to re-run cleanup
-        // Targeting ARTICLE elements (Instagram posts) is usually safest,
-        // but you can add additional tag names (e.g., 'DIV', 'SPAN') if desired.
+        waitLength: 500, // milliseconds to wait after a click before re-scanning
+        // Target tags to scan for feed items (ARTICLE is typically an Instagram post)
         elementsToClean: ['ARTICLE'],
-        // Updated selectors with more precise targeting
+        // CSS selectors that identify sponsored/suggested/follow prompts.
+        // These are intentionally specific to reduce false positives.
         selectors: {
             sponsored: '[data-ad-preview="message"]',
             suggested: 'div[role="button"] span[dir="auto"]:only-child',
@@ -55,16 +57,21 @@
     };
 
     /**
-     * More precise check for unwanted content
+     * Determine whether a DOM element represents unwanted content.
+     * Detects sponsored ads, "Suggested for you" items, and follow prompts.
+     * Returns true when the element should be hidden.
+     *
+     * @param {Element} element - candidate feed element to inspect
+     * @returns {boolean}
      */
     const containsBannedContent = (element) => {
-        // Check for sponsored content
+        // Sponsored/ad indicator (explicit ad metadata)
         if (element.querySelector(CONFIG.selectors.sponsored)) {
             Logger.warning(`Found sponsored content: "${element.textContent.trim().slice(0, 30)}..."`);
             return true;
         }
 
-        // Check for suggested posts with more precise targeting
+        // Suggested-post header (more targeted match to reduce false positives)
         const suggestedHeader = element.querySelector(CONFIG.selectors.suggested);
         if (suggestedHeader) {
             const headerText = suggestedHeader.textContent.trim().toLowerCase();
@@ -73,7 +80,7 @@
             }
         }
 
-        // Check for standard suggested post structure
+        // Fallback: match common suggested structure (label + follow button)
         const suggestedLabel = element.querySelector(CONFIG.selectors.suggestedLabel);
         if (suggestedLabel &&
             suggestedLabel.textContent.trim().toLowerCase() === 'suggested for you' &&
@@ -85,8 +92,9 @@
     };
 
     /**
-     * Instead of removing an element (which might disrupt layout),
-     * we hide it non-destructively.
+     * Hide an element non-destructively to avoid layout reflow or JS errors.
+     * Applies simple inline styles so the element is visually removed but
+     * remains in the DOM.
      *
      * @param {Element} element
      */
@@ -98,8 +106,8 @@
     };
 
     /**
-     * Check all elements specified in CONFIG.elementsToClean for banned text.
-     * If banned text is found, the element is hidden.
+     * Scan the page for elements matching configured tag names and hide those
+     * that match the banned-content heuristic.
      */
     const cleanElements = () => {
         Logger.info('Starting cleanup scan...');
@@ -123,8 +131,8 @@
     };
 
     /**
-     * MutationObserver callback:
-     * Checks for newly added elements matching the target tags and hides them if needed.
+     * MutationObserver callback. When new nodes are added to the observed
+     * subtree, inspect them and hide those that match the banned-content test.
      *
      * @param {MutationRecord[]} mutationList
      */
@@ -152,19 +160,21 @@
         }
     };
 
-    // Wait for the page to load so we can start cleaning up.
+    // Initialize when the page finishes loading: run an initial scan,
+    // start observing for dynamic additions, and hook a click-triggered re-scan.
     window.addEventListener('load', () => {
         Logger.info('CleanGram initialized');
         cleanElements();
 
-        // Setup MutationObserver on the main content area if available; fallback to document.body.
+        // Observe the main content region when possible; fall back to the whole
+        // document if the main element isn't present.
         const targetNode = document.querySelector('main') || document.body;
         const observer = new MutationObserver(observerCallback);
         observer.observe(targetNode, { childList: true, subtree: true });
         Logger.success('MutationObserver activated');
 
-        // Optional: re-run cleanup a short time after any click event
-        // (useful when dynamic content loads after user interaction).
+        // Re-run the cleanup shortly after user clicks. Some Instagram UI
+        // interactions load content asynchronously; this helps catch them.
         document.addEventListener('click', () => {
             Logger.info('Click detected, scheduling cleanup...');
             setTimeout(cleanElements, CONFIG.waitLength);
