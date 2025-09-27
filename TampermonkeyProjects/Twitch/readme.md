@@ -53,7 +53,7 @@ The script automatically:
 ## Version History
 
 ### v0.5.5
-- Updated Legacy Games redeem URL to the correct link
+- Use dynamic "here" link or legacygames.com link when navigating to Legacy Games (fallback to previous URL)
 
 ### v0.5.4
 - Added comprehensive settings dialog with toggle switches
@@ -97,5 +97,5 @@ The script automatically:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=twitch.tv" alt="Twitch Icon">
 
-**Current Version: 0.5.4**
+**Current Version: 0.5.6**
 </div>

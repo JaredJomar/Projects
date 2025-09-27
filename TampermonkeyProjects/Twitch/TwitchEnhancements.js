@@ -959,14 +959,62 @@
                         if (code) {
                             navigator.clipboard.writeText(code).then(function () {
                                 const email = GM_getValue('legacyGamesEmail', null);
+
+                                // Try to find a dynamic "here" link or any legacygames link on the page
+                                const findLegacyUrl = () => {
+                                    try {
+                                        // 1) Prefer anchors with visible text 'here' or 'click here' (most specific)
+                                        const hereAnchors = Array.from(document.querySelectorAll('a[href]')).filter(a => {
+                                            const text = (a.textContent || '').trim().toLowerCase();
+                                            return text === 'here' || text === 'click here' || text === 'here ›' || text === 'here »' || /\bhere\b/.test(text);
+                                        });
+                                        for (let a of hereAnchors) {
+                                            const href = a.getAttribute('href');
+                                            if (!href) continue;
+                                            if (href.indexOf('javascript:') === 0) continue;
+                                            // Normalize relative URLs
+                                            if (href.startsWith('/')) return window.location.origin + href;
+                                            if (href.startsWith('http')) return href;
+                                        }
+
+                                        // 2) Search inside claim instructions block if present (more likely to contain the per-game promo link)
+                                        const claimContainers = document.querySelectorAll('[data-a-target="claim-instructions"], .claim-instructions, [data-a-target="claim-instructions_text"]');
+                                        for (let c of claimContainers) {
+                                            const anchors = c.querySelectorAll('a[href]');
+                                            for (let a of anchors) {
+                                                const href = a.getAttribute('href');
+                                                if (!href) continue;
+                                                if (href.indexOf('javascript:') === 0) continue;
+                                                if (href.startsWith('/')) return window.location.origin + href;
+                                                if (href.startsWith('http')) return href;
+                                            }
+                                        }
+
+                                        // 3) Prefer explicit promo subdomain links
+                                        const promo = Array.from(document.querySelectorAll('a[href]')).map(a => a.href).find(h => h.includes('promo.legacygames.com'));
+                                        if (promo) return promo;
+
+                                        // 4) Then any legacygames.com link that isn't just the root domain
+                                        const lg = Array.from(document.querySelectorAll('a[href]')).map(a => a.href).find(h => h.includes('legacygames.com') && !/^https?:\/\/(?:www\.)?legacygames\.com\/?$/.test(h));
+                                        if (lg) return lg;
+
+                                    } catch (e) {
+                                        // ignore and fallback
+                                    }
+                                    return null;
+                                };
+
+                                const targetUrl = findLegacyUrl() || LEGACY_GAMES_REDEEM_URL;
+                                Logger.info('Legacy Games target URL selected: ' + targetUrl);
+
                                 if (!email) {
                                     const userEmail = prompt('Please enter your email address:');
                                     if (userEmail) {
                                         GM_setValue('legacyGamesEmail', userEmail);
-                                        window.location.href = LEGACY_GAMES_REDEEM_URL;
+                                        window.location.href = targetUrl;
                                     }
                                 } else {
-                                    window.location.href = LEGACY_GAMES_REDEEM_URL;
+                                    window.location.href = targetUrl;
                                 }
                             });
                         }
