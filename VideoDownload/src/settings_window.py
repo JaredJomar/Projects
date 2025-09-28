@@ -307,20 +307,49 @@ class InstallationWorker(QThread):
         while still keeping the winget-installed CLI available. Does not change the
         selected yt-dlp path in settings.
         """
-        try:
-            py = sys.executable or 'python'
-        except Exception:
-            py = 'python'
-        self.installation_progress.emit("Ensuring Python extras for yt-dlp (default,curl-cffi)...")
-        cmd = [py, '-m', 'pip', 'install', '-U', 'yt-dlp[default,curl-cffi]']
-        rc, tail = self._run_with_progress(cmd, "Installing yt-dlp extras")
-        if rc == 0:
-            self.installation_progress.emit("yt-dlp Python extras installed successfully.")
+        interpreter_cmds = []
+
+        if getattr(sys, "frozen", False):
+            env_py = os.environ.get("PYTHON_EXECUTABLE")
+            if env_py:
+                interpreter_cmds.append([env_py])
+            launcher = shutil.which("py")
+            if launcher:
+                interpreter_cmds.append([launcher, "-3"])
+            for name in ("python3", "python", "pythonw"):
+                path_candidate = shutil.which(name)
+                if path_candidate:
+                    interpreter_cmds.append([path_candidate])
         else:
-            # Do not fail the main installation; just warn the user
+            exe = getattr(sys, "executable", None)
+            if exe:
+                interpreter_cmds.append([exe])
+
+        if not interpreter_cmds:
+            interpreter_cmds.append(["python"])
+
+        self.installation_progress.emit("Ensuring Python extras for yt-dlp (default,curl-cffi)...")
+        package_spec = "yt-dlp[default,curl-cffi]"
+        last_rc = None
+        last_output = ""
+
+        for base_cmd in interpreter_cmds:
+            cmd = base_cmd + ['-m', 'pip', 'install', '-U', package_spec]
+            rc, tail = self._run_with_progress(cmd, "Installing yt-dlp extras")
+            if rc == 0:
+                self.installation_progress.emit("yt-dlp Python extras installed successfully.")
+                return
+            last_rc, last_output = rc, tail
+
+        if last_rc is None:
             self.installation_progress.emit(
-                f"Warning: Failed to install yt-dlp extras via pip (rc {rc}). You can install manually: pip install -U \"yt-dlp[default,curl-cffi]\""
+                "Warning: No Python interpreter found to install yt-dlp extras. Install manually with: pip install -U \"yt-dlp[default,curl-cffi]\""
             )
+        else:
+            message = f"Warning: Failed to install yt-dlp extras via pip (rc {last_rc}). You can install manually: pip install -U '{package_spec}'"
+            if last_output:
+                message += f"\nLast output:\n{last_output}"
+            self.installation_progress.emit(message)
 
 
 class SettingsWindow(QDialog):
