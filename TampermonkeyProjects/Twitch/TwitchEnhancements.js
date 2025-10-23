@@ -6,6 +6,7 @@
 // @author       JJJ
 // @match        https://www.twitch.tv/*
 // @match        https://gaming.amazon.com/*
+// @match        https://luna.amazon.com/*
 // @match        https://www.twitch.tv/drops/inventory*
 // @match        https://www.gog.com/en/redeem
 // @match        https://promo.legacygames.com/*
@@ -63,14 +64,31 @@
 
     // Twitch Constants
     const PLAYER_SELECTOR = '.video-player';
-    const THEATER_MODE_BUTTON_SELECTOR = 'button[aria-label="Modo cine (alt+t)"], button[aria-label="Theatre Mode (alt+t)"]';
-    const CLOSE_MENU_BUTTON_SELECTOR = 'button[aria-label="Close Menu"]';
-    const CLOSE_MODAL_BUTTON_SELECTOR = 'button[aria-label="Close modal"]';
+    const THEATER_MODE_BUTTON_SELECTOR = [
+        'button[aria-label="Modo cine (alt+t)"]',
+        'button[aria-label="Theatre Mode (alt+t)"]',
+        'button[aria-label="Theater Mode (alt+t)"]'
+    ].join(',');
+    const CLOSE_MENU_BUTTON_SELECTOR = [
+        'button[aria-label="Close Menu"]',
+        'button[aria-label="Cerrar Menú"]'
+    ].join(',');
+    const CLOSE_MODAL_BUTTON_SELECTOR = [
+        'button[aria-label="Close modal"]',
+        'button[aria-label="Cerrar modal"]'
+    ].join(',');
     const THEATER_MODE_CLASS = 'theatre-mode';
     const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
-    const CLAIM_DROPS_SELECTOR = 'button.ScCoreButton-sc-ocjdkq-0.eWlfQB';
-    const PRIME_REWARD_SELECTOR = 'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]';
-    const PRIME_REWARD_SELECTOR_2 = 'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Get game"]';
+    const CLAIM_DROPS_SELECTOR = [
+        'button.ScCoreButton-sc-ocjdkq-0.eWlfQB',
+        'button[data-test-selector="DropsCampaignInProgressRewardPresentation-claim-button"]'
+    ].join(',');
+    const PRIME_REWARD_SELECTOR = [
+        'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]',
+        'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Obtener juego"]',
+        'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Get game"]',
+        'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Obtener juego"]'
+    ].join(',');
 
     // Redeem on GOG Constants
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
@@ -813,8 +831,9 @@
 
             const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
             if (element) {
+                const lang = element.getAttribute('title') === 'Obtener juego' ? 'Spanish' : 'English';
                 element.click();
-                Logger.success('Prime reward claimed');
+                Logger.success(`Prime reward claimed (${lang})`);
             } else {
                 Logger.info(`Attempt ${attempts}/${maxAttempts}: Waiting for prime reward button...`);
                 setTimeout(tryClaim, 1000);
@@ -1107,9 +1126,14 @@
     function openClaimGameTabs() {
         const claimGameButtons = document.querySelectorAll('div[data-a-target="tw-core-button-label-text"].Layout-sc-1xcs6mc-0.bFxzAY');
         claimGameButtons.forEach(button => {
-            const parentButton = button.closest('a');
-            if (parentButton) {
-                window.open(parentButton.href, '_blank');
+            const buttonText = button.textContent.trim().toLowerCase();
+            // Check for both English and Spanish variations
+            if (buttonText === 'claim game' || buttonText === 'claim' ||
+                buttonText === 'obtener juego' || buttonText === 'obtener') {
+                const parentButton = button.closest('a');
+                if (parentButton) {
+                    window.open(parentButton.href, '_blank');
+                }
             }
         });
     }
