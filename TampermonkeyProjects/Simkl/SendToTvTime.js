@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Send to TV Time
 // @namespace    http://tampermonkey.net/
-// @version      0.0.3
+// @version      0.0.4
 // @description  Adds TV Time, Simkl, and AniList buttons to Plex pages, TV Time and AniList buttons to Simkl pages, and automatically pastes titles in search fields.
 // @author       JJJ
 // @match        https://simkl.com/*/*
@@ -26,10 +26,13 @@
         SIMKL_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=simkl.com',
         ANILIST_SEARCH_URL: 'https://anilist.co/search/anime',
         ANILIST_FAVICON: 'https://anilist.co/img/icons/favicon-32x32.png',
+        TMDB_SEARCH_URL: 'https://www.themoviedb.org/search',
+        TMDB_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=themoviedb.org',
         OBSERVER_TIMEOUT: 1000,
         BUTTON_ID: 'tvTimeButton',
         SIMKL_BUTTON_ID: 'simklButton',
         ANILIST_BUTTON_ID: 'anilistButton',
+        TMDB_BUTTON_ID: 'tmdbButton',
         STORAGE_KEY: 'simklSearchTitle'
     };
 
@@ -55,6 +58,7 @@
         TV_TIME_BUTTON: `#${CONFIG.BUTTON_ID}`,
         SIMKL_BUTTON: `#${CONFIG.SIMKL_BUTTON_ID}`,
         ANILIST_BUTTON: `#${CONFIG.ANILIST_BUTTON_ID}`,
+        TMDB_BUTTON: `#${CONFIG.TMDB_BUTTON_ID}`,
         TV_TIME_SEARCH_INPUT: 'input[type="text"]',
 
         // TV Time search selectors
@@ -80,9 +84,11 @@
         RATING_TEN: 'SimklTVRatingTen',
         TV_TIME_BUTTON: 'tvtime-button',
         ANILIST_BUTTON: 'anilist-button',
+        TMDB_BUTTON: 'tmdb-button',
         PLEX_TV_TIME_BUTTON: 'plex-tvtime-button',
         PLEX_SIMKL_BUTTON: 'plex-simkl-button',
-        PLEX_ANILIST_BUTTON: 'plex-anilist-button'
+        PLEX_ANILIST_BUTTON: 'plex-anilist-button',
+        PLEX_TMDB_BUTTON: 'plex-tmdb-button'
     };
 
     /**
@@ -319,6 +325,57 @@
                 .${CSS_CLASSES.PLEX_ANILIST_BUTTON}:hover::after {
                     opacity: 1;
                 }
+
+                .${CSS_CLASSES.TMDB_BUTTON} {
+                    background: url('${CONFIG.TMDB_FAVICON}') center/24px no-repeat;
+                    width: 50px;
+                    height: 24px;
+                    display: inline-block;
+                    margin-top: 8px;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                }
+                
+                .${CSS_CLASSES.TMDB_BUTTON}:hover {
+                    opacity: 0.8;
+                }
+
+                .${CSS_CLASSES.PLEX_TMDB_BUTTON} {
+                    background: url('${CONFIG.TMDB_FAVICON}') center/20px no-repeat #1f1f1f;
+                    border: 1px solid #404040;
+                    border-radius: 8px;
+                    width: 48px;
+                    height: 48px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    margin-right: 8px;
+                    position: relative;
+                }
+                
+                .${CSS_CLASSES.PLEX_TMDB_BUTTON}:hover {
+                    background-color: #2a2a2a;
+                    border-color: #505050;
+                }
+
+                .${CSS_CLASSES.PLEX_TMDB_BUTTON}::after {
+                    content: 'TMDB';
+                    position: absolute;
+                    bottom: -20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+
+                .${CSS_CLASSES.PLEX_TMDB_BUTTON}:hover::after {
+                    opacity: 1;
+                }
             `);
             document.head.appendChild(style);
         }
@@ -487,6 +544,79 @@
                 type: 'button',
                 id: CONFIG.ANILIST_BUTTON_ID
             });
+        },
+
+        /**
+         * Creates a TMDB button element
+         * @returns {Element}
+         */
+        createTMDBButton() {
+            return Utils.createElement('td', { width: '1' }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="40" align="center">
+                                        <a href="#" class="${CSS_CLASSES.TMDB_BUTTON}" id="${CONFIG.TMDB_BUTTON_ID}"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <span class="${CSS_CLASSES.RATING_TEN}">TMDB</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            `);
+        },
+
+        /**
+         * Creates an anime-specific TMDB button element
+         * @returns {Element}
+         */
+        createAnimeTMDBButton() {
+            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+                                        <tr>
+                                            <td height="40" align="center">
+                                                <a href="#" class="${CSS_CLASSES.TMDB_BUTTON}" id="${CONFIG.TMDB_BUTTON_ID}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center">
+                                                <span class="${CSS_CLASSES.RATING_TEN}">TMDB</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `);
+        },
+
+        /**
+         * Creates a Plex-specific TMDB button element
+         * @returns {Element}
+         */
+        createPlexTMDBButton() {
+            return Utils.createElement('button', {
+                class: `${CSS_CLASSES.PLEX_TMDB_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
+                'data-testid': 'preplay-tmdb',
+                'aria-label': 'Send to TMDB',
+                role: 'button',
+                type: 'button',
+                id: CONFIG.TMDB_BUTTON_ID
+            });
         }
     };
 
@@ -511,11 +641,15 @@
             const tvTimeCell = ButtonFactory.createButton();
             const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const aniListCell = ButtonFactory.createAniListButton();
+            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
+            const tmdbCell = ButtonFactory.createTMDBButton();
 
             ratingCell.parentNode.insertBefore(spacerCell1, ratingCell.nextSibling);
             ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell1.nextSibling);
             ratingCell.parentNode.insertBefore(spacerCell2, tvTimeCell.nextSibling);
             ratingCell.parentNode.insertBefore(aniListCell, spacerCell2.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell3, aniListCell.nextSibling);
+            ratingCell.parentNode.insertBefore(tmdbCell, spacerCell3.nextSibling);
 
             return true;
         },
@@ -532,9 +666,11 @@
 
             const tvTimeCell = ButtonFactory.createAnimeButton();
             const aniListCell = ButtonFactory.createAnimeAniListButton();
+            const tmdbCell = ButtonFactory.createAnimeTMDBButton();
 
             animeRatingsRow.insertBefore(tvTimeCell, reactionsCell);
             animeRatingsRow.insertBefore(aniListCell, reactionsCell);
+            animeRatingsRow.insertBefore(tmdbCell, reactionsCell);
 
             return true;
         },
@@ -553,11 +689,15 @@
             const tvTimeCell = ButtonFactory.createButton();
             const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const aniListCell = ButtonFactory.createAniListButton();
+            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
+            const tmdbCell = ButtonFactory.createTMDBButton();
 
             ratingTable.insertBefore(spacerCell1, lastCell.nextSibling);
             ratingTable.insertBefore(tvTimeCell, spacerCell1.nextSibling);
             ratingTable.insertBefore(spacerCell2, tvTimeCell.nextSibling);
             ratingTable.insertBefore(aniListCell, spacerCell2.nextSibling);
+            ratingTable.insertBefore(spacerCell3, aniListCell.nextSibling);
+            ratingTable.insertBefore(tmdbCell, spacerCell3.nextSibling);
 
             return true;
         },
@@ -572,10 +712,12 @@
             const tvTimeButton = ButtonFactory.createPlexButton();
             const simklButton = ButtonFactory.createPlexSimklButton();
             const aniListButton = ButtonFactory.createPlexAniListButton();
+            const tmdbButton = ButtonFactory.createPlexTMDBButton();
 
             buttonContainer.appendChild(tvTimeButton);
             buttonContainer.appendChild(simklButton);
             buttonContainer.appendChild(aniListButton);
+            buttonContainer.appendChild(tmdbButton);
 
             return true;
         }
@@ -611,7 +753,8 @@
             // Skip if buttons already exist
             if (document.querySelector(SELECTORS.TV_TIME_BUTTON) ||
                 document.querySelector(SELECTORS.SIMKL_BUTTON) ||
-                document.querySelector(SELECTORS.ANILIST_BUTTON)) {
+                document.querySelector(SELECTORS.ANILIST_BUTTON) ||
+                document.querySelector(SELECTORS.TMDB_BUTTON)) {
                 return;
             }
 
@@ -660,6 +803,10 @@
                 // AniList button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(title)}`, '_blank');
+            } else if (clickedButton && clickedButton.id === CONFIG.TMDB_BUTTON_ID) {
+                // TMDB button clicked
+                Utils.copyToClipboard(title);
+                window.open(`${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(title)}`, '_blank');
             } else {
                 // TV Time button clicked (default)
                 Utils.copyToClipboard(title);
@@ -973,8 +1120,9 @@
                 const tvTimeButton = event.target.closest(SELECTORS.TV_TIME_BUTTON);
                 const simklButton = event.target.closest(SELECTORS.SIMKL_BUTTON);
                 const aniListButton = event.target.closest(SELECTORS.ANILIST_BUTTON);
+                const tmdbButton = event.target.closest(SELECTORS.TMDB_BUTTON);
 
-                if (tvTimeButton || simklButton || aniListButton) {
+                if (tvTimeButton || simklButton || aniListButton || tmdbButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });
