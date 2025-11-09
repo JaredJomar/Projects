@@ -42,6 +42,15 @@ const CONFIG = {
 
 ## Version History
 
+### v0.0.3
+- Complete code refactoring with modular architecture
+- Enhanced ad/sponsored content detection (multiple patterns)
+- Improved "Suggested for you" detection with updated selectors
+- Fixed infinite scroll compatibility (visibility:hidden approach)
+- Added reinforcement system to prevent elements from reappearing
+- Attribute monitoring to catch Instagram's style modifications
+- Better state management and performance optimizations
+
 ### v0.0.2
 - Improved content detection with precise selectors
 - Enhanced element hiding mechanism
@@ -65,5 +74,5 @@ const CONFIG = {
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=instagram.com" alt="Instagram Icon">
 
-**Current Version: 0.0.2**
+**Current Version: 0.0.4**
 </div>

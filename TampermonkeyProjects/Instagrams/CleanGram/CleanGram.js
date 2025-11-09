@@ -1,183 +1,497 @@
 // ==UserScript==
 // @name         CleanGram
 // @namespace    http://tampermonkey.net/
-// @version      0.0.2
+// @version      0.0.3
 // @description  Hides Instagram posts that are suggested, sponsored, or prompt for "Follow" using a flexible configuration.
 // @author       JJJ
 // @match        https://www.instagram.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=instagram.com
 // @license      MIT
-// @run-at       document-end
+// @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    // Logger utility: styled console output with timestamps for easier debugging
-    const Logger = {
-        styles: {
+    // ==================== Configuration ====================
+    const CONFIG = {
+        timing: {
+            clickDelay: 100,        // Reduced from 300ms - faster response to clicks
+            scrollInterval: 250,    // Reduced from 500ms - more frequent scans during scroll
+            scrollDebounce: 400,    // Reduced from 800ms - faster post-scroll cleanup
+            periodicScan: 2000      // Reduced from 3000ms - more frequent fallback scans
+        },
+        selectors: {
+            // Elements to scan (ARTICLE is typical Instagram post container)
+            targetElements: 'ARTICLE',
+            // Attribute used to mark hidden elements
+            hiddenMarker: 'data-cleangram-hidden',
+            // Common ad label spans (Instagram class names can vary; include a fallback)
+            adSpans: 'span.x1fhwpqd, span[class*="x1fhwpqd"]',
+            // Sponsored indicator (data attribute used by Instagram for some ads)
+            sponsored: '[data-ad-preview="message"]',
+            // Selector candidates for the "Suggested for you" label seen in the DOM
+            // We intentionally include a few class combinations observed in the site HTML
+            suggested: 'span.x193iq5w.xeuugli.x1fj9vlw, span.x1fhwpqd, span.xt0psk2'
+        },
+        patterns: {
+            sponsored: 'sponsored',
+            suggested: 'suggested for you',
+            adLabel: ['Ad', 'Sponsored']
+        }
+    };
+
+    // ==================== Logger Utility ====================
+    const Logger = (() => {
+        const styles = {
             info: 'color: #2196F3; font-weight: bold',
             warning: 'color: #FFC107; font-weight: bold',
             success: 'color: #4CAF50; font-weight: bold',
             error: 'color: #F44336; font-weight: bold'
-        },
-        prefix: '[CleanGram]',
-        getTimestamp() {
-            return new Date().toISOString().split('T')[1].slice(0, -1);
-        },
-        info(msg) {
-            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.info);
-        },
-        warning(msg) {
-            console.warn(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.warning);
-        },
-        success(msg) {
-            console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.success);
-        },
-        error(msg) {
-            console.error(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.error);
-        }
+        };
+        const prefix = '[CleanGram]';
+        const getTimestamp = () => new Date().toISOString().split('T')[1].slice(0, -1);
+        const log = (level, msg) => {
+            const method = level === 'error' ? console.error : level === 'warning' ? console.warn : console.log;
+            method(`%c${prefix} ${getTimestamp()} - ${msg}`, styles[level]);
+        };
+
+        return {
+            info: (msg) => log('info', msg),
+            warning: (msg) => log('warning', msg),
+            success: (msg) => log('success', msg),
+            error: (msg) => log('error', msg)
+        };
+    })();
+
+    // ==================== State Management ====================
+    const State = {
+        scanTimer: null,
+        scrollTimer: null,
+        isScrolling: false,
+        observer: null
     };
 
-    // Configuration: tweak timing, target element tags, and CSS selectors used to
-    // detect unwanted content. Change these values to adapt to layout/markup
-    // updates on Instagram.
-    const CONFIG = {
-        waitLength: 500, // milliseconds to wait after a click before re-scanning
-        // Target tags to scan for feed items (ARTICLE is typically an Instagram post)
-        elementsToClean: ['ARTICLE'],
-        // CSS selectors that identify sponsored/suggested/follow prompts.
-        // These are intentionally specific to reduce false positives.
-        selectors: {
-            sponsored: '[data-ad-preview="message"]',
-            suggested: 'div[role="button"] span[dir="auto"]:only-child',
-            followButton: 'div[role="button"]:not([aria-disabled="true"]) div[class*="x1i10hfl"]',
-            suggestedLabel: 'span[dir="auto"]:first-child'
-        }
-    };
+    // ==================== Content Detection ====================
+    const ContentDetector = {
+        /**
+         * Check if element text contains banned patterns
+         * @param {string} text - Element text content
+         * @returns {string|null} - Pattern found or null
+         */
+        checkTextPatterns(text) {
+            if (text.length < 10) return null;
 
-    /**
-     * Determine whether a DOM element represents unwanted content.
-     * Detects sponsored ads, "Suggested for you" items, and follow prompts.
-     * Returns true when the element should be hidden.
-     *
-     * @param {Element} element - candidate feed element to inspect
-     * @returns {boolean}
-     */
-    const containsBannedContent = (element) => {
-        // Sponsored/ad indicator (explicit ad metadata)
-        if (element.querySelector(CONFIG.selectors.sponsored)) {
-            Logger.warning(`Found sponsored content: "${element.textContent.trim().slice(0, 30)}..."`);
-            return true;
-        }
+            const textLower = text.toLowerCase();
 
-        // Suggested-post header (more targeted match to reduce false positives)
-        const suggestedHeader = element.querySelector(CONFIG.selectors.suggested);
-        if (suggestedHeader) {
-            const headerText = suggestedHeader.textContent.trim().toLowerCase();
-            if (headerText === 'suggested for you') {
+            if (textLower.includes(CONFIG.patterns.sponsored)) {
+                return 'sponsored text';
+            }
+
+            if (textLower.includes(CONFIG.patterns.suggested)) {
+                return 'suggested text';
+            }
+
+            return null;
+        },
+
+        /**
+         * Check for ad label spans
+         * @param {Element} element
+         * @returns {boolean}
+         */
+        hasAdLabel(element) {
+            const adSpans = element.querySelectorAll(CONFIG.selectors.adSpans);
+            for (const span of adSpans) {
+                const spanText = span.textContent.trim();
+                if (CONFIG.patterns.adLabel.includes(spanText)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        /**
+         * Check for sponsored content via selectors
+         * @param {Element} element
+         * @returns {boolean}
+         */
+        hasSponsoredSelector(element) {
+            return !!element.querySelector(CONFIG.selectors.sponsored);
+        },
+
+        /**
+         * Check for suggested header
+         * @param {Element} element
+         * @returns {boolean}
+         */
+        hasSuggestedHeader(element) {
+            const header = element.querySelector(CONFIG.selectors.suggested);
+            if (header) {
+                const headerText = header.textContent.trim().toLowerCase();
+                return headerText === CONFIG.patterns.suggested;
+            }
+            return false;
+        },
+
+        /**
+         * Main detection method - determines if element should be hidden
+         * @param {Element} element
+         * @returns {boolean}
+         */
+        isBannedContent(element) {
+            // Fast text-based checks first (no DOM queries)
+            const textPattern = this.checkTextPatterns(element.textContent);
+            if (textPattern) {
+                Logger.warning(`Found ${textPattern}`);
                 return true;
             }
-        }
 
-        // Fallback: match common suggested structure (label + follow button)
-        const suggestedLabel = element.querySelector(CONFIG.selectors.suggestedLabel);
-        if (suggestedLabel &&
-            suggestedLabel.textContent.trim().toLowerCase() === 'suggested for you' &&
-            element.querySelector(CONFIG.selectors.followButton)) {
-            return true;
-        }
+            // Check for ad label
+            if (this.hasAdLabel(element)) {
+                Logger.warning('Found ad label');
+                return true;
+            }
 
-        return false;
+            // Expensive DOM queries last
+            if (this.hasSponsoredSelector(element)) {
+                Logger.warning('Found sponsored selector');
+                return true;
+            }
+
+            if (this.hasSuggestedHeader(element)) {
+                Logger.warning('Found suggested header');
+                return true;
+            }
+
+            return false;
+        }
     };
 
-    /**
-     * Hide an element non-destructively to avoid layout reflow or JS errors.
-     * Applies simple inline styles so the element is visually removed but
-     * remains in the DOM.
-     *
-     * @param {Element} element
-     */
-    const hideElement = (element) => {
-        element.style.visibility = 'hidden';
-        element.style.height = '0px';
-        element.style.overflow = 'hidden';
-        Logger.success(`Hidden element: ${element.tagName} (${element.textContent.trim().slice(0, 30)}...)`);
+    // ==================== Element Management ====================
+    const ElementManager = {
+        /**
+         * Check if element is already hidden
+         * @param {Element} element
+         * @returns {boolean}
+         */
+        isHidden(element) {
+            return element.dataset.cleangramHidden === 'true';
+        },
+
+        /**
+         * Hide element non-destructively to not breake Instagram scroll detection
+         * OPTIMIZED: Apply class first for instant CSS hide, then set attributes
+         * @param {Element} element
+         */
+        hide(element) {
+            if (this.isHidden(element)) return;
+
+            // SPEED: Apply class first - CSS takes effect immediately
+            element.classList.add('cleangram-hidden');
+            element.dataset.cleangramHidden = 'true';
+
+            // Apply inline styles as backup (in case CSS is removed)
+            element.style.cssText = 'visibility:hidden!important;height:0!important;min-height:0!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important';
+
+            // Remove element from accessibility tree
+            element.setAttribute('aria-hidden', 'true');
+        },
+
+        /**
+         * Re-hide element if Instagram tries to show it again
+         * @param {Element} element
+         */
+        ensureHidden(element) {
+            if (this.isHidden(element)) {
+                // Re-apply hiding styles if they were removed
+                const visibility = element.style.getPropertyValue('visibility');
+                if (visibility !== 'hidden') {
+                    element.style.setProperty('visibility', 'hidden', 'important');
+                    element.style.setProperty('height', '0', 'important');
+                    element.style.setProperty('overflow', 'hidden', 'important');
+                }
+            }
+        },
+
+        /**
+         * Get all unprocessed target elements
+         * @returns {NodeList}
+         */
+        getUnprocessedElements() {
+            return document.querySelectorAll(
+                `${CONFIG.selectors.targetElements}:not([${CONFIG.selectors.hiddenMarker}="true"])`
+            );
+        },
+
+        /**
+         * Process and hide elements if they contain banned content
+         * OPTIMIZED: Batch operations for better performance
+         * @returns {number} - Count of hidden elements
+         */
+        processElements() {
+            const elements = this.getUnprocessedElements();
+            let hiddenCount = 0;
+
+            // Process in batches for better performance with many elements
+            for (let i = 0; i < elements.length; i++) {
+                const element = elements[i];
+                if (ContentDetector.isBannedContent(element)) {
+                    this.hide(element);
+                    hiddenCount++;
+                }
+            }
+
+            return hiddenCount;
+        },
+
+        /**
+         * Check and re-hide all marked elements (in case Instagram re-shows them)
+         */
+        reinforceHidden() {
+            const hiddenElements = document.querySelectorAll(`[${CONFIG.selectors.hiddenMarker}="true"]`);
+            hiddenElements.forEach(element => this.ensureHidden(element));
+        }
     };
 
-    /**
-     * Scan the page for elements matching configured tag names and hide those
-     * that match the banned-content heuristic.
-     */
-    const cleanElements = () => {
-        Logger.info('Starting cleanup scan...');
-        let hiddenCount = 0;
+    // ==================== Scan Management ====================
+    const ScanManager = {
+        /**
+         * Run cleanup scan
+         */
+        scan() {
+            // First, reinforce already hidden elements
+            ElementManager.reinforceHidden();
 
-        CONFIG.elementsToClean.forEach(tag => {
-            const elements = document.querySelectorAll(tag);
-            Logger.info(`Scanning ${elements.length} ${tag} elements`);
+            // Then process new elements
+            const hiddenCount = ElementManager.processElements();
+            if (hiddenCount > 0) {
+                Logger.success(`Hidden ${hiddenCount} element(s)`);
+            }
+        },
 
-            elements.forEach(element => {
-                if (containsBannedContent(element)) {
-                    hideElement(element);
+        /**
+         * Start continuous scanning during scroll
+         */
+        startContinuous() {
+            if (State.scanTimer) return;
+            State.scanTimer = setInterval(
+                () => this.scan(),
+                CONFIG.timing.scrollInterval
+            );
+        },
+
+        /**
+         * Stop continuous scanning
+         */
+        stopContinuous() {
+            if (State.scanTimer) {
+                clearInterval(State.scanTimer);
+                State.scanTimer = null;
+            }
+        },
+
+        /**
+         * Handle scroll events with debouncing
+         */
+        handleScroll() {
+            if (!State.isScrolling) {
+                State.isScrolling = true;
+                this.startContinuous();
+            }
+
+            clearTimeout(State.scrollTimer);
+            State.scrollTimer = setTimeout(() => {
+                State.isScrolling = false;
+                this.stopContinuous();
+                this.scan(); // Final cleanup after scroll stops
+            }, CONFIG.timing.scrollDebounce);
+        }
+    };
+
+    // ==================== Observer Management ====================
+    const ObserverManager = {
+        /**
+         * Process added nodes from mutations
+         * @param {Node} node
+         * @returns {number} - Count of hidden elements
+         */
+        processNode(node) {
+            if (node.nodeType !== Node.ELEMENT_NODE) return 0;
+
+            let hiddenCount = 0;
+
+            // Check if node itself is a target element
+            if (node.tagName === CONFIG.selectors.targetElements && !ElementManager.isHidden(node)) {
+                if (ContentDetector.isBannedContent(node)) {
+                    ElementManager.hide(node);
+                    hiddenCount++;
+                }
+            }
+
+            // Check child elements
+            const children = node.querySelectorAll(
+                `${CONFIG.selectors.targetElements}:not([${CONFIG.selectors.hiddenMarker}="true"])`
+            );
+
+            children.forEach(child => {
+                if (ContentDetector.isBannedContent(child)) {
+                    ElementManager.hide(child);
                     hiddenCount++;
                 }
             });
-        });
 
-        if (hiddenCount > 0) {
-            Logger.success(`Cleanup complete: ${hiddenCount} elements hidden`);
-        }
-    };
+            return hiddenCount;
+        },
 
-    /**
-     * MutationObserver callback. When new nodes are added to the observed
-     * subtree, inspect them and hide those that match the banned-content test.
-     *
-     * @param {MutationRecord[]} mutationList
-     */
-    const observerCallback = (mutationList) => {
-        let newElements = 0;
-        let hiddenElements = 0;
+        /**
+         * MutationObserver callback
+         * OPTIMIZED: Faster iteration
+         * @param {MutationRecord[]} mutations
+         */
+        callback(mutations) {
+            let totalHidden = 0;
 
-        mutationList.forEach(mutation => {
-            if (mutation.type === 'childList' && mutation.addedNodes.length) {
-                mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === Node.ELEMENT_NODE &&
-                        CONFIG.elementsToClean.includes(node.tagName)) {
-                        newElements++;
-                        if (containsBannedContent(node)) {
-                            hideElement(node);
-                            hiddenElements++;
-                        }
+            // Use for loop instead of forEach for speed
+            for (let i = 0; i < mutations.length; i++) {
+                const mutation = mutations[i];
+
+                // Handle new nodes being added
+                if (mutation.type === 'childList' && mutation.addedNodes.length) {
+                    for (let j = 0; j < mutation.addedNodes.length; j++) {
+                        totalHidden += this.processNode(mutation.addedNodes[j]);
                     }
-                });
-            }
-        });
+                }
 
-        if (newElements > 0) {
-            Logger.info(`Processed ${newElements} new elements, hidden ${hiddenElements}`);
+                // Handle attribute changes (Instagram trying to re-show elements)
+                else if (mutation.type === 'attributes' && mutation.target && ElementManager.isHidden(mutation.target)) {
+                    ElementManager.ensureHidden(mutation.target);
+                }
+            }
+
+            if (totalHidden > 0) {
+                Logger.success(`Observer hidden ${totalHidden} element(s)`);
+            }
+        },
+
+        /**
+         * Initialize MutationObserver
+         */
+        initialize() {
+            const targetNode = document.querySelector('main') || document.body;
+            State.observer = new MutationObserver((mutations) => this.callback(mutations));
+            // Watch for childList changes AND attribute changes (to catch style modifications)
+            State.observer.observe(targetNode, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
+            Logger.success('Observer activated');
         }
     };
 
-    // Initialize when the page finishes loading: run an initial scan,
-    // start observing for dynamic additions, and hook a click-triggered re-scan.
-    window.addEventListener('load', () => {
-        Logger.info('CleanGram initialized');
-        cleanElements();
+    // ==================== Event Handlers ====================
+    const EventHandlers = {
+        /**
+         * Handle click events
+         */
+        onClick() {
+            setTimeout(() => ScanManager.scan(), CONFIG.timing.clickDelay);
+        },
 
-        // Observe the main content region when possible; fall back to the whole
-        // document if the main element isn't present.
-        const targetNode = document.querySelector('main') || document.body;
-        const observer = new MutationObserver(observerCallback);
-        observer.observe(targetNode, { childList: true, subtree: true });
-        Logger.success('MutationObserver activated');
+        /**
+         * Handle scroll events
+         */
+        onScroll() {
+            ScanManager.handleScroll();
+        },
 
-        // Re-run the cleanup shortly after user clicks. Some Instagram UI
-        // interactions load content asynchronously; this helps catch them.
-        document.addEventListener('click', () => {
-            Logger.info('Click detected, scheduling cleanup...');
-            setTimeout(cleanElements, CONFIG.waitLength);
-        });
-    });
+        /**
+         * Handle page load
+         */
+        onLoad() {
+            ScanManager.scan();
+        },
+
+        /**
+         * Register all event listeners
+         */
+        register() {
+            window.addEventListener('scroll', () => this.onScroll(), { passive: true });
+            document.addEventListener('click', () => this.onClick());
+            window.addEventListener('load', () => this.onLoad());
+            Logger.success('Event listeners registered');
+        }
+    };
+
+    // ==================== Style Injection ====================
+    const StyleManager = {
+        /**
+         * Inject CSS to ensure hidden elements stay hidden
+         * Uses v0.0.2 gentle approach (no display:none) to preserve infinite scroll
+         */
+        injectStyles() {
+            const style = document.createElement('style');
+            style.id = 'cleangram-styles';
+            style.textContent = `
+                /* Force hide elements marked by CleanGram (v0.0.2 approach) */
+                /* NOTE: We avoid display:none to keep infinite scroll working */
+                [data-cleangram-hidden="true"],
+                .cleangram-hidden {
+                    visibility: hidden !important;
+                    height: 0 !important;
+                    min-height: 0 !important;
+                    max-height: 0 !important;
+                    overflow: hidden !important;
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+            Logger.success('Styles injected');
+        }
+    };
+
+    // ==================== Application ====================
+    const App = {
+        /**
+         * Initialize the application
+         */
+        initialize() {
+            Logger.info('CleanGram initializing...');
+
+            // Inject CSS styles first
+            StyleManager.injectStyles();
+
+            // Initial cleanup
+            ScanManager.scan();
+
+            // Setup MutationObserver
+            ObserverManager.initialize();
+
+            // Register event handlers
+            EventHandlers.register();
+
+            // Periodic fallback scan
+            setInterval(() => ScanManager.scan(), CONFIG.timing.periodicScan);
+
+            Logger.success('CleanGram fully initialized');
+        },
+
+        /**
+         * Start the application when DOM is ready
+         */
+        start() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => this.initialize());
+            } else {
+                this.initialize();
+            }
+        }
+    };
+
+    // ==================== Entry Point ====================
+    App.start();
 })();
