@@ -74,5 +74,5 @@ const CONFIG = {
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=instagram.com" alt="Instagram Icon">
 
-**Current Version: 0.0.4**
+**Current Version: 0.0.3**
 </div>
