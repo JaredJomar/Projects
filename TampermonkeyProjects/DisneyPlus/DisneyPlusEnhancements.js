@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Disney Plus Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.6.1
+// @version      0.6.2
 // @description  Enhancements for Disney Plus video player: auto fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
@@ -23,7 +23,7 @@
 
   const SELECTORS = {
     skipIntroButton: 'button.skip__button:not([class*="overlay_upnextlite"])',
-    autoPlayButton: '.overlay_upnextlite_button-container button, *[data-testid="up-next-play-button"]',
+    autoPlayButton: 'button, *[data-testid="up-next-play-button"]',
     fullscreenButton: 'button.fullscreen-icon'
   };
 
@@ -212,13 +212,64 @@
     );
   }
 
+  function findAutoPlayButton() {
+    const candidates = Array.from(document.querySelectorAll(SELECTORS.autoPlayButton));
+
+    // common class-name patterns observed on Disney+ up-next buttons (use regex to catch variants)
+    const classPatterns = [
+      /r3t2ih[\w-]*/i,
+      /_14aj777[\w-]*/i,
+      /_8mbuv9[\w-]*/i,
+      /fl2b6o4/i,
+      /_1055dze3/i,
+      /overlay_upnextlite/i
+    ];
+
+    for (const el of candidates) {
+      if (!isElementVisible(el)) continue;
+
+      // prefer class-based detection on the element itself or its ancestors
+      let classMatch = false;
+      let node = el;
+      for (let depth = 0; node && depth < 4; depth++, node = node.parentElement) {
+        const className = (node.className || '').toString();
+        if (!className) continue;
+        if (classPatterns.some(rx => rx.test(className))) {
+          classMatch = true;
+          break;
+        }
+      }
+      if (classMatch) return el;
+
+      // fallback: use aria/text or data-testid if no class match
+      const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')).toLowerCase();
+      const text = (el.textContent || '').toLowerCase();
+      if (
+        aria.includes('próximo') ||
+        aria.includes('proximo') ||
+        aria.includes('next') ||
+        text.includes('ver próximo') ||
+        text.includes('ver proximo') ||
+        text.includes('next') ||
+        (el.dataset && el.dataset.testid === 'up-next-play-button')
+      ) {
+        return el;
+      }
+    }
+    return null;
+  }
+
   function clickButton(selector) {
+    if (selector === SELECTORS.autoPlayButton) {
+      const button = findAutoPlayButton();
+      if (button) button.click();
+      return;
+    }
+
     const button = document.querySelector(selector);
     if (button && isElementVisible(button)) {
       if (selector === SELECTORS.skipIntroButton) {
         handleSkipIntroButton(button);
-      } else if (selector === SELECTORS.autoPlayButton) {
-        button.click();
       }
     }
   }
