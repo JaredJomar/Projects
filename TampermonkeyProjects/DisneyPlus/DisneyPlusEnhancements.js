@@ -30,10 +30,17 @@
   const CONSTANTS = {
     CLICK_DELAY: 5000,
     BUTTON_TRACKING_TIMEOUT: 30000
+    // Polling settings for dynamic appearance of up-next button
+  };
+  const AUTOPLAY_POLL = {
+    INTERVAL_MS: 500,
+    MAX_RETRIES: 20
   };
 
   let lastSkipClickTime = 0;
   const clickedButtons = new Set();
+  let autoPlayPollTimer = null;
+  let autoPlayPollRetries = 0;
 
   function createSettingsDialog() {
     const dialogHTML = `
@@ -313,6 +320,38 @@
     }
   }
 
+  function attemptAutoPlay() {
+    // If disabled, abort
+    if (!CONFIG.enableAutoPlayNext) return;
+
+    // If a poll is already running, don't start another
+    if (autoPlayPollTimer) return;
+
+    const tryClick = () => {
+      const btn = findAutoPlayButton();
+      if (btn) {
+        btn.click();
+        clearInterval(autoPlayPollTimer);
+        autoPlayPollTimer = null;
+        autoPlayPollRetries = 0;
+        return;
+      }
+
+      autoPlayPollRetries++;
+      if (autoPlayPollRetries >= AUTOPLAY_POLL.MAX_RETRIES) {
+        clearInterval(autoPlayPollTimer);
+        autoPlayPollTimer = null;
+        autoPlayPollRetries = 0;
+      }
+    };
+
+    // Try immediate first, then schedule polling
+    tryClick();
+    if (!autoPlayPollTimer && !findAutoPlayButton()) {
+      autoPlayPollTimer = setInterval(tryClick, AUTOPLAY_POLL.INTERVAL_MS);
+    }
+  }
+
   function handleEnhancements() {
     try {
       if (CONFIG.enableAutoFullscreen) {
@@ -324,13 +363,26 @@
         clickButton(SELECTORS.skipIntroButton);
       }
 
+      // use attemptAutoPlay so we retry until the dynamic button appears
       if (CONFIG.enableAutoPlayNext) {
-        clickButton(SELECTORS.autoPlayButton);
+        attemptAutoPlay();
       }
     } catch (error) {
       console.error('Disney Plus Enchantments error:', error);
     }
   }
+
+  // Detect SPA navigation (pushState/replaceState/popstate) and re-run enhancements
+  (function patchHistoryEvents() {
+    const wrap = (orig) => function () {
+      const ret = orig.apply(this, arguments);
+      handleEnhancements();
+      return ret;
+    };
+    if (history.pushState) history.pushState = wrap(history.pushState);
+    if (history.replaceState) history.replaceState = wrap(history.replaceState);
+    window.addEventListener('popstate', handleEnhancements);
+  })();
 
   const observer = new MutationObserver(handleEnhancements);
   observer.observe(document.body, { childList: true, subtree: true });
