@@ -37,16 +37,28 @@ searchInput.addEventListener('input', (e) => {
     });
 });
 
+// Throttle function for performance optimization
+function throttle(func, wait) {
+    let timeout;
+    let lastRan;
+    return function executedFunction(...args) {
+        if (!lastRan) {
+            func.apply(this, args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                if (Date.now() - lastRan >= wait) {
+                    func.apply(this, args);
+                    lastRan = Date.now();
+                }
+            }, wait - (Date.now() - lastRan));
+        }
+    };
+}
+
 // Back to Top Button
 const backToTopButton = document.getElementById('backToTop');
-
-window.addEventListener('scroll', () => {
-    if (window.pageYOffset > 300) {
-        backToTopButton.classList.add('visible');
-    } else {
-        backToTopButton.classList.remove('visible');
-    }
-});
 
 backToTopButton.addEventListener('click', () => {
     window.scrollTo({
@@ -126,13 +138,24 @@ projectCards.forEach(card => {
     cardObserver.observe(card);
 });
 
-// Navbar scroll effect
+// Combined scroll handler with throttling
 let lastScroll = 0;
 const navbar = document.querySelector('.navbar');
+const sections = document.querySelectorAll('.section');
+const navLinks = document.querySelectorAll('.nav-link');
+const hero = document.querySelector('.hero');
 
-window.addEventListener('scroll', () => {
+const handleScroll = throttle(() => {
     const currentScroll = window.pageYOffset;
     
+    // Back to top button visibility
+    if (currentScroll > 300) {
+        backToTopButton.classList.add('visible');
+    } else {
+        backToTopButton.classList.remove('visible');
+    }
+    
+    // Navbar scroll effect
     if (currentScroll > lastScroll && currentScroll > 100) {
         // Scrolling down
         navbar.style.transform = 'translateY(-100%)';
@@ -140,21 +163,14 @@ window.addEventListener('scroll', () => {
         // Scrolling up
         navbar.style.transform = 'translateY(0)';
     }
-    
     lastScroll = currentScroll;
-});
-
-// Add active state to nav links based on scroll position
-const sections = document.querySelectorAll('.section');
-const navLinks = document.querySelectorAll('.nav-link');
-
-window.addEventListener('scroll', () => {
-    let current = '';
     
+    // Active state for nav links
+    let current = '';
     sections.forEach(section => {
         const sectionTop = section.offsetTop;
         const sectionHeight = section.clientHeight;
-        if (window.pageYOffset >= (sectionTop - 200)) {
+        if (currentScroll >= (sectionTop - 200)) {
             current = section.getAttribute('id');
         }
     });
@@ -165,7 +181,15 @@ window.addEventListener('scroll', () => {
             link.classList.add('active');
         }
     });
-});
+    
+    // Parallax effect for hero section
+    if (hero && currentScroll < window.innerHeight) {
+        hero.style.transform = `translateY(${currentScroll * 0.5}px)`;
+        hero.style.opacity = 1 - (currentScroll / window.innerHeight);
+    }
+}, 100);
+
+window.addEventListener('scroll', handleScroll);
 
 // Add keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -213,16 +237,6 @@ window.addEventListener('load', () => {
         document.body.style.transition = 'opacity 0.5s ease';
         document.body.style.opacity = '1';
     }, 100);
-});
-
-// Add parallax effect to hero section
-const hero = document.querySelector('.hero');
-window.addEventListener('scroll', () => {
-    const scrolled = window.pageYOffset;
-    if (hero && scrolled < window.innerHeight) {
-        hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-        hero.style.opacity = 1 - (scrolled / window.innerHeight);
-    }
 });
 
 // Console Easter Egg

@@ -29,6 +29,7 @@
 
 html {
     scroll-behavior: smooth;
+    scroll-padding-top: 100px;
 }
 
 body {
@@ -598,7 +599,4 @@ body {
     }
 }
 
-/* Smooth Scrolling */
-html {
-    scroll-padding-top: 100px;
-}
+
