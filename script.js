@@ -230,14 +230,8 @@ setTimeout(() => {
     }, 3000);
 }, 1000);
 
-// Loading animation
-window.addEventListener('load', () => {
-    document.body.style.opacity = '0';
-    setTimeout(() => {
-        document.body.style.transition = 'opacity 0.5s ease';
-        document.body.style.opacity = '1';
-    }, 100);
-});
+// Set current year dynamically
+document.getElementById('currentYear').textContent = new Date().getFullYear();
 
 // Console Easter Egg
 console.log('%c👋 Hello, Developer!', 'font-size: 20px; font-weight: bold; color: #6366f1;');
