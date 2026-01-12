@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jared's Projects - Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Header/Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Jared's Projects</h1>
+            <p class="hero-subtitle">A collection of tools, utilities, and browser enhancements</p>
+            <div class="hero-links">
+                <a href="https://github.com/JaredJomar/Projects" target="_blank" class="btn btn-primary">
+                    <i class="fab fa-github"></i> View on GitHub
+                </a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="#desktop" class="nav-link">Desktop Apps</a>
+                <a href="#streaming" class="nav-link">Streaming</a>
+                <a href="#social" class="nav-link">Social</a>
+                <a href="#productivity" class="nav-link">Productivity</a>
+                <a href="#utilities" class="nav-link">Utilities</a>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search projects...">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Desktop Applications Section -->
+        <section id="desktop" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-desktop"></i>
+                Desktop Applications
+            </h2>
+            <div class="projects-grid">
+                <div class="project-card" data-keywords="noteapp python pyqt6 editor text syntax">
+                    <div class="project-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3 class="project-title">NoteApp</h3>
+                    <p class="project-description">A modern, feature-rich text editor built with PyQt6, supporting multiple programming languages and advanced editing features.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Syntax Highlighting</span>
+                        <span class="feature-tag">Code Folding</span>
+                        <span class="feature-tag">Line Numbers</span>
+                        <span class="feature-tag">Dark Theme</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">Python</span>
+                        <span class="tech-badge">PyQt6</span>
+                        <span class="tech-badge">QScintilla</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/NoteApp" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="video download pyqt5 youtube yt-dlp ffmpeg">
+                    <div class="project-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3 class="project-title">Video Download App</h3>
+                    <p class="project-description">A PyQt5-based application for downloading videos, audio, and live streams from various platforms.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Multiple Formats</span>
+                        <span class="feature-tag">Batch Downloads</span>
+                        <span class="feature-tag">Custom Resolution</span>
+                        <span class="feature-tag">Progress Tracking</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">Python</span>
+                        <span class="tech-badge">PyQt5</span>
+                        <span class="tech-badge">yt-dlp</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/VideoDownload" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Streaming Services Section -->
+        <section id="streaming" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-tv"></i>
+                Streaming Service Enhancements
+            </h2>
+            <div class="projects-grid">
+                <div class="project-card" data-keywords="netflix streaming javascript tampermonkey skip intro">
+                    <div class="project-icon netflix-icon">
+                        <i class="fas fa-film"></i>
+                    </div>
+                    <h3 class="project-title">Netflix Enhancements</h3>
+                    <span class="version-badge">v0.4.4</span>
+                    <p class="project-description">Enhance your Netflix experience with automatic features and smart controls.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto Skip Intros</span>
+                        <span class="feature-tag">Smart Fullscreen</span>
+                        <span class="feature-tag">Hide Games</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Netflix" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="disney plus streaming javascript tampermonkey">
+                    <div class="project-icon disney-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3 class="project-title">Disney Plus Enhancements</h3>
+                    <span class="version-badge">v0.6.1</span>
+                    <p class="project-description">Improve Disney Plus with automatic playback controls.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto Skip</span>
+                        <span class="feature-tag">Auto Play Next</span>
+                        <span class="feature-tag">Fullscreen</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/DisneyPlus" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="prime video amazon streaming javascript">
+                    <div class="project-icon prime-icon">
+                        <i class="fas fa-play-circle"></i>
+                    </div>
+                    <h3 class="project-title">Prime Video Enhancements</h3>
+                    <span class="version-badge">v0.2.2</span>
+                    <p class="project-description">Streamline your Prime Video experience with smart playback features.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto Skip Intros</span>
+                        <span class="feature-tag">Auto Fullscreen</span>
+                        <span class="feature-tag">Settings UI</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/PrimeVideo" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="animeflv anime streaming javascript">
+                    <div class="project-icon anime-icon">
+                        <i class="fas fa-dragon"></i>
+                    </div>
+                    <h3 class="project-title">AnimeFLV Enhancements</h3>
+                    <span class="version-badge">v0.3.1</span>
+                    <p class="project-description">Enhance AnimeFLV with provider selection and navigation improvements.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto Provider</span>
+                        <span class="feature-tag">Floating Button</span>
+                        <span class="feature-tag">Preferences</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/AnimeFLV" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Social & Content Section -->
+        <section id="social" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-share-alt"></i>
+                Social & Content Platforms
+            </h2>
+            <div class="projects-grid">
+                <div class="project-card" data-keywords="instagram cleangram social javascript">
+                    <div class="project-icon instagram-icon">
+                        <i class="fab fa-instagram"></i>
+                    </div>
+                    <h3 class="project-title">Cleangram</h3>
+                    <span class="version-badge">v0.0.2</span>
+                    <p class="project-description">Clean up your Instagram feed by hiding unwanted content.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Hide Suggested</span>
+                        <span class="feature-tag">Remove Ads</span>
+                        <span class="feature-tag">Lightweight</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Instagrams/CleanGram" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="twitch gaming javascript tampermonkey">
+                    <div class="project-icon twitch-icon">
+                        <i class="fab fa-twitch"></i>
+                    </div>
+                    <h3 class="project-title">Twitch Enhancements</h3>
+                    <span class="version-badge">v0.5.4</span>
+                    <p class="project-description">Enhance Twitch and Amazon Gaming with automated features.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto Claim Points</span>
+                        <span class="feature-tag">Theater Mode</span>
+                        <span class="feature-tag">Prime Rewards</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Twitch" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="youtube video javascript tampermonkey">
+                    <div class="project-icon youtube-icon">
+                        <i class="fab fa-youtube"></i>
+                    </div>
+                    <h3 class="project-title">YouTube Enhancements</h3>
+                    <p class="project-description">Collection of YouTube enhancing scripts including AdBlock bypass and playlist improvements.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">AdBlock Bypass</span>
+                        <span class="feature-tag">Playlist Tools</span>
+                        <span class="feature-tag">Auto Features</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Youtube" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Productivity Section -->
+        <section id="productivity" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-briefcase"></i>
+                Search & Productivity Tools
+            </h2>
+            <div class="projects-grid">
+                <div class="project-card" data-keywords="search fast productivity react javascript">
+                    <div class="project-icon search-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="project-title">Fast Search</h3>
+                    <p class="project-description">Quick search shortcuts across multiple platforms using a React-based interface.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Multi-Engine</span>
+                        <span class="feature-tag">Keyboard Shortcuts</span>
+                        <span class="feature-tag">Search History</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">React</span>
+                        <span class="tech-badge">JavaScript</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/FastSearch" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="outlook email filter javascript">
+                    <div class="project-icon outlook-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <h3 class="project-title">Outlook Smart Email Filter</h3>
+                    <p class="project-description">Quick email filter management for Outlook Web App.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Advanced Filtering</span>
+                        <span class="feature-tag">Keyboard Shortcuts</span>
+                        <span class="feature-tag">Real-time</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Outlook" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="perplexity ai thread javascript">
+                    <div class="project-icon perplexity-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3 class="project-title">Perplexity Thread Manager</h3>
+                    <span class="version-badge">v0.1.3</span>
+                    <p class="project-description">Thread deletion for Perplexity through keyboard shortcuts.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Keyboard Control</span>
+                        <span class="feature-tag">Visual Prompts</span>
+                        <span class="feature-tag">Quick Delete</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/Perplexity" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="captcha automation javascript">
+                    <div class="project-icon robot-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3 class="project-title">Auto "Not a Robot"</h3>
+                    <span class="version-badge">v0.9.0</span>
+                    <p class="project-description">Automate captcha verification across websites.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto CAPTCHA</span>
+                        <span class="feature-tag">Smart Detection</span>
+                        <span class="feature-tag">Cross-site</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/NotARobot" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Utilities Section -->
+        <section id="utilities" class="section">
+            <h2 class="section-title">
+                <i class="fas fa-tools"></i>
+                Utilities
+            </h2>
+            <div class="projects-grid">
+                <div class="project-card" data-keywords="archive books download batch">
+                    <div class="project-icon archive-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h3 class="project-title">ArchiveBooksDownloader</h3>
+                    <p class="project-description">A batch file utility that simplifies downloading books from Archive.org.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Batch Download</span>
+                        <span class="feature-tag">Save Preferences</span>
+                        <span class="feature-tag">Custom Resolution</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">Batch</span>
+                        <span class="tech-badge">Windows</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/ArchiveBooksDownloader" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="pdf python combine split">
+                    <div class="project-icon pdf-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h3 class="project-title">PDF Tool</h3>
+                    <p class="project-description">A Python utility for combining, splitting, and manipulating PDF files.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Combine PDFs</span>
+                        <span class="feature-tag">Split Pages</span>
+                        <span class="feature-tag">Extract Pages</span>
+                        <span class="feature-tag">Excel to PDF</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">Python</span>
+                        <span class="tech-badge">PyPDF2</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/Pdf_Combiner" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="project-card" data-keywords="google drive pdf download bypass">
+                    <div class="project-icon drive-icon">
+                        <i class="fab fa-google-drive"></i>
+                    </div>
+                    <h3 class="project-title">Drive PDF Download Bypass</h3>
+                    <span class="version-badge">v0.1.0</span>
+                    <p class="project-description">Bypass PDF download restrictions on Google Drive files.</p>
+                    <div class="project-features">
+                        <span class="feature-tag">Auto-scroll</span>
+                        <span class="feature-tag">High Quality</span>
+                        <span class="feature-tag">Progress Updates</span>
+                    </div>
+                    <div class="project-tech">
+                        <span class="tech-badge">JavaScript</span>
+                        <span class="tech-badge">Tampermonkey</span>
+                    </div>
+                    <a href="https://github.com/JaredJomar/Projects/tree/main/TampermonkeyProjects/GoogleDrive" class="project-link" target="_blank">
+                        View Project <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" data-target="25">0</div>
+                    <div class="stat-label">Total Projects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="5">0</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="15">0</div>
+                    <div class="stat-label">Browser Extensions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" data-target="10">0</div>
+                    <div class="stat-label">Tech Stacks</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About</h4>
+                    <p>A collection of personal projects spanning utilities, browser enhancements, and desktop applications.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#desktop">Desktop Apps</a></li>
+                        <li><a href="#streaming">Streaming</a></li>
+                        <li><a href="#social">Social</a></li>
+                        <li><a href="#productivity">Productivity</a></li>
+                        <li><a href="#utilities">Utilities</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Connect</h4>
+                    <div class="social-links">
+                        <a href="https://github.com/JaredJomar/Projects" target="_blank" title="GitHub">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Jared's Projects. Licensed under the <a href="https://choosealicense.com/licenses/mit/" target="_blank">MIT License</a>.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="back-to-top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html>
