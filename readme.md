@@ -8,6 +8,7 @@ This repo contains my personal projects across various domains including utiliti
 
 ## 📚 Table of Contents
 
+- [Project Structure](#project-structure)
 - [Desktop Applications](#desktop-applications)
 - [Browser Enhancements](#browser-enhancements)
   - [Streaming Services](#streaming-services)
@@ -15,6 +16,24 @@ This repo contains my personal projects across various domains including utiliti
   - [Search & Productivity](#search--productivity)
 - [Utilities](#utilities)
 - [License](#license)
+
+## Project Structure
+
+```
+Projects/
+├── apps/
+│   ├── NoteApp/
+│   ├── Pdf_Combiner/
+│   └── VideoDownload/
+├── extensions/
+│   ├── ChromeExtensions/
+│   └── TampermonkeyProjects/
+├── utilities/
+│   └── ArchiveBooksDownloader/
+├── .gitignore
+├── last_dir.json
+└── README.md
+```
 
 ## Desktop Applications
 
