@@ -231,6 +231,8 @@ class DownloadThread(QThread):
         # Remove trailing resolution markers like _1080p or _640x360
         base = re.sub(r'_[0-9]{3,4}p$', '', base, flags=re.IGNORECASE)
         base = re.sub(r'_\d{2,4}x\d{2,4}$', '', base, flags=re.IGNORECASE)
+        # Remove non-ASCII characters (emojis, accents, etc.)
+        base = re.sub(r'[^\x00-\x7F]+', '', base)
         # Sanitize and mimic --restrict-filenames basic effects
         base = self.sanitize_path(base)
         base = re.sub(r'\s+', '_', base)  # spaces to underscores
@@ -255,20 +257,14 @@ class DownloadThread(QThread):
                 # Compare against just the base name without extension
                 base = os.path.splitext(fn)[0]
                 existing.append(self.normalize_title_for_compare(base))
-        except Exception:
+        except Exception as e:
+            self.download_output.emit(f"⚠️ Error scanning existing files: {e}")
             pass
         return set(existing), max_num
 
     def _title_exists(self, candidate_norm: str, existing_norms: set) -> bool:
-        """Robust check: exact or substring containment either way."""
-        if candidate_norm in existing_norms:
-            return True
-        for ex in existing_norms:
-            if not ex or not candidate_norm:
-                continue
-            if candidate_norm in ex or ex in candidate_norm:
-                return True
-        return False
+        """Exact match check."""
+        return candidate_norm in existing_norms
 
     def process_youtube_playlist(self, url: str):
         playlist_id = self._extract_playlist_id(url)
@@ -284,6 +280,26 @@ class DownloadThread(QThread):
 
         # items are already ordered by upload date older -> newest
         existing_titles, max_enum = self.collect_existing_titles()
+        self.download_output.emit(f"📂 Found {len(existing_titles)} existing videos, max number: {max_enum}")
+        
+        # Check if the folder is up to date by comparing the last existing video with the last playlist item
+        if max_enum > 0 and items:
+            last_item_title = self.normalize_title_for_compare(items[-1].get('title', ''))
+            try:
+                exts = ('.mp4', '.mkv', '.webm', '.mp3', '.m4a', '.wav', '.mov', '.flv')
+                for fn in os.listdir(self._normalized_output_folder):
+                    if fn.lower().endswith(exts):
+                        m = re.match(r'\s*(\d+)\s*[-_.)]', fn)
+                        if m and int(m.group(1)) == max_enum:
+                            last_existing_title = self.normalize_title_for_compare(os.path.splitext(fn)[0])
+                            if last_existing_title == last_item_title:
+                                self.download_output.emit('✅ Folder is up to date, no new videos to download')
+                                self._any_success = True  # Mark as success since no download needed
+                                return
+                            break
+            except Exception as e:
+                self.download_output.emit(f"⚠️ Error checking if up to date: {e}")
+        
         pad = max(3, len(str(total)))
 
         # Build list to download skipping existing by title (ignoring numbers)
@@ -298,9 +314,11 @@ class DownloadThread(QThread):
 
         if not to_download:
             self.download_output.emit('✅ No new videos to download')
+            self._any_success = True  # Mark as success since no download needed
             return
 
         # Download each video with enumerated filename
+        any_success = False
         for enum_num, it in to_download:
             if not self.running:
                 return
@@ -324,6 +342,11 @@ class DownloadThread(QThread):
 
             self.download_output.emit(f"⬇️ {num_str} - {it.get('title','(untitled)')}")
             self.execute_command(command, url=video_url)
+            if self.last_command_succeeded:
+                any_success = True
+
+        if any_success:
+            self._any_success = True
 
     def construct_command(self, url, force_cookies=False, skip_cookies=False):
         if not url.startswith(('http://', 'https://', 'ftp://')):
@@ -360,6 +383,8 @@ class DownloadThread(QThread):
             "--ignore-errors",               # Continue downloading other videos if one fails
             "--retries", "10",               # Retry failed downloads up to 10 times
             "--retry-sleep", "5",            # Wait 5 seconds between retry attempts
+            "--compat-options", "2025",      # Enable compatibility options for 2025 and newer features
+            "--format-sort-reset",           # Reset format sorting to default behavior
             url                              # The video URL to download
         ]
         # Only use browser cookies if necessary or forced, unless disabled after failures
