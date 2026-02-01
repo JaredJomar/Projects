@@ -69,6 +69,16 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
+### v0.8.6
+- **Complete Class-Based Refactor**: Restructured codebase from IIFE to 11 specialized classes
+- **Modular Architecture**: Each class has single responsibility (Logger, SettingsManager, PlayerManager, AutoLikeManager, etc.)
+- **Improved Maintainability**: Better code organization with clear separation of concerns
+- **Comprehensive Test Suite**: 137 passing unit tests covering all major functionality
+- **Type Safety**: Class-based design enables better IDE support and error detection
+- **Better Performance**: Optimized class composition and dependency injection
+- **Enhanced Documentation**: Detailed class descriptions explaining purpose and functionality
+- **No Feature Changes**: Maintains 100% backward compatibility with v0.8.5
+
 ### v0.8.5
 - Trusted Types compliance: removed blob Web Worker; switched to interval-based scheduler
 - Robust script loading for YouTube IFrame API (inject once; onload/onerror handling)
@@ -124,5 +134,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.8.5**
+**Current Version: 0.8.6**
 </div>
