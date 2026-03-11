@@ -365,22 +365,40 @@
         }
 
         createChipButton(label, clickHandler) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ytChipBarViewModelChipWrapper';
+
+            const chipView = document.createElement('chip-view-model');
+            chipView.className = 'ytChipViewModelHost';
+
+            const chipShape = document.createElement('chip-shape');
+            chipShape.className = 'ytChipShapeHost';
+
             const btn = document.createElement('button');
-            btn.className = 'aplaylist-chip-btn ytChipShapeButtonReset style-scope yt-chip-cloud-chip-renderer';
+            btn.className = 'ytChipShapeButtonReset';
             btn.type = 'button';
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-selected', 'false');
 
-            const div = document.createElement('div');
-            div.className = 'aplaylist-chip ytChipShapeChip ytChipShapeInactive ytChipShapeOnlyTextPadding';
-            div.textContent = label;
+            const chipDiv = document.createElement('div');
+            chipDiv.className = 'ytChipShapeChip ytChipShapeInactive ytChipShapeOnlyTextPadding';
+            
+            const textDiv = document.createElement('div');
+            textDiv.textContent = label;
+            chipDiv.appendChild(textDiv);
 
-            btn.appendChild(div);
-            btn.onclick = clickHandler;
-            return btn;
+            btn.appendChild(chipDiv);
+            chipShape.appendChild(btn);
+            chipView.appendChild(chipShape);
+            wrapper.appendChild(chipView);
+            clickHandler && (btn.onclick = clickHandler);
+            return wrapper;
         }
 
         addButtons(videosData, onSortChange) {
-            const chips = document.querySelector('div#chips-content iron-selector#chips');
-            if (!chips) return;
+            const scrollContainer = document.querySelector('chip-bar-view-model .ytChipBarViewModelChipBarScrollContainer');
+            if (!scrollContainer) return;
+            const chips = scrollContainer;
 
             this.removeOldButtons();
 
@@ -393,11 +411,11 @@
 
             // Add buttons for each type
             buttons.forEach(({ label, data }) => {
-                const btn = this.createChipButton(label, () => {
+                const btnWrapper = this.createChipButton(label, () => {
                     // Create a temporary container for the sort buttons
                     const sortContainer = document.createElement('div');
-                    sortContainer.style.display = 'inline-block';
-                    sortContainer.style.marginLeft = '8px';
+                    sortContainer.style.display = 'flex';
+                    sortContainer.style.gap = '8px';
 
                     // Add sort buttons
                     const newestBtn = this.createChipButton('Newest First', () => {
@@ -413,9 +431,9 @@
                     sortContainer.appendChild(oldestBtn);
 
                     // Insert after the clicked button
-                    btn.parentNode.insertBefore(sortContainer, btn.nextSibling);
+                    btnWrapper.parentNode.insertBefore(sortContainer, btnWrapper.nextSibling);
                 });
-                chips.appendChild(btn);
+                chips.appendChild(btnWrapper);
             });
         }
 
@@ -586,7 +604,7 @@
 
             if (isChannelVideosPage()) {
                 // Wait for the chips container to be present
-                const chips = await waitForElement('div#chips-content iron-selector#chips');
+                const chips = await waitForElement('chip-bar-view-model .ytChipBarViewModelChipBarScrollContainer');
                 if (!chips) {
                     console.log('Chips container not found');
                     return;
@@ -618,12 +636,14 @@
 
                 // Show loading message
                 const loadingChip = this.uiManager.createChipButton('Loading videos...', () => { });
-                const chips = document.querySelector('ytd-feed-filter-chip-bar-renderer[page-subtype="channels"] #chips');
-                if (chips) {
-                    chips.appendChild(loadingChip);
+                const scrollContainer = document.querySelector('chip-bar-view-model .ytChipBarViewModelChipBarScrollContainer');
+                if (scrollContainer) {
+                    scrollContainer.appendChild(loadingChip);
                 } else {
-                    console.log('Chips container not found, trying alternative selector');
-                    const alternativeChips = document.querySelector('#chips-content #chips') || document.querySelector('#chips');
+                    console.log('Chips container not found, trying alternative selectors');
+                    const alternativeChips = document.querySelector('ytd-feed-filter-chip-bar-renderer[page-subtype="channels"] #chips') 
+                        || document.querySelector('#chips-content #chips') 
+                        || document.querySelector('#chips');
                     if (alternativeChips) {
                         alternativeChips.appendChild(loadingChip);
                     } else {
@@ -664,11 +684,11 @@
             } catch (error) {
                 console.error('Error generating playlists:', error);
                 const errorChip = this.uiManager.createChipButton('Error: Check API key and channel ID', () => { });
-                const chips = document.querySelector('div#chips-content iron-selector#chips');
-                if (chips) {
+                const scrollContainer = document.querySelector('chip-bar-view-model .ytChipBarViewModelChipBarScrollContainer');
+                if (scrollContainer) {
                     this.uiManager.removeOldButtons();
-                    chips.appendChild(errorChip);
-                    setTimeout(() => errorChip.remove(), 5000);
+                    scrollContainer.appendChild(errorChip);
+                    setTimeout(() => errorChip?.remove(), 5000);
                 } else {
                     alert('Error generating playlists. Please check your API key and channel ID.');
                 }
