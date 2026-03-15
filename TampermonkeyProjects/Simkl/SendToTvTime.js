@@ -1,24 +1,26 @@
 // ==UserScript==
-// @name         Send to TV Time
+// @name         Media Tracker Sender
 // @namespace    http://tampermonkey.net/
-// @version      0.0.4
-// @description  Adds TV Time, Simkl, and AniList buttons to Plex pages, TV Time and AniList buttons to Simkl pages, and automatically pastes titles in search fields.
+// @version      0.0.5
+// @description  Adds TV Time, Simkl, and AniList buttons to Plex and Peliplus pages, TV Time and AniList buttons to Simkl pages, and automatically pastes titles in search fields.
 // @author       JJJ
 // @match        https://simkl.com/*/*
 // @match        https://app.tvtime.com/*
 // @match        https://app.plex.tv/*
 // @match        http://127.0.0.1:32400/web/*
 // @match        https://anilist.co/*
+// @match        https://tioplus.app/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
 // @license      MIT
 // ==/UserScript==
 
 (function () {
-    'use strict';    /**
-     * Configuration constants
-     */
+    'use strict';
+    // Configuration constants
+
     const CONFIG = {
+        // Base URLs
         TV_TIME_BASE_URL: 'https://app.tvtime.com',
         TV_TIME_SEARCH_URL: 'https://app.tvtime.com/explore/search/media',
         TV_TIME_FAVICON: 'https://www.tvtime.com/favicon.ico',
@@ -28,12 +30,18 @@
         ANILIST_FAVICON: 'https://anilist.co/img/icons/favicon-32x32.png',
         TMDB_SEARCH_URL: 'https://www.themoviedb.org/search',
         TMDB_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=themoviedb.org',
+        // Observer settings
         OBSERVER_TIMEOUT: 1000,
+        // Button IDs and storage keys
         BUTTON_ID: 'tvTimeButton',
         SIMKL_BUTTON_ID: 'simklButton',
         ANILIST_BUTTON_ID: 'anilistButton',
         TMDB_BUTTON_ID: 'tmdbButton',
-        STORAGE_KEY: 'simklSearchTitle'
+        STORAGE_KEY: 'simklSearchTitle',
+        PELIPLUS_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=tioplus.app',
+        PELIPLUS_BUTTON_CONTAINER_ID: 'peliplusButtonContainer',
+        PELIPLUS_BUTTON_ID: 'peliplusButton',
+        PELIPLUS_BASE_URL: 'https://tioplus.app'
     };
 
     const SELECTORS = {
@@ -59,6 +67,7 @@
         SIMKL_BUTTON: `#${CONFIG.SIMKL_BUTTON_ID}`,
         ANILIST_BUTTON: `#${CONFIG.ANILIST_BUTTON_ID}`,
         TMDB_BUTTON: `#${CONFIG.TMDB_BUTTON_ID}`,
+        PELIPLUS_BUTTON: `#${CONFIG.PELIPLUS_BUTTON_ID}`,
         TV_TIME_SEARCH_INPUT: 'input[type="text"]',
 
         // TV Time search selectors
@@ -88,7 +97,10 @@
         PLEX_TV_TIME_BUTTON: 'plex-tvtime-button',
         PLEX_SIMKL_BUTTON: 'plex-simkl-button',
         PLEX_ANILIST_BUTTON: 'plex-anilist-button',
-        PLEX_TMDB_BUTTON: 'plex-tmdb-button'
+        PLEX_TMDB_BUTTON: 'plex-tmdb-button',
+        PELIPLUS_CONTAINER: 'peliplus-container',
+        PELIPLUS_BUTTON: 'peliplus-button',
+        PELIPLUS_SIMKL_BUTTON: 'peliplus-simkl-button'
     };
 
     /**
@@ -196,7 +208,7 @@
                     cursor: pointer;
                     transition: opacity 0.2s ease;
                 }
-                
+
                 .${CSS_CLASSES.TV_TIME_BUTTON}:hover {
                     opacity: 0.8;
                 }
@@ -210,7 +222,7 @@
                     cursor: pointer;
                     transition: opacity 0.2s ease;
                 }
-                
+
                 .${CSS_CLASSES.ANILIST_BUTTON}:hover {
                     opacity: 0.8;
                 }
@@ -229,7 +241,7 @@
                     margin-right: 8px;
                     position: relative;
                 }
-                
+
                 .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}:hover {
                     background-color: #2a2a2a;
                     border-color: #505050;
@@ -266,7 +278,7 @@
                     margin-right: 8px;
                     position: relative;
                 }
-                
+
                 .${CSS_CLASSES.PLEX_SIMKL_BUTTON}:hover {
                     background-color: #2a2a2a;
                     border-color: #505050;
@@ -303,7 +315,7 @@
                     margin-right: 8px;
                     position: relative;
                 }
-                
+
                 .${CSS_CLASSES.PLEX_ANILIST_BUTTON}:hover {
                     background-color: #2a2a2a;
                     border-color: #505050;
@@ -335,7 +347,7 @@
                     cursor: pointer;
                     transition: opacity 0.2s ease;
                 }
-                
+
                 .${CSS_CLASSES.TMDB_BUTTON}:hover {
                     opacity: 0.8;
                 }
@@ -354,7 +366,7 @@
                     margin-right: 8px;
                     position: relative;
                 }
-                
+
                 .${CSS_CLASSES.PLEX_TMDB_BUTTON}:hover {
                     background-color: #2a2a2a;
                     border-color: #505050;
@@ -375,6 +387,75 @@
 
                 .${CSS_CLASSES.PLEX_TMDB_BUTTON}:hover::after {
                     opacity: 1;
+                }
+
+                .${CSS_CLASSES.PELIPLUS_SIMKL_BUTTON} {
+                    background: url('${CONFIG.PELIPLUS_FAVICON}') center/24px no-repeat;
+                    width: 50px;
+                    height: 24px;
+                    display: inline-block;
+                    margin-top: 8px;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                }
+
+                .${CSS_CLASSES.PELIPLUS_SIMKL_BUTTON}:hover {
+                    opacity: 0.8;
+                }
+            `);
+            document.head.appendChild(style);
+        },
+
+        injectPeliplus() {
+            const style = Utils.createElement('style', {}, `
+                .${CSS_CLASSES.PELIPLUS_CONTAINER} {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    z-index: 99999;
+                }
+
+                .${CSS_CLASSES.PELIPLUS_BUTTON} {
+                    background: #1a1a1a no-repeat center;
+                    background-size: 22px;
+                    border: 1px solid #444;
+                    border-radius: 10px;
+                    width: 46px;
+                    height: 46px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    position: relative;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+                }
+
+                .${CSS_CLASSES.PELIPLUS_BUTTON}:hover {
+                    background-color: #2a2a2a;
+                    border-color: #666;
+                    transform: scale(1.05);
+                }
+
+                .${CSS_CLASSES.PELIPLUS_BUTTON} span {
+                    display: none;
+                    position: absolute;
+                    right: 54px;
+                    background: #1a1a1a;
+                    color: #fff;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    border: 1px solid #444;
+                    pointer-events: none;
+                }
+
+                .${CSS_CLASSES.PELIPLUS_BUTTON}:hover span {
+                    display: block;
                 }
             `);
             document.head.appendChild(style);
@@ -617,6 +698,56 @@
                 type: 'button',
                 id: CONFIG.TMDB_BUTTON_ID
             });
+        },
+
+        createPeliplusButton() {
+            return Utils.createElement('td', { width: '1' }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="40" align="center">
+                                        <a href="#" class="${CSS_CLASSES.PELIPLUS_SIMKL_BUTTON}" id="${CONFIG.PELIPLUS_BUTTON_ID}"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <span class="${CSS_CLASSES.RATING_TEN}">Peliplus</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            `);
+        },
+
+        createAnimePeliplusButton() {
+            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+                                        <tr>
+                                            <td height="40" align="center">
+                                                <a href="#" class="${CSS_CLASSES.PELIPLUS_SIMKL_BUTTON}" id="${CONFIG.PELIPLUS_BUTTON_ID}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center">
+                                                <span class="${CSS_CLASSES.RATING_TEN}">PELIPLUS</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `);
         }
     };
 
@@ -643,6 +774,8 @@
             const aniListCell = ButtonFactory.createAniListButton();
             const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
             const tmdbCell = ButtonFactory.createTMDBButton();
+            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
+            const peliplusCell = ButtonFactory.createPeliplusButton();
 
             ratingCell.parentNode.insertBefore(spacerCell1, ratingCell.nextSibling);
             ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell1.nextSibling);
@@ -650,6 +783,8 @@
             ratingCell.parentNode.insertBefore(aniListCell, spacerCell2.nextSibling);
             ratingCell.parentNode.insertBefore(spacerCell3, aniListCell.nextSibling);
             ratingCell.parentNode.insertBefore(tmdbCell, spacerCell3.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell4, tmdbCell.nextSibling);
+            ratingCell.parentNode.insertBefore(peliplusCell, spacerCell4.nextSibling);
 
             return true;
         },
@@ -667,10 +802,12 @@
             const tvTimeCell = ButtonFactory.createAnimeButton();
             const aniListCell = ButtonFactory.createAnimeAniListButton();
             const tmdbCell = ButtonFactory.createAnimeTMDBButton();
+            const peliplusCell = ButtonFactory.createAnimePeliplusButton();
 
             animeRatingsRow.insertBefore(tvTimeCell, reactionsCell);
             animeRatingsRow.insertBefore(aniListCell, reactionsCell);
             animeRatingsRow.insertBefore(tmdbCell, reactionsCell);
+            animeRatingsRow.insertBefore(peliplusCell, reactionsCell);
 
             return true;
         },
@@ -691,6 +828,8 @@
             const aniListCell = ButtonFactory.createAniListButton();
             const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
             const tmdbCell = ButtonFactory.createTMDBButton();
+            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
+            const peliplusCell = ButtonFactory.createPeliplusButton();
 
             ratingTable.insertBefore(spacerCell1, lastCell.nextSibling);
             ratingTable.insertBefore(tvTimeCell, spacerCell1.nextSibling);
@@ -698,6 +837,8 @@
             ratingTable.insertBefore(aniListCell, spacerCell2.nextSibling);
             ratingTable.insertBefore(spacerCell3, aniListCell.nextSibling);
             ratingTable.insertBefore(tmdbCell, spacerCell3.nextSibling);
+            ratingTable.insertBefore(spacerCell4, tmdbCell.nextSibling);
+            ratingTable.insertBefore(peliplusCell, spacerCell4.nextSibling);
 
             return true;
         },
@@ -754,7 +895,8 @@
             if (document.querySelector(SELECTORS.TV_TIME_BUTTON) ||
                 document.querySelector(SELECTORS.SIMKL_BUTTON) ||
                 document.querySelector(SELECTORS.ANILIST_BUTTON) ||
-                document.querySelector(SELECTORS.TMDB_BUTTON)) {
+                document.querySelector(SELECTORS.TMDB_BUTTON) ||
+                document.querySelector(SELECTORS.PELIPLUS_BUTTON)) {
                 return;
             }
 
@@ -807,6 +949,18 @@
                 // TMDB button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(title)}`, '_blank');
+            } else if (clickedButton && clickedButton.id === CONFIG.PELIPLUS_BUTTON_ID) {
+                // Peliplus button clicked
+                Utils.copyToClipboard(title);
+                const slug = title
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-');
+                const path = window.location.pathname;
+                const type = path.startsWith('/movies/') ? 'pelicula' : 'serie';
+                window.open(`${CONFIG.PELIPLUS_BASE_URL}/${type}/${slug}`, '_blank');
             } else {
                 // TV Time button clicked (default)
                 Utils.copyToClipboard(title);
@@ -1093,6 +1247,133 @@
     };
 
     /**
+     * Peliplus (tioplus.app) page handler - injects a floating button panel
+     */
+    const PeliplusHandler = {
+        observer: null,
+
+        /**
+         * Gets the title from the page, falling back to URL slug
+         */
+        getTitle() {
+            const titleSelectors = ['h1', '[itemprop="name"]', '[class*="title"]', 'h2'];
+            for (const sel of titleSelectors) {
+                const el = document.querySelector(sel);
+                if (el) {
+                    const text = el.textContent.trim();
+                    if (text) return text;
+                }
+            }
+
+            // Fallback: parse from URL slug (e.g. /serie/la-oficina → "La Oficina")
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            if (pathParts.length >= 2) {
+                return pathParts[1]
+                    .split('-')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            }
+
+            return null;
+        },
+
+        /**
+         * Creates and appends the floating button panel to the page
+         */
+        createButtonPanel() {
+            if (document.getElementById(CONFIG.PELIPLUS_BUTTON_CONTAINER_ID)) return;
+
+            const container = Utils.createElement('div', {
+                id: CONFIG.PELIPLUS_BUTTON_CONTAINER_ID,
+                class: CSS_CLASSES.PELIPLUS_CONTAINER
+            });
+
+            const buttons = [
+                { label: 'TV Time', favicon: CONFIG.TV_TIME_FAVICON, getUrl: (t) => `${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(t)}` },
+                { label: 'Simkl',   favicon: CONFIG.SIMKL_FAVICON,   getUrl: (t) => `${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(t)}` },
+                { label: 'AniList', favicon: CONFIG.ANILIST_FAVICON,  getUrl: (t) => `${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(t)}` },
+                { label: 'TMDB',    favicon: CONFIG.TMDB_FAVICON,     getUrl: (t) => `${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(t)}` }
+            ];
+
+            for (const btn of buttons) {
+                const button = Utils.createElement('button', {
+                    class: CSS_CLASSES.PELIPLUS_BUTTON,
+                    title: btn.label,
+                    type: 'button'
+                });
+                button.style.backgroundImage = `url('${btn.favicon}')`;
+
+                const label = Utils.createElement('span', {}, btn.label);
+                button.appendChild(label);
+
+                button.addEventListener('click', () => {
+                    const title = this.getTitle();
+                    if (!title) {
+                        console.error('Peliplus: title not found');
+                        return;
+                    }
+                    Utils.copyToClipboard(title);
+                    window.open(btn.getUrl(title), '_blank');
+                });
+
+                container.appendChild(button);
+            }
+
+            document.body.appendChild(container);
+        },
+
+        /**
+         * Initializes the handler, waiting for content pages and SPA navigation
+         */
+        init() {
+            StyleManager.injectPeliplus();
+
+            const tryInject = () => {
+                const pathParts = window.location.pathname.split('/').filter(Boolean);
+                if (pathParts.length >= 2 && (pathParts[0] === 'serie' || pathParts[0] === 'pelicula')) {
+                    // Small delay to let the SPA finish rendering
+                    setTimeout(() => this.createButtonPanel(), 300);
+                } else {
+                    // Remove panel when navigating away from a content page
+                    const existing = document.getElementById(CONFIG.PELIPLUS_BUTTON_CONTAINER_ID);
+                    if (existing) existing.remove();
+                }
+            };
+
+            // Initial injection
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', tryInject);
+            } else {
+                tryInject();
+            }
+
+            // Listen for back/forward navigation
+            window.addEventListener('popstate', tryInject);
+
+            // Intercept history.pushState and replaceState for SPA routers
+            const originalPushState = history.pushState.bind(history);
+            history.pushState = function (...args) {
+                originalPushState(...args);
+                tryInject();
+            };
+            const originalReplaceState = history.replaceState.bind(history);
+            history.replaceState = function (...args) {
+                originalReplaceState(...args);
+                tryInject();
+            };
+
+            // Fallback: MutationObserver in case the panel gets removed
+            this.observer = new MutationObserver(Utils.debounce(() => {
+                if (!document.getElementById(CONFIG.PELIPLUS_BUTTON_CONTAINER_ID)) {
+                    tryInject();
+                }
+            }, 500));
+
+            this.observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
+    };
+
+    /**
      * Main application controller
      */
     const App = {
@@ -1102,6 +1383,11 @@
         init() {
             if (window.location.hostname === 'app.tvtime.com') {
                 TVTimeHandler.init();
+                return;
+            }
+
+            if (window.location.hostname === 'tioplus.app') {
+                PeliplusHandler.init();
                 return;
             }
 
@@ -1121,8 +1407,9 @@
                 const simklButton = event.target.closest(SELECTORS.SIMKL_BUTTON);
                 const aniListButton = event.target.closest(SELECTORS.ANILIST_BUTTON);
                 const tmdbButton = event.target.closest(SELECTORS.TMDB_BUTTON);
+                const peliplusButton = event.target.closest(SELECTORS.PELIPLUS_BUTTON);
 
-                if (tvTimeButton || simklButton || aniListButton || tmdbButton) {
+                if (tvTimeButton || simklButton || aniListButton || tmdbButton || peliplusButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });
