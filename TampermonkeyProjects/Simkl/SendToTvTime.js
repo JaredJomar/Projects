@@ -10,6 +10,7 @@
 // @match        http://127.0.0.1:32400/web/*
 // @match        https://anilist.co/*
 // @match        https://tioplus.app/*
+// @match        https://sololatino.net/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
 // @license      MIT
@@ -41,7 +42,10 @@
         PELIPLUS_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=tioplus.app',
         PELIPLUS_BUTTON_CONTAINER_ID: 'peliplusButtonContainer',
         PELIPLUS_BUTTON_ID: 'peliplusButton',
-        PELIPLUS_BASE_URL: 'https://tioplus.app'
+        PELIPLUS_BASE_URL: 'https://tioplus.app',
+        SOLOLATINO_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=sololatino.net',
+        SOLOLATINO_BUTTON_ID: 'sololatinoButton',
+        SOLOLATINO_BASE_URL: 'https://sololatino.net'
     };
 
     const SELECTORS = {
@@ -68,6 +72,7 @@
         ANILIST_BUTTON: `#${CONFIG.ANILIST_BUTTON_ID}`,
         TMDB_BUTTON: `#${CONFIG.TMDB_BUTTON_ID}`,
         PELIPLUS_BUTTON: `#${CONFIG.PELIPLUS_BUTTON_ID}`,
+        SOLOLATINO_BUTTON: `#${CONFIG.SOLOLATINO_BUTTON_ID}`,
         TV_TIME_SEARCH_INPUT: 'input[type="text"]',
 
         // TV Time search selectors
@@ -100,7 +105,14 @@
         PLEX_TMDB_BUTTON: 'plex-tmdb-button',
         PELIPLUS_CONTAINER: 'peliplus-container',
         PELIPLUS_BUTTON: 'peliplus-button',
-        PELIPLUS_SIMKL_BUTTON: 'peliplus-simkl-button'
+        SOLOLATINO_PANEL: 'sololatino-panel',
+        FLOAT_ICON_FALLBACK: 'float-icon-fallback',
+        PELIPLUS_FLOAT_TVTIME: 'peliplus-float-tvtime',
+        PELIPLUS_FLOAT_SIMKL: 'peliplus-float-simkl',
+        PELIPLUS_FLOAT_ANILIST: 'peliplus-float-anilist',
+        PELIPLUS_FLOAT_TMDB: 'peliplus-float-tmdb',
+        PELIPLUS_SIMKL_BUTTON: 'peliplus-simkl-button',
+        SOLOLATINO_SIMKL_BUTTON: 'sololatino-simkl-button'
     };
 
     /**
@@ -400,7 +412,42 @@
                 }
 
                 .${CSS_CLASSES.PELIPLUS_SIMKL_BUTTON}:hover {
-                    opacity: 0.8;
+                    opacity: 1;
+                    filter: brightness(1.15);
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON} {
+                    background: url('${CONFIG.SOLOLATINO_FAVICON}') center/24px no-repeat;
+                    width: 50px;
+                    height: 24px;
+                    display: inline-block;
+                    margin-top: 8px;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                    position: relative;
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}:hover {
+                    opacity: 1;
+                    filter: brightness(1.15);
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}::after {
+                    content: 'SoloLatino';
+                    position: absolute;
+                    bottom: -18px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    pointer-events: none;
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}:hover::after {
+                    opacity: 1;
                 }
             `);
             document.head.appendChild(style);
@@ -419,7 +466,9 @@
                 }
 
                 .${CSS_CLASSES.PELIPLUS_BUTTON} {
-                    background: #1a1a1a no-repeat center;
+                    background-color: #1a1a1a;
+                    background-repeat: no-repeat;
+                    background-position: center;
                     background-size: 22px;
                     border: 1px solid #444;
                     border-radius: 10px;
@@ -438,6 +487,7 @@
                     background-color: #2a2a2a;
                     border-color: #666;
                     transform: scale(1.05);
+                    filter: brightness(1.1);
                 }
 
                 .${CSS_CLASSES.PELIPLUS_BUTTON} span {
@@ -456,6 +506,44 @@
 
                 .${CSS_CLASSES.PELIPLUS_BUTTON}:hover span {
                     display: block;
+                }
+
+                .${CSS_CLASSES.FLOAT_ICON_FALLBACK} {
+                    display: none;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 6px;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #fff;
+                    background: #2f2f2f;
+                    line-height: 1;
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_PANEL} .${CSS_CLASSES.PELIPLUS_BUTTON} {
+                    background-image: none;
+                }
+
+                .${CSS_CLASSES.SOLOLATINO_PANEL} .${CSS_CLASSES.FLOAT_ICON_FALLBACK} {
+                    display: inline-flex;
+                }
+
+                .${CSS_CLASSES.PELIPLUS_FLOAT_TVTIME} {
+                    background-image: url('${CONFIG.TV_TIME_FAVICON}');
+                }
+
+                .${CSS_CLASSES.PELIPLUS_FLOAT_SIMKL} {
+                    background-image: url('${CONFIG.SIMKL_FAVICON}');
+                }
+
+                .${CSS_CLASSES.PELIPLUS_FLOAT_ANILIST} {
+                    background-image: url('${CONFIG.ANILIST_FAVICON}');
+                }
+
+                .${CSS_CLASSES.PELIPLUS_FLOAT_TMDB} {
+                    background-image: url('${CONFIG.TMDB_FAVICON}');
                 }
             `);
             document.head.appendChild(style);
@@ -748,6 +836,56 @@
                     </tbody>
                 </table>
             `);
+        },
+
+        createSoloLatinoButton() {
+            return Utils.createElement('td', { width: '1' }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="40" align="center">
+                                        <a href="#" class="${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}" id="${CONFIG.SOLOLATINO_BUTTON_ID}"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <span class="${CSS_CLASSES.RATING_TEN}">SoloLatino</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            `);
+        },
+
+        createAnimeSoloLatinoButton() {
+            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+                                        <tr>
+                                            <td height="40" align="center">
+                                                <a href="#" class="${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}" id="${CONFIG.SOLOLATINO_BUTTON_ID}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center">
+                                                <span class="${CSS_CLASSES.RATING_TEN}">SOLOLATINO</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `);
         }
     };
 
@@ -776,6 +914,8 @@
             const tmdbCell = ButtonFactory.createTMDBButton();
             const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
             const peliplusCell = ButtonFactory.createPeliplusButton();
+            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const sololatinoCell = ButtonFactory.createSoloLatinoButton();
 
             ratingCell.parentNode.insertBefore(spacerCell1, ratingCell.nextSibling);
             ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell1.nextSibling);
@@ -785,6 +925,8 @@
             ratingCell.parentNode.insertBefore(tmdbCell, spacerCell3.nextSibling);
             ratingCell.parentNode.insertBefore(spacerCell4, tmdbCell.nextSibling);
             ratingCell.parentNode.insertBefore(peliplusCell, spacerCell4.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell5, peliplusCell.nextSibling);
+            ratingCell.parentNode.insertBefore(sololatinoCell, spacerCell5.nextSibling);
 
             return true;
         },
@@ -803,11 +945,13 @@
             const aniListCell = ButtonFactory.createAnimeAniListButton();
             const tmdbCell = ButtonFactory.createAnimeTMDBButton();
             const peliplusCell = ButtonFactory.createAnimePeliplusButton();
+            const sololatinoCell = ButtonFactory.createAnimeSoloLatinoButton();
 
             animeRatingsRow.insertBefore(tvTimeCell, reactionsCell);
             animeRatingsRow.insertBefore(aniListCell, reactionsCell);
             animeRatingsRow.insertBefore(tmdbCell, reactionsCell);
             animeRatingsRow.insertBefore(peliplusCell, reactionsCell);
+            animeRatingsRow.insertBefore(sololatinoCell, reactionsCell);
 
             return true;
         },
@@ -830,6 +974,8 @@
             const tmdbCell = ButtonFactory.createTMDBButton();
             const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
             const peliplusCell = ButtonFactory.createPeliplusButton();
+            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const sololatinoCell = ButtonFactory.createSoloLatinoButton();
 
             ratingTable.insertBefore(spacerCell1, lastCell.nextSibling);
             ratingTable.insertBefore(tvTimeCell, spacerCell1.nextSibling);
@@ -839,6 +985,8 @@
             ratingTable.insertBefore(tmdbCell, spacerCell3.nextSibling);
             ratingTable.insertBefore(spacerCell4, tmdbCell.nextSibling);
             ratingTable.insertBefore(peliplusCell, spacerCell4.nextSibling);
+            ratingTable.insertBefore(spacerCell5, peliplusCell.nextSibling);
+            ratingTable.insertBefore(sololatinoCell, spacerCell5.nextSibling);
 
             return true;
         },
@@ -896,7 +1044,8 @@
                 document.querySelector(SELECTORS.SIMKL_BUTTON) ||
                 document.querySelector(SELECTORS.ANILIST_BUTTON) ||
                 document.querySelector(SELECTORS.TMDB_BUTTON) ||
-                document.querySelector(SELECTORS.PELIPLUS_BUTTON)) {
+                document.querySelector(SELECTORS.PELIPLUS_BUTTON) ||
+                document.querySelector(SELECTORS.SOLOLATINO_BUTTON)) {
                 return;
             }
 
@@ -952,15 +1101,11 @@
             } else if (clickedButton && clickedButton.id === CONFIG.PELIPLUS_BUTTON_ID) {
                 // Peliplus button clicked
                 Utils.copyToClipboard(title);
-                const slug = title
-                    .toLowerCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^a-z0-9\s-]/g, '')
-                    .trim()
-                    .replace(/\s+/g, '-');
-                const path = window.location.pathname;
-                const type = path.startsWith('/movies/') ? 'pelicula' : 'serie';
-                window.open(`${CONFIG.PELIPLUS_BASE_URL}/${type}/${slug}`, '_blank');
+                window.open(CONFIG.PELIPLUS_BASE_URL, '_blank');
+            } else if (clickedButton && clickedButton.id === CONFIG.SOLOLATINO_BUTTON_ID) {
+                // SoloLatino button clicked
+                Utils.copyToClipboard(title);
+                window.open(CONFIG.SOLOLATINO_BASE_URL, '_blank');
             } else {
                 // TV Time button clicked (default)
                 Utils.copyToClipboard(title);
@@ -1288,20 +1433,26 @@
                 class: CSS_CLASSES.PELIPLUS_CONTAINER
             });
 
+            if (window.location.hostname === 'sololatino.net') {
+                container.classList.add(CSS_CLASSES.SOLOLATINO_PANEL);
+            }
+
             const buttons = [
-                { label: 'TV Time', favicon: CONFIG.TV_TIME_FAVICON, getUrl: (t) => `${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(t)}` },
-                { label: 'Simkl',   favicon: CONFIG.SIMKL_FAVICON,   getUrl: (t) => `${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(t)}` },
-                { label: 'AniList', favicon: CONFIG.ANILIST_FAVICON,  getUrl: (t) => `${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(t)}` },
-                { label: 'TMDB',    favicon: CONFIG.TMDB_FAVICON,     getUrl: (t) => `${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(t)}` }
+                { label: 'TV Time', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_TVTIME, short: 'T', getUrl: (t) => `${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(t)}` },
+                { label: 'Simkl', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_SIMKL, short: 'S', getUrl: (t) => `${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(t)}` },
+                { label: 'AniList', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_ANILIST, short: 'A', getUrl: (t) => `${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(t)}` },
+                { label: 'TMDB', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_TMDB, short: 'M', getUrl: (t) => `${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(t)}` }
             ];
 
             for (const btn of buttons) {
                 const button = Utils.createElement('button', {
-                    class: CSS_CLASSES.PELIPLUS_BUTTON,
+                    class: `${CSS_CLASSES.PELIPLUS_BUTTON} ${btn.iconClass}`,
                     title: btn.label,
                     type: 'button'
                 });
-                button.style.backgroundImage = `url('${btn.favicon}')`;
+
+                const iconFallback = Utils.createElement('i', { class: CSS_CLASSES.FLOAT_ICON_FALLBACK }, btn.short);
+                button.appendChild(iconFallback);
 
                 const label = Utils.createElement('span', {}, btn.label);
                 button.appendChild(label);
@@ -1386,7 +1537,8 @@
                 return;
             }
 
-            if (window.location.hostname === 'tioplus.app') {
+            if (window.location.hostname === 'tioplus.app' ||
+                window.location.hostname === 'sololatino.net') {
                 PeliplusHandler.init();
                 return;
             }
@@ -1408,8 +1560,9 @@
                 const aniListButton = event.target.closest(SELECTORS.ANILIST_BUTTON);
                 const tmdbButton = event.target.closest(SELECTORS.TMDB_BUTTON);
                 const peliplusButton = event.target.closest(SELECTORS.PELIPLUS_BUTTON);
+                const sololatinoButton = event.target.closest(SELECTORS.SOLOLATINO_BUTTON);
 
-                if (tvTimeButton || simklButton || aniListButton || tmdbButton || peliplusButton) {
+                if (tvTimeButton || simklButton || aniListButton || tmdbButton || peliplusButton || sololatinoButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });
