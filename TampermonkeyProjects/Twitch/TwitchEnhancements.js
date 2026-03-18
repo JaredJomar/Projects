@@ -9,6 +9,7 @@
 // @match        https://luna.amazon.com/*
 // @match        https://www.twitch.tv/drops/inventory*
 // @match        https://www.gog.com/en/redeem
+// @match        https://www.gog.com/redeem/*
 // @match        https://promo.legacygames.com/*
 // @icon         https://th.bing.com/th/id/R.d71be224f193da01e7e499165a8981c5?rik=uBYlAxJ4XyXmJg&riu=http%3a%2f%2fpngimg.com%2fuploads%2ftwitch%2ftwitch_PNG28.png&ehk=PMc5m5Fil%2bhyq1zilk3F3cuzxSluXFBE80XgxVIG0rM%3d&risl=&pid=ImgRaw&r=0
 // @grant        GM_setValue
@@ -74,6 +75,7 @@
             enableAutoRefreshDrops: GM_getValue('enableAutoRefreshDrops', true),
             enableClaimAllButton: GM_getValue('enableClaimAllButton', true),
             enableRemoveAllButton: GM_getValue('enableRemoveAllButton', true),
+            enableDebugLogs: GM_getValue('enableDebugLogs', false),
             settingsKey: GM_getValue('settingsKey', 'F2') // Default to F2 if not set
         };
 
@@ -100,6 +102,7 @@
                     ${this.createToggle('enableAutoRefreshDrops', 'Auto Refresh Drops', 'Automatically refresh drops inventory page every 15 minutes')}
                     ${this.createToggle('enableClaimAllButton', 'Enable Claim All Button', 'Add Claim All button on Amazon Gaming')}
                     ${this.createToggle('enableRemoveAllButton', 'Enable Remove All Button', 'Add Remove All button on Amazon Gaming')}
+                    ${this.createToggle('enableDebugLogs', 'Enable Debug Logs', 'Show informational logs in console')}
                     <div class="te-key-setting">
                         <label for="settingsKey" class="te-key-label">Settings Toggle Key:</label>
                         <div class="te-key-input-container">
@@ -530,14 +533,17 @@
         }
 
         static info(msg) {
+            if (!SettingsManager.CONFIG.enableDebugLogs) return;
             console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.info);
         }
 
         static warning(msg) {
+            if (!SettingsManager.CONFIG.enableDebugLogs) return;
             console.warn(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.warning);
         }
 
         static success(msg) {
+            if (!SettingsManager.CONFIG.enableDebugLogs) return;
             console.log(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.success);
         }
 
@@ -545,6 +551,9 @@
             console.error(`%c${this.prefix} ${this.getTimestamp()} - ${msg}`, this.styles.error);
         }
     }
+
+    // Backward-compat alias used by legacy helper functions in this file.
+    const CONFIG = SettingsManager.CONFIG;
 
     // Register menu command
     GM_registerMenuCommand('Twitch Enhancements Settings', () => SettingsManager.toggleSettingsDialog());
@@ -1127,6 +1136,7 @@
                     if (codeInput) {
                         const code = codeInput.value;
                         if (code) {
+                            GM_setValue('gogRedeemCode', code);
                             navigator.clipboard.writeText(code).then(function () {
                                 window.location.href = 'https://www.gog.com/en/redeem';
                             });
@@ -1163,34 +1173,136 @@
 
     // Function to redeem code on GOG
     function redeemCodeOnGOG() {
-        navigator.clipboard.readText().then(function (code) {
-            const codeInput = document.querySelector(GOG_REDEEM_CODE_INPUT_SELECTOR);
-            if (codeInput) {
-                codeInput.value = code;
+        const findGogContinueButton = () => {
+            const bySelector = document.querySelector(GOG_CONTINUE_BUTTON_SELECTOR);
+            if (bySelector) return bySelector;
 
-                // Simulate input event to ensure any listeners are triggered
-                const inputEvent = new Event('input', { bubbles: true });
-                codeInput.dispatchEvent(inputEvent);
+            const candidates = Array.from(document.querySelectorAll('button[type="submit"], button.button.primary'));
+            return candidates.find(button => {
+                const label = (button.getAttribute('aria-label') || '').toLowerCase();
+                const text = (button.textContent || '').trim().toLowerCase();
+                return label.includes('proceed to the next step') || text === 'continue' || text === 'continuar';
+            }) || null;
+        };
 
-                // Click the continue button after a short delay
-                setTimeout(() => {
-                    const continueButton = document.querySelector(GOG_CONTINUE_BUTTON_SELECTOR);
-                    if (continueButton) {
-                        continueButton.click();
+        const findGogRedeemButton = () => {
+            const bySelector = document.querySelector(GOG_FINAL_REDEEM_BUTTON_SELECTOR);
+            if (bySelector) return bySelector;
 
-                        // Wait for the "Redeem" button to appear and click it
-                        const checkRedeemButton = setInterval(() => {
-                            const redeemButton = document.querySelector(GOG_FINAL_REDEEM_BUTTON_SELECTOR);
-                            if (redeemButton) {
-                                clearInterval(checkRedeemButton);
-                                redeemButton.click();
-                            }
-                        }, 500); // Check every 500ms for the Redeem button
-                    }
-                }, 500); // Adjust the delay as needed
+            const candidates = Array.from(document.querySelectorAll('button[type="submit"], button.button.primary'));
+            return candidates.find(button => {
+                const label = (button.getAttribute('aria-label') || '').toLowerCase();
+                const text = (button.textContent || '').trim().toLowerCase();
+                return label.includes('redeem') || text === 'redeem' || text === 'canjear';
+            }) || null;
+        };
+
+        const clickButtonSafely = (button) => {
+            if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') {
+                return false;
             }
+
+            button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            button.click();
+
+            const form = button.closest('form');
+            if (form) {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(button);
+                } else {
+                    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }
+            }
+
+            return true;
+        };
+
+        const trySubmitRedeemForm = () => {
+            const form = document.querySelector('form');
+            if (!form) return false;
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }
+
+            return true;
+        };
+
+        const startRedeemFlow = (code) => {
+
+            let attempts = 0;
+            const maxAttempts = 50;
+            let continueClicked = false;
+
+            const interval = setInterval(() => {
+                attempts++;
+
+                const codeInput = document.querySelector(GOG_REDEEM_CODE_INPUT_SELECTOR);
+                const hasExistingCode = !!(codeInput && codeInput.value && codeInput.value.trim());
+                if (codeInput && !hasExistingCode && code) {
+                    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                    if (valueSetter) {
+                        valueSetter.call(codeInput, code);
+                    } else {
+                        codeInput.value = code;
+                    }
+
+                    ['input', 'change', 'keyup', 'blur'].forEach(eventName => {
+                        codeInput.dispatchEvent(new Event(eventName, { bubbles: true }));
+                    });
+                }
+
+                if (!continueClicked) {
+                    const continueButton = findGogContinueButton();
+                    if (clickButtonSafely(continueButton)) {
+                        continueClicked = true;
+                        Logger.success('GOG Continue button clicked');
+                    } else {
+                        const codeInput = document.querySelector(GOG_REDEEM_CODE_INPUT_SELECTOR);
+                        if (codeInput) {
+                            codeInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                            codeInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+                        }
+
+                        if (trySubmitRedeemForm()) {
+                            continueClicked = true;
+                            Logger.success('GOG Continue submitted via form fallback');
+                        }
+                    }
+                }
+
+                if (continueClicked) {
+                    const redeemButton = findGogRedeemButton();
+                    if (clickButtonSafely(redeemButton)) {
+                        clearInterval(interval);
+                        Logger.success('GOG Redeem button clicked');
+                        GM_deleteValue('gogRedeemCode');
+                        return;
+                    }
+                }
+
+                if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    Logger.warning('GOG auto-redeem timed out waiting for enabled Continue/Redeem button');
+                }
+            }, 300);
+        };
+
+        const storedCode = (GM_getValue('gogRedeemCode', '') || '').trim();
+        if (storedCode) {
+            startRedeemFlow(storedCode);
+            return;
+        }
+
+        navigator.clipboard.readText().then(function (code) {
+            startRedeemFlow((code || '').trim());
         }).catch(function (err) {
             Logger.error('Failed to read clipboard contents: ' + err);
+            // Continue flow even if clipboard is blocked, using any code already present in the input.
+            startRedeemFlow('');
         });
     }
 
@@ -1382,6 +1494,200 @@
         });
     }
 
+    function removeClaimedItems() {
+        const allItems = document.querySelectorAll('.prime-offer');
+        let dismissedCount = 0;
+        let dismissButtons = [];
+
+        Logger.info(`Found ${allItems.length} total items to dismiss`);
+
+        document.querySelectorAll('button[aria-label="Dismiss"][data-a-target="prime-offer-dismiss-button"]').forEach(btn => {
+            dismissButtons.push(btn);
+        });
+
+        document.querySelectorAll('button[data-test-selector="prime-offer-dismiss-button"]').forEach(btn => {
+            if (!dismissButtons.includes(btn)) {
+                dismissButtons.push(btn);
+            }
+        });
+
+        document.querySelectorAll('.prime-offer__dismiss button').forEach(btn => {
+            if (!dismissButtons.includes(btn)) {
+                dismissButtons.push(btn);
+            }
+        });
+
+        dismissButtons = [...new Set(dismissButtons)];
+        Logger.info(`Found ${dismissButtons.length} dismiss buttons to click`);
+
+        if (dismissButtons.length > 0) {
+            const clickNextButton = (index) => {
+                if (index < dismissButtons.length) {
+                    try {
+                        dismissButtons[index].click();
+                        dismissedCount++;
+
+                        if (dismissedCount % 5 === 0 || dismissedCount === dismissButtons.length) {
+                            Logger.info(`Dismissed ${dismissedCount} of ${dismissButtons.length} items...`);
+                        }
+                    } catch (e) {
+                        Logger.error(`Error clicking button ${index}: ` + e);
+                    }
+
+                    setTimeout(() => clickNextButton(index + 1), 75);
+                } else {
+                    Logger.success(`Completed! Dismissed ${dismissedCount} items total.`);
+
+                    const remainingButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
+                    if (remainingButtons.length > 0) {
+                        Logger.warning(`Found ${remainingButtons.length} additional buttons to try`);
+                        remainingButtons.forEach(btn => {
+                            try {
+                                btn.click();
+                                dismissedCount++;
+                            } catch (e) {
+                                // ignore individual failures
+                            }
+                        });
+
+                        Logger.success(`Final dismissal count: ${dismissedCount}`);
+                    }
+                }
+            };
+
+            clickNextButton(0);
+        } else {
+            Logger.warning('No dismiss buttons found to click');
+
+            const fallbackButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
+            if (fallbackButtons.length > 0) {
+                Logger.warning(`Fallback: Found ${fallbackButtons.length} buttons with aria-label="Dismiss"`);
+                fallbackButtons.forEach(btn => {
+                    try {
+                        btn.click();
+                        dismissedCount++;
+                    } catch (e) {
+                        // ignore individual failures
+                    }
+                });
+
+                Logger.success(`Fallback dismissal completed: ${dismissedCount} items dismissed`);
+            }
+        }
+    }
+
+    // Function to switch Prime Offers popover to the Claim Games tab
+    function switchToClaimGamesTab() {
+        const popoverRoot = document.getElementById('PrimeOfferPopover') ||
+            document.querySelector('[id^="PrimeOfferPopover"]') ||
+            document;
+        const tabCandidates = Array.from(popoverRoot.querySelectorAll('button[role="tab"], [role="tab"]'));
+        let claimGamesTab = tabCandidates.find(tab => {
+            const text = (tab.textContent || '').trim().toLowerCase();
+            return text.includes('claim games') || text.includes('obtener juegos') || text.includes('reclamar juegos');
+        });
+
+        // Fallback: in the Prime Offers popover, "Claim Games" is usually the first tab.
+        if (!claimGamesTab) {
+            claimGamesTab = document.querySelector('#PrimeOfferPopover-header button[role="tab"][data-index="0"], button[role="tab"][data-index="0"]');
+        }
+
+        if (!claimGamesTab) {
+            return false;
+        }
+
+        if (claimGamesTab.getAttribute('aria-selected') === 'true') {
+            return true;
+        }
+
+        // Some Twitch/Amazon UI nodes only react reliably to full pointer+mouse sequence.
+        claimGamesTab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        claimGamesTab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        claimGamesTab.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        claimGamesTab.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        claimGamesTab.click();
+        Logger.success('Prime Offers tab switched to Claim Games');
+        return true;
+    }
+
+    function setupPrimeOffersTabAutoSwitch() {
+        if (window.location.hostname !== 'gaming.amazon.com') return;
+
+        let activeForceInterval = null;
+        let activeForceObserver = null;
+
+        const forceSwitchClaimGames = (durationMs = 5000) => {
+            if (activeForceInterval) {
+                clearInterval(activeForceInterval);
+                activeForceInterval = null;
+            }
+
+            if (activeForceObserver) {
+                activeForceObserver.disconnect();
+                activeForceObserver = null;
+            }
+
+            const startedAt = Date.now();
+
+            const tick = () => {
+                switchToClaimGamesTab();
+
+                if (Date.now() - startedAt >= durationMs) {
+                    if (activeForceInterval) {
+                        clearInterval(activeForceInterval);
+                        activeForceInterval = null;
+                    }
+                    if (activeForceObserver) {
+                        activeForceObserver.disconnect();
+                        activeForceObserver = null;
+                    }
+                }
+            };
+
+            activeForceInterval = setInterval(tick, 120);
+            tick();
+
+            activeForceObserver = new MutationObserver(() => {
+                tick();
+            });
+
+            activeForceObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['aria-selected', 'class']
+            });
+        };
+
+        document.addEventListener('click', (event) => {
+            const primeOffersButton = event.target.closest('[data-a-target="prime-offers-icon"]');
+            if (!primeOffersButton) return;
+
+            setTimeout(() => {
+                forceSwitchClaimGames(12000);
+            }, 60);
+        }, true);
+
+        const popoverObserver = new MutationObserver(() => {
+            const popoverHeader = document.getElementById('PrimeOfferPopover-header');
+            if (popoverHeader) {
+                forceSwitchClaimGames(3000);
+            }
+        });
+
+        popoverObserver.observe(document.body, { childList: true, subtree: true });
+
+        // Proactive attempt in case the popover is already open on initial load.
+        setTimeout(() => {
+            forceSwitchClaimGames(2000);
+        }, 250);
+
+        // Retry when the tab gains focus again.
+        window.addEventListener('focus', () => {
+            forceSwitchClaimGames(2000);
+        });
+    }
+
     if (window.location.hostname === 'gaming.amazon.com') {
         const observer = new MutationObserver((mutations, obs) => {
             const claimCodeButton = document.querySelector('p[title="Claim Code"]');
@@ -1403,7 +1709,7 @@
         if (CONFIG.enableLegacyGamesRedeemButton) addLegacyGamesRedeemButton();
     }
 
-    if (window.location.hostname === 'www.gog.com' && window.location.pathname === '/en/redeem') {
+    if (window.location.hostname === 'www.gog.com' && window.location.pathname.includes('/redeem')) {
         window.addEventListener('load', redeemCodeOnGOG);
     }
 
@@ -1411,7 +1717,9 @@
         window.addEventListener('load', redeemCodeOnLegacyGames);
     }
 
-    setTimeout(UIEnhancer.enableTheaterMode, 1000);
+    setupPrimeOffersTabAutoSwitch();
+
+    setTimeout(() => UIEnhancer.enableTheaterMode(), 1000);
     setTimeout(AutoClaimer.startClaimingPoints, 1000);
     setTimeout(PrimeRewardManager.claimRewards, 1000);
     setTimeout(() => UIEnhancer.clickButton(CLOSE_MENU_BUTTON_SELECTOR), 1000);
@@ -1504,13 +1812,9 @@
         }
     }, true);
 
-    let o = new MutationObserver((m) => {
-        if (!SettingsManager.CONFIG.enableClaimAllButton && !SettingsManager.CONFIG.enableRemoveAllButton) return;
-
-        // Check if the PrimeOfferPopover-header element exists
-        const primeOfferHeader = document.getElementById("PrimeOfferPopover-header");
+    let o = new MutationObserver(() => {
+        const primeOfferHeader = document.getElementById('PrimeOfferPopover-header');
         if (!primeOfferHeader) {
-            // If we're on a page where this element doesn't exist, we should stop
             return;
         }
 
