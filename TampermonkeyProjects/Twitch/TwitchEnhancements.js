@@ -640,6 +640,8 @@
 
     // UIEnhancer Class
     class UIEnhancer {
+        static theaterModeObserver = null;
+
         static enableTheaterMode() {
             if (!SettingsManager.CONFIG.enableTheaterMode) return;
 
@@ -647,6 +649,7 @@
             const player = document.querySelector(PLAYER_SELECTOR);
             if (player && player.classList.contains(THEATER_MODE_CLASS)) {
                 Logger.info('Theater mode already enabled');
+                this.setupTheaterModeMonitor();
                 return;
             }
 
@@ -655,6 +658,7 @@
             if (theaterButton) {
                 theaterButton.click();
                 Logger.success('Theater mode button clicked');
+                this.setupTheaterModeMonitor();
             } else {
                 // Fallback: use observer to wait for button
                 this.clickButton(THEATER_MODE_BUTTON_SELECTOR);
@@ -662,7 +666,26 @@
             }
         }
 
+        static setupTheaterModeMonitor() {
+            if (!SettingsManager.CONFIG.enableTheaterMode) return;
+            if (this.theaterModeObserver) return; // Avoid duplicate observers
 
+            const player = document.querySelector(PLAYER_SELECTOR);
+            if (!player) return;
+
+            // Monitor theater mode state - user can toggle with native Esc key
+            this.theaterModeObserver = new MutationObserver((mutations) => {
+                const isTheaterMode = player.classList.contains(THEATER_MODE_CLASS);
+                Logger.info(`Theater mode ${isTheaterMode ? 'enabled' : 'disabled'}`);
+            });
+
+            this.theaterModeObserver.observe(player, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            Logger.info('Theater mode monitor started');
+        }
 
         static clickButton(buttonSelector) {
             if (!MutationObserver) return;
@@ -1623,6 +1646,24 @@
         if (matchesModifiers && matchesMainKey) {
             // Prevent default behavior for our combination
             event.preventDefault();
+        }
+    }, true);
+
+    // Escape key listener for theater mode toggle - intercept before Twitch processes it
+    document.addEventListener('keydown', (event) => {
+        if ((event.key === 'Escape' || event.keyCode === 27) && window.location.hostname === 'www.twitch.tv') {
+            if (!SettingsManager.CONFIG.enableTheaterMode) return;
+
+            // Prevent Twitch default behavior
+            event.stopImmediatePropagation();
+            event.preventDefault();
+
+            // Click the theater button to toggle
+            const theaterButton = document.querySelector(THEATER_MODE_BUTTON_SELECTOR);
+            if (theaterButton) {
+                theaterButton.click();
+                Logger.success('Theater mode toggled via Esc');
+            }
         }
     }, true);
 
