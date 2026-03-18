@@ -1578,18 +1578,70 @@
 
     // Function to switch Prime Offers popover to the Claim Games tab
     function switchToClaimGamesTab() {
-        const popoverRoot = document.getElementById('PrimeOfferPopover') ||
-            document.querySelector('[id^="PrimeOfferPopover"]') ||
-            document;
-        const tabCandidates = Array.from(popoverRoot.querySelectorAll('button[role="tab"], [role="tab"]'));
+        const normalize = (value) => (value || '').trim().toLowerCase();
+        const dispatchTabClickSequence = (element) => {
+            if (!element) return;
+
+            const rect = element.getBoundingClientRect();
+            const clientX = rect.left + (rect.width / 2);
+            const clientY = rect.top + (rect.height / 2);
+            const mouseEventOptions = {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                clientX,
+                clientY,
+                button: 0,
+                buttons: 1
+            };
+
+            if (typeof PointerEvent !== 'undefined') {
+                element.dispatchEvent(new PointerEvent('pointerdown', mouseEventOptions));
+            }
+            element.dispatchEvent(new MouseEvent('mousedown', mouseEventOptions));
+            if (typeof PointerEvent !== 'undefined') {
+                element.dispatchEvent(new PointerEvent('pointerup', { ...mouseEventOptions, buttons: 0 }));
+            }
+            element.dispatchEvent(new MouseEvent('mouseup', { ...mouseEventOptions, buttons: 0 }));
+            element.dispatchEvent(new MouseEvent('click', { ...mouseEventOptions, buttons: 0 }));
+        };
+
+        const tabLists = Array.from(document.querySelectorAll('ul[role="tablist"], div[role="tablist"]'));
+        let primeOffersTabList = null;
+
+        for (const tabList of tabLists) {
+            const tabs = Array.from(tabList.querySelectorAll('button[role="tab"], [role="tab"]'));
+            if (!tabs.length) continue;
+
+            const tabTexts = tabs.map(tab => normalize(tab.textContent));
+            const hasClaimGames = tabTexts.some(text => text.includes('claim games') || text.includes('obtener juegos') || text.includes('reclamar juegos'));
+            const hasPlayNow = tabTexts.some(text => text.includes('play now') || text.includes('jugar ahora'));
+
+            if (hasClaimGames && hasPlayNow) {
+                primeOffersTabList = tabList;
+                break;
+            }
+        }
+
+        if (!primeOffersTabList) {
+            return false;
+        }
+
+        const tabCandidates = Array.from(primeOffersTabList.querySelectorAll('button[role="tab"], [role="tab"]'));
         let claimGamesTab = tabCandidates.find(tab => {
-            const text = (tab.textContent || '').trim().toLowerCase();
+            const text = normalize(tab.textContent);
             return text.includes('claim games') || text.includes('obtener juegos') || text.includes('reclamar juegos');
         });
+        let playNowTab = tabCandidates.find(tab => {
+            const text = normalize(tab.textContent);
+            return text.includes('play now') || text.includes('jugar ahora');
+        });
 
-        // Fallback: in the Prime Offers popover, "Claim Games" is usually the first tab.
         if (!claimGamesTab) {
-            claimGamesTab = document.querySelector('#PrimeOfferPopover-header button[role="tab"][data-index="0"], button[role="tab"][data-index="0"]');
+            claimGamesTab = primeOffersTabList.querySelector('button[role="tab"][data-index="0"], [role="tab"][data-index="0"]');
+        }
+        if (!playNowTab) {
+            playNowTab = primeOffersTabList.querySelector('button[role="tab"][data-index="1"], [role="tab"][data-index="1"]');
         }
 
         if (!claimGamesTab) {
@@ -1600,14 +1652,38 @@
             return true;
         }
 
-        // Some Twitch/Amazon UI nodes only react reliably to full pointer+mouse sequence.
-        claimGamesTab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-        claimGamesTab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-        claimGamesTab.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-        claimGamesTab.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        // Hard fallback path: when Play Now is currently active, navigate to previous tab then confirm.
+        if (playNowTab && playNowTab.getAttribute('aria-selected') === 'true') {
+            try {
+                playNowTab.focus();
+                playNowTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+                playNowTab.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', bubbles: true }));
+                playNowTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+                playNowTab.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+            } catch (e) {
+                // Continue with pointer/mouse fallback below.
+            }
+        }
+
+        // Some Twitch/Amazon UI nodes only react reliably to a full pointer/mouse sequence.
+        dispatchTabClickSequence(claimGamesTab);
         claimGamesTab.click();
-        Logger.success('Prime Offers tab switched to Claim Games');
-        return true;
+
+        // If still on Play Now, repeat the hard fallback once more immediately.
+        if (claimGamesTab.getAttribute('aria-selected') !== 'true' &&
+            playNowTab && playNowTab.getAttribute('aria-selected') === 'true') {
+            dispatchTabClickSequence(claimGamesTab);
+            claimGamesTab.focus();
+            claimGamesTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            claimGamesTab.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+            claimGamesTab.click();
+        }
+
+        const switched = claimGamesTab.getAttribute('aria-selected') === 'true';
+        if (switched) {
+            Logger.success('Prime Offers tab switched to Claim Games');
+        }
+        return switched;
     }
 
     function setupPrimeOffersTabAutoSwitch() {
@@ -1644,7 +1720,7 @@
                 }
             };
 
-            activeForceInterval = setInterval(tick, 120);
+            activeForceInterval = setInterval(tick, 80);
             tick();
 
             activeForceObserver = new MutationObserver(() => {
@@ -1659,19 +1735,28 @@
             });
         };
 
-        document.addEventListener('click', (event) => {
-            const primeOffersButton = event.target.closest('[data-a-target="prime-offers-icon"]');
-            if (!primeOffersButton) return;
+        const isPrimeOffersTrigger = (target) => {
+            if (!target || !target.closest) return false;
+            return !!target.closest('[data-a-target="prime-offers-icon"], [data-target="prime-offers-icon"], [aria-label="Prime offers"], [data-test-selector="toggle-balloon-wrapper__mouse-enter-detector"]');
+        };
 
+        const handlePrimeOffersInteraction = (event) => {
+            if (!isPrimeOffersTrigger(event.target)) return;
             setTimeout(() => {
-                forceSwitchClaimGames(12000);
-            }, 60);
-        }, true);
+                forceSwitchClaimGames(20000);
+            }, 30);
+        };
+
+        document.addEventListener('pointerdown', handlePrimeOffersInteraction, true);
+        document.addEventListener('mousedown', handlePrimeOffersInteraction, true);
+        document.addEventListener('click', handlePrimeOffersInteraction, true);
+        document.addEventListener('mouseenter', handlePrimeOffersInteraction, true);
 
         const popoverObserver = new MutationObserver(() => {
-            const popoverHeader = document.getElementById('PrimeOfferPopover-header');
-            if (popoverHeader) {
-                forceSwitchClaimGames(3000);
+            const hasPrimeTabs = !!document.querySelector('ul[role="tablist"] [role="tab"][data-index="0"]') &&
+                !!document.querySelector('ul[role="tablist"] [role="tab"][data-index="1"]');
+            if (hasPrimeTabs) {
+                forceSwitchClaimGames(3500);
             }
         });
 
@@ -1686,6 +1771,68 @@
         window.addEventListener('focus', () => {
             forceSwitchClaimGames(2000);
         });
+    }
+
+    function renderPrimePopoverActions() {
+        const primeOfferHeader = document.getElementById('PrimeOfferPopover-header');
+        if (!primeOfferHeader) {
+            return;
+        }
+
+        let actionsContainer = primeOfferHeader.querySelector('#te-prime-actions');
+        const shouldShowButtons = SettingsManager.CONFIG.enableClaimAllButton || SettingsManager.CONFIG.enableRemoveAllButton;
+
+        if (!shouldShowButtons) {
+            if (actionsContainer) {
+                actionsContainer.remove();
+            }
+            return;
+        }
+
+        if (!actionsContainer) {
+            actionsContainer = document.createElement('div');
+            actionsContainer.id = 'te-prime-actions';
+            actionsContainer.style.display = 'flex';
+            actionsContainer.style.gap = '10px';
+            actionsContainer.style.marginBottom = '10px';
+            primeOfferHeader.prepend(actionsContainer);
+        }
+
+        actionsContainer.innerHTML = '';
+
+        if (SettingsManager.CONFIG.enableClaimAllButton) {
+            const claimAllButton = document.createElement('input');
+            claimAllButton.type = 'button';
+            claimAllButton.value = 'Claim All';
+            claimAllButton.className = 'tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative';
+            claimAllButton.style.border = 'none';
+            claimAllButton.style.backgroundColor = '#9147ff';
+            claimAllButton.style.color = 'white';
+            claimAllButton.style.padding = '10px 20px';
+            claimAllButton.style.fontSize = '14px';
+            claimAllButton.style.borderRadius = '4px';
+            claimAllButton.style.cursor = 'pointer';
+            claimAllButton.style.flex = '1';
+            claimAllButton.addEventListener('click', openClaimGameTabs);
+            actionsContainer.appendChild(claimAllButton);
+        }
+
+        if (SettingsManager.CONFIG.enableRemoveAllButton) {
+            const removeAllButton = document.createElement('input');
+            removeAllButton.type = 'button';
+            removeAllButton.value = 'Remove All';
+            removeAllButton.className = 'tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative';
+            removeAllButton.style.border = 'none';
+            removeAllButton.style.backgroundColor = '#772ce8';
+            removeAllButton.style.color = 'white';
+            removeAllButton.style.padding = '10px 20px';
+            removeAllButton.style.fontSize = '14px';
+            removeAllButton.style.borderRadius = '4px';
+            removeAllButton.style.cursor = 'pointer';
+            removeAllButton.style.flex = '1';
+            removeAllButton.addEventListener('click', removeClaimedItems);
+            actionsContainer.appendChild(removeAllButton);
+        }
     }
 
     if (window.location.hostname === 'gaming.amazon.com') {
@@ -1813,179 +1960,7 @@
     }, true);
 
     let o = new MutationObserver(() => {
-        const primeOfferHeader = document.getElementById('PrimeOfferPopover-header');
-        if (!primeOfferHeader) {
-            return;
-        }
-
-        let script = document.createElement("script");
-        script.innerHTML = `
-        // Add logger configuration for client-side script
-        const Logger = {
-            styles: {
-                info: 'color: #2196F3; font-weight: bold',
-                warning: 'color: #FFC107; font-weight: bold',
-                success: 'color: #4CAF50; font-weight: bold',
-                error: 'color: #F44336; font-weight: bold'
-            },
-            prefix: '[TwitchEnhancements]',
-            getTimestamp() {
-                return new Date().toISOString().split('T')[1].slice(0, -1);
-            },
-            info(msg) {
-                console.log(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.info);
-            },
-            warning(msg) {
-                console.warn(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.warning);
-            },
-            success(msg) {
-                console.log(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.success);
-            },
-            error(msg) {
-                console.error(\`%c\${this.prefix} \${this.getTimestamp()} - \${msg}\`, this.styles.error);
-            }
-        };
-
-        const openClaimGameTabs = () => {
-            // More specific selector targeting only prime offer buttons
-            const allButtonTexts = document.querySelectorAll('div[data-a-target="tw-core-button-label-text"]');
-
-            // Filter buttons to only include those with text "Claim Game" or just "Claim"
-            const claimGameButtons = Array.from(allButtonTexts).filter(button => {
-                const text = button.textContent.trim();
-                return (text === "Claim Game" || text === "Claim") &&
-                       button.closest('a') && // Must be inside an anchor tag
-                       button.closest('.prime-offer'); // Must be inside a prime offer
-            });
-
-            Logger.info(\`Found \${claimGameButtons.length} valid claim buttons\`);
-
-            // Open each valid claim button in a new tab
-            claimGameButtons.forEach(button => {
-                const parentButton = button.closest('a');
-                if (parentButton && parentButton.href &&
-                    (parentButton.href.includes('gaming.amazon.com') ||
-                     parentButton.href.includes('?ingress=twch'))) {
-                    window.open(parentButton.href, '_blank');
-                }
-            });
-        };
-
-        const removeClaimedItems = () => {
-            // Find ALL items in the list, not just claimed ones
-            const allItems = document.querySelectorAll('.prime-offer');
-            let dismissedCount = 0;
-            let dismissButtons = [];
-
-            Logger.info(\`Found \${allItems.length} total items to dismiss\`);
-
-            // First collect all dismiss buttons - use multiple methods to ensure we catch all
-            // Method 1: Find buttons by attribute and data target
-            document.querySelectorAll('button[aria-label="Dismiss"][data-a-target="prime-offer-dismiss-button"]').forEach(btn => {
-                dismissButtons.push(btn);
-            });
-
-            // Method 2: Find buttons by test selector attribute as backup
-            document.querySelectorAll('button[data-test-selector="prime-offer-dismiss-button"]').forEach(btn => {
-                if (!dismissButtons.includes(btn)) {
-                    dismissButtons.push(btn);
-                }
-            });
-
-            // Method 3: Find by class and structure if the above methods miss any
-            document.querySelectorAll('.prime-offer__dismiss button').forEach(btn => {
-                if (!dismissButtons.includes(btn)) {
-                    dismissButtons.push(btn);
-                }
-            });
-
-            // Deduplicate just in case
-            dismissButtons = [...new Set(dismissButtons)];
-
-            Logger.info(\`Found \${dismissButtons.length} dismiss buttons to click\`);
-
-            // Process dismiss buttons with a delay to avoid UI lockups
-            if (dismissButtons.length > 0) {
-                const clickNextButton = (index) => {
-                    if (index < dismissButtons.length) {
-                        try {
-                            dismissButtons[index].click();
-                            dismissedCount++;
-
-                            // Show progress in console
-                            if (dismissedCount % 5 === 0 || dismissedCount === dismissButtons.length) {
-                                Logger.info(\`Dismissed \${dismissedCount} of \${dismissButtons.length} items...\`);
-                            }
-                        } catch (e) {
-                            Logger.error(\`Error clicking button \${index}: \` + e);
-                        }
-
-                        // Schedule next button click with a small delay
-                        setTimeout(() => clickNextButton(index + 1), 75);
-                    } else {
-                        Logger.success(\`Completed! Dismissed \${dismissedCount} items total.\`);
-
-                        // Look for any dismiss buttons that might have been missed
-                        const remainingButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
-                        if (remainingButtons.length > 0) {
-                            Logger.warning(\`Found \${remainingButtons.length} additional buttons to try\`);
-
-                            // Try to click any remaining dismiss buttons as a final pass
-                            remainingButtons.forEach(btn => {
-                                try {
-                                    btn.click();
-                                    dismissedCount++;
-                                } catch(e) {}
-                            });
-
-                            Logger.success(\`Final dismissal count: \${dismissedCount}\`);
-                        }
-                    }
-                };
-
-                // Start the dismissal process
-                clickNextButton(0);
-            } else {
-                Logger.warning('No dismiss buttons found to click');
-
-                // Last attempt fallback - try to find any button with "Dismiss" in aria-label
-                const fallbackButtons = document.querySelectorAll('button[aria-label="Dismiss"]');
-                if (fallbackButtons.length > 0) {
-                    Logger.warning(\`Fallback: Found \${fallbackButtons.length} buttons with aria-label="Dismiss"\`);
-                    fallbackButtons.forEach(btn => {
-                        try {
-                            btn.click();
-                            dismissedCount++;
-                        } catch(e) {}
-                    });
-                    Logger.success(\`Fallback dismissal completed: \${dismissedCount} items dismissed\`);
-                }
-            }
-        };
-    `;
-
-        // Safely clear and append to the header
-        primeOfferHeader.innerHTML = "";
-        primeOfferHeader.appendChild(script);
-
-        if (SettingsManager.CONFIG.enableClaimAllButton || SettingsManager.CONFIG.enableRemoveAllButton) {
-            primeOfferHeader.innerHTML += `
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                ${SettingsManager.CONFIG.enableClaimAllButton ? `
-                <input type='button' style='border: none; background-color: #9147ff; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer; flex: 1;'
-                    class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative'
-                    value='Claim All'
-                    onclick='openClaimGameTabs();'>
-                ` : ''}
-                ${SettingsManager.CONFIG.enableRemoveAllButton ? `
-                <input type='button' style='border: none; background-color: #772ce8; color: white; padding: 10px 20px; font-size: 14px; border-radius: 4px; cursor: pointer; flex: 1;'
-                    class='tw-align-items-center tw-align-middle tw-border-bottom-left-radius-medium tw-border-bottom-right-radius-medium tw-border-top-left-radius-medium tw-border-top-right-radius-medium tw-core-button tw-core-button--primary tw-inline-flex tw-interactive tw-justify-content-center tw-overflow-hidden tw-relative'
-                    value='Remove All'
-                    onclick='removeClaimedItems();'>
-                ` : ''}
-            </div>
-        `;
-        }
+        renderPrimePopoverActions();
     });
 
     o.observe(document.body, { childList: true });
