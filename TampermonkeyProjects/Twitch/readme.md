@@ -52,6 +52,15 @@ The script automatically:
 
 ## Version History
 
+### v0.5.6
+- Refactored code: removed ~400+ lines of duplicates, consolidated to pure class-based architecture
+- Removed hide global menu feature (menu now always visible)
+- Improved theater mode selector with language variants (ES/EN)
+- Enhanced theater mode with direct button detection and fallback observer
+- Added Esc key toggle for theater mode activation/deactivation
+- Theater mode now auto-activates on page load and can be toggled with Esc or Alt+T
+- Improved code maintainability and performance
+
 ### v0.5.5
 - Use dynamic "here" link instead of static URL for Legacy Games navigation
 
