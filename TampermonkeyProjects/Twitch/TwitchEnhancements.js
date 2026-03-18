@@ -26,7 +26,9 @@
     const PLAYER_SELECTOR = '.video-player';
     const THEATER_MODE_BUTTON_SELECTOR = [
         'button[aria-label="Modo cine (alt+t)"]',
-        'button[aria-label="Theater Mode (alt+t)"]'
+        'button[aria-label="Theater Mode (alt+t)"]',
+        'button[aria-label*="Theatre Mode"]',
+        'button[aria-label*="Theater Mode"]'
     ].join(',');
     const CLOSE_MENU_BUTTON_SELECTOR = [
         'button[aria-label="Close Menu"]',
@@ -71,7 +73,6 @@
             enableClaimDrops: GM_getValue('enableClaimDrops', true),
             enableGogRedeemButton: GM_getValue('enableGogRedeemButton', true),
             enableLegacyGamesRedeemButton: GM_getValue('enableLegacyGamesRedeemButton', true),
-            enableHideGlobalMenu: GM_getValue('enableHideGlobalMenu', true),
             enableAutoRefreshDrops: GM_getValue('enableAutoRefreshDrops', true),
             enableClaimAllButton: GM_getValue('enableClaimAllButton', true),
             enableRemoveAllButton: GM_getValue('enableRemoveAllButton', true),
@@ -98,7 +99,6 @@
                     ${this.createToggle('enableClaimDrops', 'Auto Claim Drops', 'Automatically claim Twitch drops')}
                     ${this.createToggle('enableGogRedeemButton', 'GOG Redeem Button', 'Add GOG redeem button on Amazon Gaming')}
                     ${this.createToggle('enableLegacyGamesRedeemButton', 'Legacy Games Button', 'Add Legacy Games redeem button on Amazon Gaming')}
-                    ${this.createToggle('enableHideGlobalMenu', 'Hide Global Menu', 'Hide the global menu on Twitch')}
                     ${this.createToggle('enableAutoRefreshDrops', 'Auto Refresh Drops', 'Automatically refresh drops inventory page every 15 minutes')}
                     ${this.createToggle('enableClaimAllButton', 'Enable Claim All Button', 'Add Claim All button on Amazon Gaming')}
                     ${this.createToggle('enableRemoveAllButton', 'Enable Remove All Button', 'Add Remove All button on Amazon Gaming')}
@@ -643,36 +643,26 @@
         static enableTheaterMode() {
             if (!SettingsManager.CONFIG.enableTheaterMode) return;
 
+            // First try to find if player is in theater mode already
             const player = document.querySelector(PLAYER_SELECTOR);
-            if (player) {
-                if (!player.classList.contains(THEATER_MODE_CLASS)) {
-                    this.clickButton(THEATER_MODE_BUTTON_SELECTOR);
-                }
+            if (player && player.classList.contains(THEATER_MODE_CLASS)) {
+                Logger.info('Theater mode already enabled');
+                return;
+            }
+
+            // Try to find and click the theater mode button directly
+            const theaterButton = document.querySelector(THEATER_MODE_BUTTON_SELECTOR);
+            if (theaterButton) {
+                theaterButton.click();
+                Logger.success('Theater mode button clicked');
             } else {
-                Logger.error('Player not found');
+                // Fallback: use observer to wait for button
+                this.clickButton(THEATER_MODE_BUTTON_SELECTOR);
+                Logger.info('Waiting for theater mode button to appear');
             }
         }
 
-        static hideGlobalMenu() {
-            if (!SettingsManager.CONFIG.enableHideGlobalMenu) return;
 
-            const GLOBAL_MENU_SELECTOR = 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm';
-            const globalMenu = document.querySelector(GLOBAL_MENU_SELECTOR);
-            if (globalMenu) {
-                globalMenu.style.display = 'none';
-            } else {
-                Logger.error('Global menu not found');
-            }
-        }
-
-        static showGlobalMenu() {
-            const GLOBAL_MENU_SELECTOR = 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm';
-            const globalMenu = document.querySelector(GLOBAL_MENU_SELECTOR);
-            if (globalMenu) {
-                globalMenu.style.display = '';
-                Logger.info('Global menu restored');
-            }
-        }
 
         static clickButton(buttonSelector) {
             if (!MutationObserver) return;
@@ -820,46 +810,9 @@
 
 
 
-    // Function to show global menu (when setting is turned off)
-    function showGlobalMenu() {
-        const GLOBAL_MENU_SELECTOR = 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm';
-        const globalMenu = document.querySelector(GLOBAL_MENU_SELECTOR);
-        if (globalMenu) {
-            globalMenu.style.display = '';
-            Logger.info('Global menu restored');
-        }
-    }
 
-    // Variables to track observers
-    let claimPointsObserver = null;
-    let claimDropsObserver = null;
+    // Auto refresh drops timer interval
     let autoRefreshInterval = null;
-
-    // Function to restart claim points observer
-    function restartClaimPointsObserver() {
-        if (claimPointsObserver) {
-            claimPointsObserver.disconnect();
-            claimPointsObserver = null;
-            Logger.info('Auto claim points observer disconnected');
-        }
-
-        if (CONFIG.enableAutoClaimPoints) {
-            setupAutoClaimBonus();
-        }
-    }
-
-    // Function to restart claim drops observer
-    function restartClaimDropsObserver() {
-        if (claimDropsObserver) {
-            claimDropsObserver.disconnect();
-            claimDropsObserver = null;
-            Logger.info('Claim drops observer disconnected');
-        }
-
-        if (CONFIG.enableClaimDrops) {
-            setupClaimDrops();
-        }
-    }
 
     // Function to setup auto refresh drops timer
     function setupAutoRefreshDrops() {
@@ -880,296 +833,11 @@
         }
     }
 
-    // Function to update redeem buttons
-    function updateRedeeemButtons() {
-        if (window.location.hostname === 'gaming.amazon.com') {
-            if (CONFIG.enableGogRedeemButton) {
-                addGogRedeemButton();
-            } else {
-                // Remove GOG buttons
-                const gogButtons = document.querySelectorAll('.gog-redeem-button');
-                gogButtons.forEach(button => button.remove());
-                Logger.info('GOG redeem buttons removed');
-            }
 
-            if (CONFIG.enableLegacyGamesRedeemButton) {
-                addLegacyGamesRedeemButton();
-            } else {
-                // Remove Legacy Games buttons
-                const legacyButtons = document.querySelectorAll('.legacy-games-redeem-button');
-                legacyButtons.forEach(button => button.remove());
-                Logger.info('Legacy Games redeem buttons removed');
-            }
-        }
-    }
 
-    // Function to update the Prime Offer Popover buttons
-    function updatePrimeOfferButtons() {
-        const primeOfferHeader = document.getElementById("PrimeOfferPopover-header");
-        if (!primeOfferHeader) return;
 
-        let o = new MutationObserver((m) => {
-            if (!CONFIG.enableClaimAllButton && !CONFIG.enableRemoveAllButton) {
-                // Remove all custom buttons
-                const customButtonsContainer = document.querySelector('#PrimeOfferPopover-header > div');
-                if (customButtonsContainer) {
-                    customButtonsContainer.remove();
-                }
-                return;
-            }
 
-            // Trigger a refresh of the buttons
-            const headerElement = document.getElementById("PrimeOfferPopover-header");
-            if (headerElement) {
-                // Force refresh by triggering our main observer
-                const dummyDiv = document.createElement('div');
-                document.body.appendChild(dummyDiv);
-                document.body.removeChild(dummyDiv);
-            }
-        });
 
-        // Trigger the observer
-        o.observe(document.body, { childList: true });
-        setTimeout(() => o.disconnect(), 500); // Disconnect after a short time
-    }
-
-    // Function to setup auto claim bonus
-    function setupAutoClaimBonus() {
-        if (!CONFIG.enableAutoClaimPoints || !MutationObserver) return;
-
-        Logger.info('Auto claimer is enabled.');
-
-        claimPointsObserver = new MutationObserver(mutationsList => {
-            for (let mutation of mutationsList) {
-                if (mutation.type === 'childList' && CONFIG.enableAutoClaimPoints) {
-                    let bonus = document.querySelector(CLAIMABLE_BONUS_SELECTOR);
-                    if (bonus && !claiming) {
-                        bonus.click();
-                        let date = new Date();
-                        claiming = true;
-                        setTimeout(() => {
-                            Logger.success('Claimed at ' + date.toLocaleString());
-                            claiming = false;
-                        }, Math.random() * 1000 + 2000);
-                    }
-                }
-            }
-        });
-
-        claimPointsObserver.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Function to setup claim drops
-    function setupClaimDrops() {
-        if (!CONFIG.enableClaimDrops || !MutationObserver) return;
-
-        var onMutate = function (mutationsList) {
-            mutationsList.forEach(mutation => {
-                if (CONFIG.enableClaimDrops && document.querySelector(CLAIM_DROPS_SELECTOR)) {
-                    document.querySelector(CLAIM_DROPS_SELECTOR).click();
-                }
-            });
-        };
-
-        claimDropsObserver = new MutationObserver(onMutate);
-        claimDropsObserver.observe(document.body, { childList: true, subtree: true });
-        Logger.info('Claim drops observer started');
-    }
-
-    function closeDialog() {
-        const dialog = document.getElementById('twitchEnhancementsDialog');
-        if (dialog) {
-            dialog.remove();
-        }
-    }
-
-    function toggleSettingsDialog() {
-        const dialog = document.getElementById('twitchEnhancementsDialog');
-        if (dialog) {
-            dialog.remove();
-        } else {
-            createSettingsDialog();
-        }
-    }
-
-    // Register menu command
-    GM_registerMenuCommand('Twitch Enhancements Settings', toggleSettingsDialog);
-
-    // Function to click a button
-    function clickButton(buttonSelector) {
-        if (!MutationObserver) return;
-
-        const observer = new MutationObserver((mutationsList, observer) => {
-            for (let mutation of mutationsList) {
-                if (mutation.addedNodes.length) {
-                    const button = document.querySelector(buttonSelector);
-                    if (button) {
-                        button.click();
-                        observer.disconnect();
-                        return;
-                    }
-                }
-            }
-        });
-
-        observer.observe(document, { childList: true, subtree: true });
-    }
-
-    // Function to enable theater mode
-    function enableTheaterMode() {
-        if (!CONFIG.enableTheaterMode) return;
-
-        const player = document.querySelector(PLAYER_SELECTOR);
-        if (player) {
-            if (!player.classList.contains(THEATER_MODE_CLASS)) {
-                clickButton(THEATER_MODE_BUTTON_SELECTOR);
-            }
-        } else {
-            Logger.error('Player not found');
-        }
-    }
-
-    // Function to hide the global menu
-    function hideGlobalMenu() {
-        if (!CONFIG.enableHideGlobalMenu) return;
-
-        const GLOBAL_MENU_SELECTOR = 'div.ScBalloonWrapper-sc-14jr088-0.eEhNFm';
-        const globalMenu = document.querySelector(GLOBAL_MENU_SELECTOR);
-        if (globalMenu) {
-            globalMenu.style.display = 'none';
-        } else {
-            Logger.error('Global menu not found');
-        }
-    }
-
-    // Function to automatically claim channel points
-    function autoClaimBonus() {
-        if (!CONFIG.enableAutoClaimPoints || !MutationObserver) return;
-
-        Logger.info('Auto claimer is enabled.');
-
-        let observer = new MutationObserver(mutationsList => {
-            for (let mutation of mutationsList) {
-                if (mutation.type === 'childList') {
-                    let bonus = document.querySelector(CLAIMABLE_BONUS_SELECTOR);
-                    if (bonus && !claiming) {
-                        bonus.click();
-                        let date = new Date();
-                        claiming = true;
-                        setTimeout(() => {
-                            Logger.success('Claimed at ' + date.toLocaleString());
-                            claiming = false;
-                        }, Math.random() * 1000 + 2000);
-                    }
-                }
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Function to claim prime rewards with retry
-    function claimPrimeReward() {
-        if (!CONFIG.enableClaimPrimeRewards) return;
-
-        const maxAttempts = 5;
-        let attempts = 0;
-
-        const tryClaim = () => {
-            if (attempts >= maxAttempts) {
-                Logger.warning('Max attempts reached for claiming prime reward');
-                return;
-            }
-            attempts++;
-
-            const element = document.querySelector(PRIME_REWARD_SELECTOR) || document.querySelector(PRIME_REWARD_SELECTOR_2);
-            if (element) {
-                const lang = element.getAttribute('title') === 'Obtener juego' ? 'Spanish' : 'English';
-                element.click();
-                Logger.success(`Prime reward claimed (${lang})`);
-            } else {
-                Logger.info(`Attempt ${attempts}/${maxAttempts}: Waiting for prime reward button...`);
-                setTimeout(tryClaim, 1000);
-            }
-        };
-
-        setTimeout(tryClaim, 2000);
-    }
-
-    // Function to claim drops
-    function claimDrops() {
-        if (!CONFIG.enableClaimDrops || !MutationObserver) return;
-
-        var onMutate = function (mutationsList) {
-            mutationsList.forEach(mutation => {
-                if (document.querySelector(CLAIM_DROPS_SELECTOR)) document.querySelector(CLAIM_DROPS_SELECTOR).click();
-            })
-        }
-        var observer = new MutationObserver(onMutate);
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    // Function to add the "Redeem on GOG" button
-    function addGogRedeemButton() {
-        if (!CONFIG.enableGogRedeemButton) return;
-
-        const claimCodeButton = document.querySelector('p[title="Claim Code"]');
-        if (claimCodeButton && !document.querySelector('.gog-redeem-button')) {
-            const claimCodeWrapper = claimCodeButton.closest('.claim-button-wrapper');
-            if (claimCodeWrapper) {
-                const gogRedeemButtonDiv = document.createElement('div');
-                gogRedeemButtonDiv.className = 'claim-button tw-align-self-center gog-redeem-button';
-
-                const gogRedeemButton = document.createElement('a');
-                gogRedeemButton.href = 'https://www.gog.com/en/redeem';
-                gogRedeemButton.rel = 'noopener noreferrer';
-                gogRedeemButton.className = 'tw-interactive tw-button tw-button--full-width';
-                gogRedeemButton.dataset.aTarget = 'redeem-on-gog';
-                gogRedeemButton.innerHTML = '<span class="tw-button__text" data-a-target="tw-button-text"><div class="tw-inline-flex"><p class="" title="Redeem on GOG">Redeem on GOG</p>&nbsp;&nbsp;<figure aria-label="ExternalLinkWithBox" class="tw-svg"><svg class="tw-svg__asset tw-svg__asset--externallinkwithbox tw-svg__asset--inherit" width="12px" height="12px" version="1.1" viewBox="0 0 11 11" x="0px" y="0px"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.3125 6.875V9.625C10.3125 10.3844 9.69689 11 8.9375 11H1.375C0.615608 11 0 10.3844 0 9.625V2.0625C0 1.30311 0.615608 0.6875 1.375 0.6875H4.125V2.0625H1.375V9.625H8.9375V6.875H10.3125ZM9.62301 2.34727L5.29664 6.67364L4.32437 5.70136L8.65073 1.375H6.18551V0H10.998V4.8125H9.62301V2.34727Z"></path></svg></figure></div></span>';
-
-                gogRedeemButtonDiv.appendChild(gogRedeemButton);
-                claimCodeWrapper.appendChild(gogRedeemButtonDiv);
-
-                gogRedeemButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const codeInput = document.querySelector('input[aria-label]');
-                    if (codeInput) {
-                        const code = codeInput.value;
-                        if (code) {
-                            GM_setValue('gogRedeemCode', code);
-                            navigator.clipboard.writeText(code).then(function () {
-                                window.location.href = 'https://www.gog.com/en/redeem';
-                            });
-                        }
-                    }
-                });
-
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    .claim-button-wrapper {
-                        display: flex;
-                        flex-direction: column;
-                        margin-top: 15px;
-                    }
-                    .claim-button,
-                    .gog-redeem-button {
-                        margin: 5px 0;
-                    }
-                    .tw-mg-l-1 {
-                        margin-top: 10px;
-                    }
-                    .claimable-item {
-                        flex-direction: column !important;
-                        gap: 15px;
-                    }
-                    .tw-flex-grow-1 {
-                        width: 100%;
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-        }
-    }
 
     // Function to redeem code on GOG
     function redeemCodeOnGOG() {
@@ -1839,11 +1507,11 @@
         const observer = new MutationObserver((mutations, obs) => {
             const claimCodeButton = document.querySelector('p[title="Claim Code"]');
             if (claimCodeButton && CONFIG.enableGogRedeemButton) {
-                addGogRedeemButton();
+                UIEnhancer.addGogRedeemButton();
             }
             const copyCodeButton = document.querySelector('button[aria-label="Copy code to your clipboard"]');
             if (copyCodeButton && CONFIG.enableLegacyGamesRedeemButton) {
-                addLegacyGamesRedeemButton();
+                UIEnhancer.addLegacyGamesRedeemButton();
             }
         });
 
@@ -1852,8 +1520,8 @@
             subtree: true
         });
 
-        if (CONFIG.enableGogRedeemButton) addGogRedeemButton();
-        if (CONFIG.enableLegacyGamesRedeemButton) addLegacyGamesRedeemButton();
+        if (CONFIG.enableGogRedeemButton) UIEnhancer.addGogRedeemButton();
+        if (CONFIG.enableLegacyGamesRedeemButton) UIEnhancer.addLegacyGamesRedeemButton();
     }
 
     if (window.location.hostname === 'www.gog.com' && window.location.pathname.includes('/redeem')) {
@@ -1871,7 +1539,6 @@
     setTimeout(PrimeRewardManager.claimRewards, 1000);
     setTimeout(() => UIEnhancer.clickButton(CLOSE_MENU_BUTTON_SELECTOR), 1000);
     setTimeout(() => UIEnhancer.clickButton(CLOSE_MODAL_BUTTON_SELECTOR), 1000);
-    setTimeout(UIEnhancer.hideGlobalMenu, 1000);
     setTimeout(AutoClaimer.startClaimingDrops, 1000);
 
     // Auto refresh drops inventory page

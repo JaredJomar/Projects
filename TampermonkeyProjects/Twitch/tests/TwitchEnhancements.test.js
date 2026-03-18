@@ -79,7 +79,6 @@ describe('Twitch Enhancements', () => {
     expect(GM_getValue).toHaveBeenCalledWith('enableClaimDrops', true);
     expect(GM_getValue).toHaveBeenCalledWith('enableGogRedeemButton', true);
     expect(GM_getValue).toHaveBeenCalledWith('enableLegacyGamesRedeemButton', true);
-    expect(GM_getValue).toHaveBeenCalledWith('enableHideGlobalMenu', true);
     expect(GM_getValue).toHaveBeenCalledWith('enableAutoRefreshDrops', true);
     expect(GM_getValue).toHaveBeenCalledWith('enableClaimAllButton', true);
     expect(GM_getValue).toHaveBeenCalledWith('enableRemoveAllButton', true);
