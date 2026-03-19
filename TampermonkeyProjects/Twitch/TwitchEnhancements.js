@@ -22,7 +22,7 @@
 (function () {
     'use strict';
 
-    // Twitch Constants
+    // Shared selectors for Twitch UI controls.
     const PLAYER_SELECTOR = '.video-player';
     const THEATER_MODE_BUTTON_SELECTOR = [
         'button[aria-label="Modo cine (alt+t)"]',
@@ -42,7 +42,8 @@
     const CLAIMABLE_BONUS_SELECTOR = '.claimable-bonus__icon';
     const CLAIM_DROPS_SELECTOR = [
         'button.ScCoreButton-sc-ocjdkq-0.eWlfQB',
-        'button[data-test-selector="DropsCampaignInProgressRewardPresentation-claim-button"]'
+        'button[data-test-selector="DropsCampaignInProgressRewardPresentation-claim-button"]',
+        'button[data-a-target="DropsCampaignInProgressRewardPresentation-claim-button"]'
     ].join(',');
     const PRIME_REWARD_SELECTOR = [
         'button.tw-interactive.tw-button.tw-button--full-width[data-a-target="buy-box_call-to-action"] span.tw-button__text div.tw-inline-block p.tw-font-size-5.tw-md-font-size-4[title="Get game"]',
@@ -51,12 +52,12 @@
         'p.tw-font-size-5.tw-md-font-size-4[data-a-target="buy-box_call-to-action-text"][title="Obtener juego"]'
     ].join(',');
 
-    // Redeem on GOG Constants
+    // GOG redeem page selectors.
     const GOG_REDEEM_CODE_INPUT_SELECTOR = '#codeInput';
     const GOG_CONTINUE_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Proceed to the next step"]';
     const GOG_FINAL_REDEEM_BUTTON_SELECTOR = 'button[type="submit"][aria-label="Redeem the code"]';
 
-    // Redeem on Legacy Games Constants
+    // Legacy Games redeem page selectors.
     const LEGACY_GAMES_REDEEM_URL = 'https://promo.legacygames.com/gallery-of-things-reveries-prime-deal/';
     const LEGACY_GAMES_CODE_INPUT_SELECTOR = '#primedeal_game_code';
     const LEGACY_GAMES_EMAIL_INPUT_SELECTOR = '#primedeal_email';
@@ -64,7 +65,7 @@
     const LEGACY_GAMES_SUBMIT_BUTTON_SELECTOR = '#submitbutton';
     const LEGACY_GAMES_NEWSLETTER_CHECKBOX_SELECTOR = '#primedeal_newsletter';
 
-    // SettingsManager Class
+    // Handles persisted settings and the in-page settings dialog.
     class SettingsManager {
         static CONFIG = {
             enableAutoClaimPoints: GM_getValue('enableAutoClaimPoints', true),
@@ -77,11 +78,10 @@
             enableClaimAllButton: GM_getValue('enableClaimAllButton', true),
             enableRemoveAllButton: GM_getValue('enableRemoveAllButton', true),
             enableDebugLogs: GM_getValue('enableDebugLogs', false),
-            settingsKey: GM_getValue('settingsKey', 'F2') // Default to F2 if not set
+            settingsKey: GM_getValue('settingsKey', 'F2')
         };
 
         static loadConfig() {
-            // Already loaded in static CONFIG
         }
 
         static saveConfig(key, value) {
@@ -130,7 +130,7 @@
                         border-radius: 8px;
                         padding: 20px;
                         box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
-                        z-index: 9999999; /* Increased z-index to ensure it appears above all elements */
+                        z-index: 9999999; 
                         color: white;
                         width: 350px;
                         font-family: 'Roobert', 'Inter', Helvetica, Arial, sans-serif;
@@ -270,41 +270,32 @@
             dialogWrapper.innerHTML = styleSheet + dialogHTML;
             document.body.appendChild(dialogWrapper);
 
-            // Add event listeners to toggles with improved feedback - MODIFIED
-            // Store toggle changes in memory instead of immediately updating CONFIG
-            const pendingChanges = {}; // Object to track pending changes
+            const pendingChanges = {};
 
             document.querySelectorAll('.te-toggle input').forEach(toggle => {
                 toggle.addEventListener('change', (event) => {
                     const { id, checked } = event.target;
                     Logger.info(`Toggle changed: ${id} = ${checked}`);
-                    // Instead of updating CONFIG directly, store the pending change
                     pendingChanges[id] = checked;
                 });
             });
 
-            // Add event listeners to buttons
             document.getElementById('saveSettingsButton').addEventListener('click', () => this.saveAndCloseDialog(pendingChanges));
             document.getElementById('cancelSettingsButton').addEventListener('click', this.closeDialog);
 
-            // Add event listener for change key button
             const changeKeyButton = document.getElementById('changeKeyButton');
             changeKeyButton.addEventListener('click', function () {
                 const keyInput = document.getElementById('settingsKey');
                 const keyInstructions = document.getElementById('keyInstructions');
 
-                // Show instructions and focus on input
                 keyInstructions.style.display = 'block';
                 keyInstructions.textContent = 'Press key combination (e.g. Ctrl+Shift+K)...';
                 keyInput.value = 'Press keys...';
 
-                // Change button text to indicate canceling is possible
                 changeKeyButton.textContent = 'Cancel';
 
-                // Flag to track if we're in key capture mode
                 let capturingKey = true;
 
-                // Variables to store key combination
                 let modifiers = {
                     ctrl: false,
                     alt: false,
@@ -313,7 +304,6 @@
                 };
                 let mainKey = '';
 
-                // Function to format current key combination
                 const formatKeyCombination = () => {
                     const parts = [];
                     if (modifiers.ctrl) parts.push('Ctrl');
@@ -326,7 +316,6 @@
                     return parts.join('+');
                 };
 
-                // Function to update the input with current combination
                 const updateKeyDisplay = () => {
                     const combination = formatKeyCombination();
                     if (combination) {
@@ -336,14 +325,12 @@
                     }
                 };
 
-                // Function to handle key down
                 const handleKeyDown = function (e) {
                     if (!capturingKey) return;
 
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // Track modifier keys
                     if (e.key === 'Control' || e.key === 'Alt' || e.key === 'Shift' || e.key === 'Meta') {
                         switch (e.key) {
                             case 'Control': modifiers.ctrl = true; break;
@@ -352,22 +339,18 @@
                             case 'Meta': modifiers.meta = true; break;
                         }
                     } else {
-                        // Track main key
                         mainKey = e.key;
                     }
 
-                    // Update the display
                     updateKeyDisplay();
                 };
 
-                // Function to handle key up
                 const handleKeyUp = function (e) {
                     if (!capturingKey) return;
 
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // Handle modifier keys being released
                     if (e.key === 'Control' || e.key === 'Alt' || e.key === 'Shift' || e.key === 'Meta') {
                         switch (e.key) {
                             case 'Control': modifiers.ctrl = false; break;
@@ -376,30 +359,24 @@
                             case 'Meta': modifiers.meta = false; break;
                         }
 
-                        // Update the display
                         updateKeyDisplay();
                     } else {
-                        // If a non-modifier key was released, complete the capture
                         const keyCombination = formatKeyCombination();
 
-                        // Only save if we have a valid combination (at least one key)
                         if (keyCombination && keyCombination !== 'Press keys...') {
                             keyInput.value = keyCombination;
 
-                            // Exit key capture mode
                             document.removeEventListener('keydown', handleKeyDown, true);
                             document.removeEventListener('keyup', handleKeyUp, true);
                             keyInstructions.style.display = 'none';
                             changeKeyButton.textContent = 'Change Key';
                             capturingKey = false;
 
-                            // Log the captured combination
                             Logger.info(`Key combination captured: ${keyCombination}`);
                         }
                     }
                 };
 
-                // Function to cancel key capture
                 const cancelCapture = function () {
                     if (!capturingKey) return;
 
@@ -411,10 +388,8 @@
                     capturingKey = false;
                 };
 
-                // Allow canceling key capture by clicking the button again
                 changeKeyButton.addEventListener('click', cancelCapture, { once: true });
 
-                // Capture key events
                 document.addEventListener('keydown', handleKeyDown, true);
                 document.addEventListener('keyup', handleKeyUp, true);
             });
@@ -432,28 +407,22 @@
             `;
         }
 
-        // Modified saveAndCloseDialog function to apply changes dynamically
         static saveAndCloseDialog(pendingChanges = {}) {
-            // Create a deep copy of the CONFIG object before any changes are made
+            // Snapshot old values so downstream logic can react only to real changes.
             const oldConfig = JSON.parse(JSON.stringify(this.CONFIG));
             let changesMade = false;
 
-            // Improved debugging output
             Logger.info("Checking for settings changes...");
 
-            // Save toggle settings
             Object.keys(this.CONFIG).forEach(key => {
-                if (key === 'settingsKey') return; // Handle separately
+                if (key === 'settingsKey') return;
 
-                // Check if this setting has a pending change
                 if (pendingChanges.hasOwnProperty(key)) {
                     const oldValue = oldConfig[key];
                     const newValue = pendingChanges[key];
 
-                    // Log the comparison for debugging
                     Logger.info(`Comparing ${key}: old=${oldValue} (${typeof oldValue}), new=${newValue} (${typeof newValue})`);
 
-                    // Compare values - both should be booleans for toggle settings
                     if (oldValue !== newValue) {
                         changesMade = true;
                         Logger.info(`Changed ${key} from ${oldValue} to ${newValue}`);
@@ -461,16 +430,13 @@
                         GM_setValue(key, newValue);
                     }
                 } else {
-                    // If no pending change, get value from form element
                     const element = document.getElementById(key);
                     if (element) {
                         const oldValue = oldConfig[key];
                         const newValue = element.checked;
 
-                        // Log the comparison for debugging
                         Logger.info(`Comparing ${key}: old=${oldValue} (${typeof oldValue}), new=${newValue} (${typeof newValue})`);
 
-                        // Compare values
                         if (oldValue !== newValue) {
                             changesMade = true;
                             Logger.info(`Changed ${key} from ${oldValue} to ${newValue}`);
@@ -481,7 +447,6 @@
                 }
             });
 
-            // Save settings key
             const keyInput = document.getElementById('settingsKey');
             if (keyInput && keyInput.value !== oldConfig.settingsKey) {
                 changesMade = true;
@@ -494,9 +459,7 @@
 
             if (changesMade) {
                 Logger.success('Settings saved and applied immediately');
-                // Note: applySettingsChanges will be called by FeatureInitializer
             } else {
-                // Show more helpful message when no changes are detected
                 Logger.info('No changes detected. Settings remain the same.');
             }
         }
@@ -518,7 +481,6 @@
         }
     }
 
-    // Logger Class
     class Logger {
         static styles = {
             info: 'color: #2196F3; font-weight: bold',
@@ -552,13 +514,12 @@
         }
     }
 
-    // Backward-compat alias used by legacy helper functions in this file.
     const CONFIG = SettingsManager.CONFIG;
 
-    // Register menu command
+    // Add a Tampermonkey menu entry for quick access to settings.
     GM_registerMenuCommand('Twitch Enhancements Settings', () => SettingsManager.toggleSettingsDialog());
 
-    // ObserverManager Class
+    // Lightweight registry for all mutation observers used by the script.
     class ObserverManager {
         static observers = new Map();
 
@@ -592,9 +553,9 @@
         }
     }
 
-    // AutoClaimer Class
     class AutoClaimer {
         static claiming = false;
+        static dropClaimInterval = null;
 
         static startClaimingPoints() {
             if (!SettingsManager.CONFIG.enableAutoClaimPoints || !MutationObserver) return;
@@ -622,30 +583,92 @@
         static startClaimingDrops() {
             if (!SettingsManager.CONFIG.enableClaimDrops || !MutationObserver) return;
 
-            ObserverManager.createObserver('claimDrops', CLAIM_DROPS_SELECTOR, (mutationsList) => {
-                mutationsList.forEach(mutation => {
-                    if (SettingsManager.CONFIG.enableClaimDrops && document.querySelector(CLAIM_DROPS_SELECTOR)) {
-                        document.querySelector(CLAIM_DROPS_SELECTOR).click();
-                    }
-                });
+            // Drop claiming only runs on Twitch Drops routes.
+            const onDropsPage = window.location.hostname === 'www.twitch.tv' && window.location.pathname.includes('/drops');
+            if (!onDropsPage) {
+                return;
+            }
+
+            const claimDrops = () => {
+                if (!SettingsManager.CONFIG.enableClaimDrops) return;
+                const clicked = typeof AutoClaimer.claimAvailableDrops === 'function'
+                    ? AutoClaimer.claimAvailableDrops()
+                    : 0;
+                if (clicked > 0) {
+                    Logger.success(`Claimed ${clicked} drop${clicked > 1 ? 's' : ''}`);
+                }
+            };
+
+            ObserverManager.createObserver('claimDrops', CLAIM_DROPS_SELECTOR, () => {
+                claimDrops();
             });
+
+            // Keep polling because Twitch often mounts claim buttons late.
+            if (AutoClaimer.dropClaimInterval) {
+                clearInterval(AutoClaimer.dropClaimInterval);
+            }
+            AutoClaimer.dropClaimInterval = setInterval(claimDrops, 2500);
+            claimDrops();
+
             Logger.info('Claim drops observer started');
+        }
+
+        static claimAvailableDrops() {
+            const claimButtons = this.findDropClaimButtons();
+            let clicked = 0;
+
+            claimButtons.forEach((button) => {
+                if (button.dataset.teDropClicked === '1') return;
+
+                try {
+                    button.click();
+                    button.dataset.teDropClicked = '1';
+                    clicked++;
+                } catch (error) {
+                    Logger.error('Failed to click drop claim button: ' + error);
+                }
+            });
+
+            return clicked;
+        }
+
+        static findDropClaimButtons() {
+            // Combine stable attributes with text fallbacks to survive DOM changes.
+            const normalize = (value) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            const claimTexts = ['claim now', 'claim', 'reclamar ahora', 'reclamar'];
+            const skipTexts = ['claimed', 'about this drop', 'connect', 'connected', 'conectar'];
+
+            const selectorMatches = Array.from(document.querySelectorAll(CLAIM_DROPS_SELECTOR));
+            const textMatches = Array.from(document.querySelectorAll('.inventory-page button, [data-test-selector*="DropsCampaign"] button'))
+                .filter((button) => {
+                    if (!button || button.disabled) return false;
+                    if (!button.offsetParent) return false;
+
+                    const text = normalize(button.textContent);
+                    if (!text) return false;
+                    if (skipTexts.some(skip => text.includes(skip))) return false;
+                    return claimTexts.some(claimText => text.includes(claimText));
+                });
+
+            return [...new Set([...selectorMatches, ...textMatches])];
         }
 
         static stop() {
             ObserverManager.disconnectObserver('claimPoints');
             ObserverManager.disconnectObserver('claimDrops');
+            if (this.dropClaimInterval) {
+                clearInterval(this.dropClaimInterval);
+                this.dropClaimInterval = null;
+            }
         }
     }
 
-    // UIEnhancer Class
     class UIEnhancer {
         static theaterModeObserver = null;
 
         static enableTheaterMode() {
             if (!SettingsManager.CONFIG.enableTheaterMode) return;
 
-            // First try to find if player is in theater mode already
             const player = document.querySelector(PLAYER_SELECTOR);
             if (player && player.classList.contains(THEATER_MODE_CLASS)) {
                 Logger.info('Theater mode already enabled');
@@ -653,14 +676,12 @@
                 return;
             }
 
-            // Try to find and click the theater mode button directly
             const theaterButton = document.querySelector(THEATER_MODE_BUTTON_SELECTOR);
             if (theaterButton) {
                 theaterButton.click();
                 Logger.success('Theater mode button clicked');
                 this.setupTheaterModeMonitor();
             } else {
-                // Fallback: use observer to wait for button
                 this.clickButton(THEATER_MODE_BUTTON_SELECTOR);
                 Logger.info('Waiting for theater mode button to appear');
             }
@@ -668,12 +689,12 @@
 
         static setupTheaterModeMonitor() {
             if (!SettingsManager.CONFIG.enableTheaterMode) return;
-            if (this.theaterModeObserver) return; // Avoid duplicate observers
+            if (this.theaterModeObserver) return;
 
             const player = document.querySelector(PLAYER_SELECTOR);
             if (!player) return;
 
-            // Monitor theater mode state - user can toggle with native Esc key
+            // Watch class changes to track theater mode transitions.
             this.theaterModeObserver = new MutationObserver((mutations) => {
                 const isTheaterMode = player.classList.contains(THEATER_MODE_CLASS);
                 Logger.info(`Theater mode ${isTheaterMode ? 'enabled' : 'disabled'}`);
@@ -690,6 +711,7 @@
         static clickButton(buttonSelector) {
             if (!MutationObserver) return;
 
+            // Wait for asynchronous DOM insertion and click once when available.
             const observer = new MutationObserver((mutationsList, observer) => {
                 for (let mutation of mutationsList) {
                     if (mutation.addedNodes.length) {
@@ -767,7 +789,6 @@
         }
     }
 
-    // PrimeRewardManager Class
     class PrimeRewardManager {
         static claimRewards() {
             if (!SettingsManager.CONFIG.enableClaimPrimeRewards) return;
@@ -802,7 +823,6 @@
 
             let o = new MutationObserver((m) => {
                 if (!SettingsManager.CONFIG.enableClaimAllButton && !SettingsManager.CONFIG.enableRemoveAllButton) {
-                    // Remove all custom buttons
                     const customButtonsContainer = document.querySelector('#PrimeOfferPopover-header > div');
                     if (customButtonsContainer) {
                         customButtonsContainer.remove();
@@ -810,17 +830,14 @@
                     return;
                 }
 
-                // Trigger a refresh of the buttons
                 const headerElement = document.getElementById("PrimeOfferPopover-header");
                 if (headerElement) {
-                    // Force refresh by triggering our main observer
                     const dummyDiv = document.createElement('div');
                     document.body.appendChild(dummyDiv);
                     document.body.removeChild(dummyDiv);
                 }
             });
 
-            // Trigger the observer
             o.observe(document.body, { childList: true });
             setTimeout(() => o.disconnect(), 500);
         }
@@ -828,17 +845,16 @@
 
     let claiming = false;
 
-    // Check if MutationObserver is supported
+    // Cross-browser mutation observer alias.
     const MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
 
 
 
-    // Auto refresh drops timer interval
     let autoRefreshInterval = null;
 
-    // Function to setup auto refresh drops timer
     function setupAutoRefreshDrops() {
+        // Recreate the interval each time to avoid duplicate timers.
         if (autoRefreshInterval) {
             clearInterval(autoRefreshInterval);
             autoRefreshInterval = null;
@@ -862,8 +878,8 @@
 
 
 
-    // Function to redeem code on GOG
     function redeemCodeOnGOG() {
+        // Resolve unstable GOG controls by selector first, then by text fallback.
         const findGogContinueButton = () => {
             const bySelector = document.querySelector(GOG_CONTINUE_BUTTON_SELECTOR);
             if (bySelector) return bySelector;
@@ -928,6 +944,7 @@
             const maxAttempts = 50;
             let continueClicked = false;
 
+            // Retry until buttons become interactive or timeout is reached.
             const interval = setInterval(() => {
                 attempts++;
 
@@ -992,12 +1009,10 @@
             startRedeemFlow((code || '').trim());
         }).catch(function (err) {
             Logger.error('Failed to read clipboard contents: ' + err);
-            // Continue flow even if clipboard is blocked, using any code already present in the input.
             startRedeemFlow('');
         });
     }
 
-    // Function to add the "Redeem on Legacy Games" button
     function addLegacyGamesRedeemButton() {
         if (!CONFIG.enableLegacyGamesRedeemButton) return;
 
@@ -1026,10 +1041,9 @@
                             navigator.clipboard.writeText(code).then(function () {
                                 const email = GM_getValue('legacyGamesEmail', null);
 
-                                // Try to find a dynamic "here" link or any legacygames link on the page
                                 const findLegacyUrl = () => {
+                                    // Prefer specific in-page links before generic fallback URLs.
                                     try {
-                                        // 1) Prefer anchors with visible text 'here' or 'click here' (most specific)
                                         const hereAnchors = Array.from(document.querySelectorAll('a[href]')).filter(a => {
                                             const text = (a.textContent || '').trim().toLowerCase();
                                             return text === 'here' || text === 'click here' || text === 'here ›' || text === 'here »' || /\bhere\b/.test(text);
@@ -1038,12 +1052,10 @@
                                             const href = a.getAttribute('href');
                                             if (!href) continue;
                                             if (href.indexOf('javascript:') === 0) continue;
-                                            // Normalize relative URLs
                                             if (href.startsWith('/')) return window.location.origin + href;
                                             if (href.startsWith('http')) return href;
                                         }
 
-                                        // 2) Search inside claim instructions block if present (more likely to contain the per-game promo link)
                                         const claimContainers = document.querySelectorAll('[data-a-target="claim-instructions"], .claim-instructions, [data-a-target="claim-instructions_text"]');
                                         for (let c of claimContainers) {
                                             const anchors = c.querySelectorAll('a[href]');
@@ -1056,16 +1068,13 @@
                                             }
                                         }
 
-                                        // 3) Prefer explicit promo subdomain links
                                         const promo = Array.from(document.querySelectorAll('a[href]')).map(a => a.href).find(h => h.includes('promo.legacygames.com'));
                                         if (promo) return promo;
 
-                                        // 4) Then any legacygames.com link that isn't just the root domain
                                         const lg = Array.from(document.querySelectorAll('a[href]')).map(a => a.href).find(h => h.includes('legacygames.com') && !/^https?:\/\/(?:www\.)?legacygames\.com\/?$/.test(h));
                                         if (lg) return lg;
 
                                     } catch (e) {
-                                        // ignore and fallback
                                     }
                                     return null;
                                 };
@@ -1114,7 +1123,6 @@
         }
     }
 
-    // Function to redeem code on Legacy Games
     function redeemCodeOnLegacyGames() {
         const maxAttempts = 5;
         let attempts = 0;
@@ -1138,23 +1146,20 @@
                 }
 
                 if (email && code) {
-                    // Fill in the form
+                    // Fill required fields and submit once everything is available.
                     codeInput.value = code;
                     emailInput.value = email;
                     emailValidateInput.value = email;
 
-                    // Ensure newsletter checkbox is unchecked
                     if (newsletterCheckbox) {
                         newsletterCheckbox.checked = false;
                     }
 
-                    // Trigger input events
                     [codeInput, emailInput, emailValidateInput].forEach(input => {
                         input.dispatchEvent(new Event('input', { bubbles: true }));
                         input.dispatchEvent(new Event('change', { bubbles: true }));
                     });
 
-                    // Submit the form
                     setTimeout(() => {
                         submitButton.click();
                         Logger.success('Form submitted with code: ' + code + ' and email: ' + email);
@@ -1165,27 +1170,45 @@
             });
         };
 
-        // Start the redemption process
         setTimeout(tryRedeem, 2000);
     }
 
-    // Function to open all "Claim Game" buttons in new tabs
     function openClaimGameTabs() {
-        const claimGameButtons = document.querySelectorAll('div[data-a-target="tw-core-button-label-text"].Layout-sc-1xcs6mc-0.bFxzAY');
-        claimGameButtons.forEach(button => {
-            const buttonText = button.textContent.trim().toLowerCase();
-            // Check for both English and Spanish variations
-            if (buttonText === 'claim game' || buttonText === 'claim' ||
-                buttonText === 'obtener juego' || buttonText === 'obtener') {
-                const parentButton = button.closest('a');
-                if (parentButton) {
-                    window.open(parentButton.href, '_blank');
-                }
+        // Open only claim actions in separate tabs.
+        const normalize = (value) => (value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const claimTexts = ['claim game', 'claim', 'obtener juego', 'obtener', 'reclamar juego', 'reclamar'];
+
+        const offersRoot = document.querySelector('[data-a-target="offers-list"]') || document;
+        const labels = Array.from(offersRoot.querySelectorAll('[data-a-target="tw-core-button-label-text"], .tw-core-button-label-text'));
+        const links = [];
+
+        labels.forEach(labelNode => {
+            const text = normalize(labelNode.textContent);
+            if (!claimTexts.some(claimText => text.includes(claimText))) return;
+
+            const anchor = labelNode.closest('a[href]');
+            if (anchor && anchor.href) {
+                links.push(anchor.href);
             }
         });
+
+        const uniqueLinks = [...new Set(links)].filter(Boolean);
+
+        if (uniqueLinks.length === 0) {
+            Logger.warning('Claim All: no claim links found yet (offers may still be loading)');
+            return 0;
+        }
+
+        uniqueLinks.forEach((href) => {
+            window.open(href, '_blank', 'noopener,noreferrer');
+        });
+
+        Logger.success(`Claim All: opened ${uniqueLinks.length} claim link${uniqueLinks.length > 1 ? 's' : ''}`);
+        return uniqueLinks.length;
     }
 
     function removeClaimedItems() {
+        // Aggregate dismiss buttons from multiple layouts and click sequentially.
         const allItems = document.querySelectorAll('.prime-offer');
         let dismissedCount = 0;
         let dismissButtons = [];
@@ -1237,7 +1260,6 @@
                                 btn.click();
                                 dismissedCount++;
                             } catch (e) {
-                                // ignore individual failures
                             }
                         });
 
@@ -1258,7 +1280,6 @@
                         btn.click();
                         dismissedCount++;
                     } catch (e) {
-                        // ignore individual failures
                     }
                 });
 
@@ -1267,8 +1288,8 @@
         }
     }
 
-    // Function to switch Prime Offers popover to the Claim Games tab
     function switchToClaimGamesTab() {
+        // Keep Prime popover focused on the Claim Games tab.
         const normalize = (value) => (value || '').trim().toLowerCase();
         const dispatchTabClickSequence = (element) => {
             if (!element) return;
@@ -1343,7 +1364,6 @@
             return true;
         }
 
-        // Hard fallback path: when Play Now is currently active, navigate to previous tab then confirm.
         if (playNowTab && playNowTab.getAttribute('aria-selected') === 'true') {
             try {
                 playNowTab.focus();
@@ -1352,15 +1372,12 @@
                 playNowTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
                 playNowTab.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
             } catch (e) {
-                // Continue with pointer/mouse fallback below.
             }
         }
 
-        // Some Twitch/Amazon UI nodes only react reliably to a full pointer/mouse sequence.
         dispatchTabClickSequence(claimGamesTab);
         claimGamesTab.click();
 
-        // If still on Play Now, repeat the hard fallback once more immediately.
         if (claimGamesTab.getAttribute('aria-selected') !== 'true' &&
             playNowTab && playNowTab.getAttribute('aria-selected') === 'true') {
             dispatchTabClickSequence(claimGamesTab);
@@ -1383,6 +1400,7 @@
         let activeForceInterval = null;
         let activeForceObserver = null;
 
+        // Re-apply tab selection during the short period where Twitch rerenders tabs.
         const forceSwitchClaimGames = (durationMs = 5000) => {
             if (activeForceInterval) {
                 clearInterval(activeForceInterval);
@@ -1453,18 +1471,17 @@
 
         popoverObserver.observe(document.body, { childList: true, subtree: true });
 
-        // Proactive attempt in case the popover is already open on initial load.
         setTimeout(() => {
             forceSwitchClaimGames(2000);
         }, 250);
 
-        // Retry when the tab gains focus again.
         window.addEventListener('focus', () => {
             forceSwitchClaimGames(2000);
         });
     }
 
     function renderPrimePopoverActions() {
+        // Inject custom Claim All / Remove All controls into the Prime popover.
         const primeOfferHeader = document.getElementById('PrimeOfferPopover-header');
         if (!primeOfferHeader) {
             return;
@@ -1504,7 +1521,21 @@
             claimAllButton.style.borderRadius = '4px';
             claimAllButton.style.cursor = 'pointer';
             claimAllButton.style.flex = '1';
-            claimAllButton.addEventListener('click', openClaimGameTabs);
+            claimAllButton.addEventListener('click', () => {
+                const opened = openClaimGameTabs();
+                if (opened > 0) return;
+
+                // Retry briefly when Twitch still shows placeholders in the popover.
+                let attempts = 0;
+                const maxAttempts = 12;
+                const retryInterval = setInterval(() => {
+                    attempts++;
+                    const retryOpened = openClaimGameTabs();
+                    if (retryOpened > 0 || attempts >= maxAttempts) {
+                        clearInterval(retryInterval);
+                    }
+                }, 500);
+            });
             actionsContainer.appendChild(claimAllButton);
         }
 
@@ -1527,6 +1558,7 @@
     }
 
     if (window.location.hostname === 'gaming.amazon.com') {
+        // Keep redeem shortcut buttons mounted as offer cards update.
         const observer = new MutationObserver((mutations, obs) => {
             const claimCodeButton = document.querySelector('p[title="Claim Code"]');
             if (claimCodeButton && CONFIG.enableGogRedeemButton) {
@@ -1557,6 +1589,7 @@
 
     setupPrimeOffersTabAutoSwitch();
 
+    // Delay startup to allow Twitch's dynamic layout to mount first.
     setTimeout(() => UIEnhancer.enableTheaterMode(), 1000);
     setTimeout(AutoClaimer.startClaimingPoints, 1000);
     setTimeout(PrimeRewardManager.claimRewards, 1000);
@@ -1564,7 +1597,6 @@
     setTimeout(() => UIEnhancer.clickButton(CLOSE_MODAL_BUTTON_SELECTOR), 1000);
     setTimeout(AutoClaimer.startClaimingDrops, 1000);
 
-    // Auto refresh drops inventory page
     if (SettingsManager.CONFIG.enableAutoRefreshDrops) {
         setInterval(function () {
             if (window.location.href.startsWith('https://www.twitch.tv/drops/inventory')) {
@@ -1573,9 +1605,8 @@
         }, 15 * 60000);
     }
 
-    // Add keyboard shortcut to toggle settings - now using the configured key
     document.addEventListener('keyup', (event) => {
-        // Parse the configured key combination
+        // Toggle settings when the configured key combination is pressed.
         const parts = SettingsManager.CONFIG.settingsKey.split('+');
         const requiredModifiers = {
             Ctrl: parts.includes('Ctrl'),
@@ -1584,10 +1615,8 @@
             Meta: parts.includes('Meta')
         };
 
-        // The main key is the last part if it's not a modifier
         const mainKey = parts.filter(part => !['Ctrl', 'Alt', 'Shift', 'Meta'].includes(part)).pop();
 
-        // Check if the event matches our configured combination
         const matchesModifiers =
             (!requiredModifiers.Ctrl || event.ctrlKey) &&
             (!requiredModifiers.Alt || event.altKey) &&
@@ -1597,32 +1626,23 @@
         const matchesMainKey = mainKey ? event.key === mainKey : true;
 
         if (matchesModifiers && matchesMainKey) {
-            // Only trigger on the exact key combination
             if (
-                // If Ctrl is in the combination, ensure it's pressed
                 (!parts.includes('Ctrl') || event.ctrlKey) &&
-                // If Alt is in the combination, ensure it's pressed
                 (!parts.includes('Alt') || event.altKey) &&
-                // If Shift is in the combination, ensure it's pressed
                 (!parts.includes('Shift') || event.shiftKey) &&
-                // If Meta is in the combination, ensure it's pressed
                 (!parts.includes('Meta') || event.metaKey) &&
-                // If a main key is specified, ensure it matches
                 (mainKey ? event.key === mainKey : true)
             ) {
-                // Prevent default behavior
                 event.preventDefault();
                 SettingsManager.toggleSettingsDialog();
 
-                // Log for debugging
                 Logger.info(`${SettingsManager.CONFIG.settingsKey} key combination pressed - toggling settings dialog`);
             }
         }
     });
 
-    // Make sure event is captured at the document level with capture phase
     document.addEventListener('keydown', (event) => {
-        // Parse the configured key combination
+        // Capture phase prevents page handlers from consuming the shortcut.
         const parts = SettingsManager.CONFIG.settingsKey.split('+');
         const requiredModifiers = {
             Ctrl: parts.includes('Ctrl'),
@@ -1631,10 +1651,8 @@
             Meta: parts.includes('Meta')
         };
 
-        // The main key is the last part if it's not a modifier
         const mainKey = parts.filter(part => !['Ctrl', 'Alt', 'Shift', 'Meta'].includes(part)).pop();
 
-        // Check if the event matches our configured combination
         const matchesModifiers =
             (!requiredModifiers.Ctrl || event.ctrlKey) &&
             (!requiredModifiers.Alt || event.altKey) &&
@@ -1644,21 +1662,18 @@
         const matchesMainKey = mainKey ? event.key === mainKey : true;
 
         if (matchesModifiers && matchesMainKey) {
-            // Prevent default behavior for our combination
             event.preventDefault();
         }
     }, true);
 
-    // Escape key listener for theater mode toggle - intercept before Twitch processes it
     document.addEventListener('keydown', (event) => {
+        // Override native Escape handling when theater automation is enabled.
         if ((event.key === 'Escape' || event.keyCode === 27) && window.location.hostname === 'www.twitch.tv') {
             if (!SettingsManager.CONFIG.enableTheaterMode) return;
 
-            // Prevent Twitch default behavior
             event.stopImmediatePropagation();
             event.preventDefault();
 
-            // Click the theater button to toggle
             const theaterButton = document.querySelector(THEATER_MODE_BUTTON_SELECTOR);
             if (theaterButton) {
                 theaterButton.click();
@@ -1668,6 +1683,7 @@
     }, true);
 
     let o = new MutationObserver(() => {
+        // Re-render custom Prime controls after DOM updates.
         renderPrimePopoverActions();
     });
 
