@@ -2,7 +2,7 @@
 // @name         YouTube Subscription Visibility Manager
 // @namespace    http://tampermonkey.net/
 // @author       JJJ
-// @version      0.0.1
+// @version      0.1.3  
 // @description  Control which subscribed channels are visible in the YouTube subscriptions feed without unsubscribing.
 // @match        https://www.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -15,8 +15,8 @@
 
     const Config = {
         appName: 'YT Subscription Visibility Manager',
-        version: '0.0.1',
-        storageKey: 'ytsvm_data_v001',
+        version: '0.1.3',
+        storageKey: 'ytsvm_data_v013',
 
         routes: {
             subscriptions: '/feed/subscriptions'
