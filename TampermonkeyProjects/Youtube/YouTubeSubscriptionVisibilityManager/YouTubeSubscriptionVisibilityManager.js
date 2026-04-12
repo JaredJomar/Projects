@@ -2,7 +2,7 @@
 // @name         YouTube Subscription Visibility Manager
 // @namespace    http://tampermonkey.net/
 // @author       JJJ
-// @version      0.1.3  
+// @version      0.1.4  
 // @description  Control which subscribed channels are visible in the YouTube subscriptions feed without unsubscribing.
 // @match        https://www.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -15,8 +15,8 @@
 
     const Config = {
         appName: 'YT Subscription Visibility Manager',
-        version: '0.1.3',
-        storageKey: 'ytsvm_data_v013',
+        version: '0.1.4',
+        storageKey: 'ytsvm_data_v014',
 
         routes: {
             subscriptions: '/feed/subscriptions'
@@ -343,7 +343,7 @@
 
 
                 if (!raw) {
-                    const legacyKeys = ['ytsvm_data_v012', 'ytsvm_data_v011', 'ytsvm_data_v020', 'ytsvm_data_v010'];
+                    const legacyKeys = ['ytsvm_data_v013', 'ytsvm_data_v012', 'ytsvm_data_v011', 'ytsvm_data_v020', 'ytsvm_data_v010'];
                     let oldRaw = null;
                     let foundKey = '';
                     for (const lk of legacyKeys) {
@@ -2830,6 +2830,10 @@
     const ContextMenuManager = {
         injectCycleId: 0,
 
+        getMenuActionLabel() {
+            return 'Hide channel in Subscriptions';
+        },
+
         isLikelyMenuTrigger(element) {
             if (!element) return false;
 
@@ -2855,11 +2859,29 @@
             return markers.some(marker => label.includes(marker));
         },
 
+        resolvePotentialContextContainer(target) {
+            if (!(target instanceof Element)) return null;
+
+            const directCard = target.closest(Config.selectors.subscriptionCards);
+            if (directCard) return directCard;
+
+            // New YouTube lockup layouts used in subscriptions feed.
+            const lockup = target.closest('yt-lockup-view-model, ytd-lockup-view-model, .ytLockupViewModelMetadata');
+            if (lockup) {
+                const parentCard = lockup.closest(
+                    'ytd-rich-item-renderer, ytd-rich-grid-media, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer'
+                );
+                return parentCard || lockup;
+            }
+
+            return null;
+        },
+
         trackPotentialCardFromEvent(event) {
             const target = event.target;
             if (!(target instanceof Element)) return;
 
-            const card = target.closest(Config.selectors.subscriptionCards);
+            const card = this.resolvePotentialContextContainer(target);
             if (!card) return;
 
             const trigger = target.closest('button, tp-yt-paper-icon-button, yt-icon-button, [role="button"]');
@@ -2888,7 +2910,7 @@
                 const trigger = Utils.safeQuery(document, selector);
                 if (!trigger) continue;
 
-                const card = trigger.closest(Config.selectors.subscriptionCards);
+                const card = this.resolvePotentialContextContainer(trigger);
                 if (card) {
                     return card;
                 }
@@ -2900,12 +2922,8 @@
         getMenuActionIconHtml() {
             return `
                 <span class="ytIconWrapperHost yt-list-item-view-model__accessory yt-list-item-view-model__image" role="img" aria-hidden="true">
-                    <span class="yt-icon-shape ytSpecIconShapeHost">
-                        <div style="width:100%;height:100%;display:block;fill:currentcolor;">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24" focusable="false" aria-hidden="true" style="pointer-events:none;display:inherit;width:100%;height:100%;">
-                                <path d="M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1Zm0 2a9 9 0 018.246 12.605L4.755 6.661A8.99 8.99 0 0112 3ZM3.754 8.393l15.491 8.944A9 9 0 013.754 8.393Z"></path>
-                            </svg>
-                        </div>
+                    <span class="yt-icon-shape ytSpecIconShapeHost" style="display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">
+                        🙈
                     </span>
                 </span>
             `;
@@ -2926,6 +2944,39 @@
             return null;
         },
 
+        isVideoActionsMenu(wrapper) {
+            if (!wrapper) return false;
+
+            const labels = Utils.safeQueryAll(
+                wrapper,
+                '.yt-list-item-view-model__title, .ytListItemViewModelTitle, .ytAttributedStringHost[role="text"]'
+            );
+
+            let hits = 0;
+            for (const label of labels) {
+                const text = Utils.normalizeText(label.textContent || '');
+                if (!text) continue;
+
+                if (
+                    text.includes('añadir a la cola') ||
+                    text.includes('add to queue') ||
+                    text.includes('guardar para ver mas tarde') ||
+                    text.includes('save to watch later') ||
+                    text.includes('compartir') ||
+                    text.includes('share') ||
+                    text.includes('no me interesa') ||
+                    text.includes('not interested') ||
+                    text.includes('no recomendarme este canal') ||
+                    text.includes('dont recommend channel')
+                ) {
+                    hits += 1;
+                    if (hits >= 2) return true;
+                }
+            }
+
+            return false;
+        },
+
         createMenuItem(wrapper) {
             const runDisableAction = (event) => {
                 const now = Utils.now();
@@ -2942,16 +2993,22 @@
                 this.disableCurrentCardChannel(event.currentTarget || event.target);
             };
 
-            const templateButton = Utils.safeQuery(wrapper, '.yt-list-item-view-model__button-or-anchor');
+            const templateButton = Utils.safeQuery(
+                wrapper,
+                '.yt-list-item-view-model__button-or-anchor, .ytListItemViewModelButtonOrAnchor, .ytButtonOrAnchorHost'
+            );
             const templateItem = templateButton?.closest('yt-list-item-view-model');
 
             if (templateItem) {
                 const clonedItem = templateItem.cloneNode(true);
                 clonedItem.removeAttribute('is-empty');
 
-                const clonedButton = Utils.safeQuery(clonedItem, '.yt-list-item-view-model__button-or-anchor');
-                const titleEl = Utils.safeQuery(clonedItem, '.yt-list-item-view-model__title');
-                const imageContainer = Utils.safeQuery(clonedItem, '.yt-list-item-view-model__image-container');
+                const clonedButton = Utils.safeQuery(
+                    clonedItem,
+                    '.yt-list-item-view-model__button-or-anchor, .ytListItemViewModelButtonOrAnchor, .ytButtonOrAnchorHost'
+                );
+                const titleEl = Utils.safeQuery(clonedItem, '.yt-list-item-view-model__title, .ytListItemViewModelTitle');
+                const imageContainer = Utils.safeQuery(clonedItem, '.yt-list-item-view-model__image-container, .ytListItemViewModelImageContainer');
 
                 if (clonedButton) {
                     clonedButton.setAttribute('type', 'button');
@@ -2969,7 +3026,7 @@
                 }, true);
 
                 if (titleEl) {
-                    titleEl.textContent = 'Desactivar canal en Subscriptions';
+                    titleEl.textContent = this.getMenuActionLabel();
                 }
 
                 if (imageContainer) {
@@ -2990,7 +3047,7 @@
                         <div aria-hidden="true" class="yt-list-item-view-model__image-container yt-list-item-view-model__leading">
                             ${this.getMenuActionIconHtml()}
                         </div>
-                        <button type="button" class="ytsvm-context-menu-item" data-ytsvm-disable-channel="1">Desactivar canal en Subscriptions</button>
+                        <button type="button" class="ytsvm-context-menu-item" data-ytsvm-disable-channel="1">${Utils.escapeHtml(this.getMenuActionLabel())}</button>
                     </div>
                 </div>
             `;
@@ -3004,11 +3061,18 @@
         },
 
         findHideItemNode(wrapper) {
-            const labels = Utils.safeQueryAll(wrapper, '.yt-list-item-view-model__title');
+            const labels = Utils.safeQueryAll(wrapper, '.yt-list-item-view-model__title, .ytListItemViewModelTitle, .ytAttributedStringHost[role="text"]');
             for (const label of labels) {
                 const text = Utils.normalizeText(label.textContent || '');
                 if (!text) continue;
-                if (text === 'ocultar' || text === 'hide' || text.includes('ocultar') || text.includes('hide')) {
+                if (
+                    text === 'ocultar' ||
+                    text === 'hide' ||
+                    text.includes('ocultar') ||
+                    text.includes('hide') ||
+                    text.includes('no me interesa') ||
+                    text.includes('not interested')
+                ) {
                     const item = label.closest('yt-list-item-view-model');
                     if (item) return item;
                 }
@@ -3023,8 +3087,38 @@
                 Utils.safeQuery(wrapper, '[role="listbox"]');
         },
 
+        isPlaylistSelectionDialog(wrapper) {
+            if (!wrapper) return false;
+
+            // Save-to-playlist dialog uses toggleable list rows/check items.
+            if (Utils.safeQuery(wrapper, 'toggleable-list-item-view-model')) {
+                return true;
+            }
+
+            // Additional guard: header usually starts with "Save to" / "Guardar en".
+            const header = Utils.safeQuery(wrapper, 'yt-panel-header-view-model');
+            const headerText = Utils.normalizeText(header?.textContent || '');
+            if (headerText.startsWith('save to') || headerText.startsWith('guardar en')) {
+                return true;
+            }
+
+            return false;
+        },
+
         hasInjectedAction(wrapper) {
             return Boolean(Utils.safeQuery(wrapper, '[data-ytsvm-disable-channel="1"]'));
+        },
+
+        removeInjectedAction(wrapper) {
+            const injectedButtons = Utils.safeQueryAll(wrapper, '[data-ytsvm-disable-channel="1"]');
+            for (const button of injectedButtons) {
+                const item = button.closest('yt-list-item-view-model');
+                if (item?.parentNode) {
+                    item.remove();
+                    continue;
+                }
+                button.remove();
+            }
         },
 
         scheduleInjectCycle() {
@@ -3269,13 +3363,31 @@
             const wrapper = this.findOpenMenuContentWrapper();
             if (!wrapper) return false;
 
+            // Only inject in video action menus (works across evolving YouTube layouts).
+            if (!this.isVideoActionsMenu(wrapper)) {
+                this.removeInjectedAction(wrapper);
+                return false;
+            }
+
+            if (this.isPlaylistSelectionDialog(wrapper)) {
+                this.removeInjectedAction(wrapper);
+                return false;
+            }
+
             const contextCard = this.resolveContextCard() || this.resolveActiveMenuCardFromDom();
+            let contextChannelList = [];
+
             if (contextCard) {
-                const contextChannelList = YouTubeDOM.extractAllChannelDataFromCard(contextCard);
-                if (Array.isArray(contextChannelList) && contextChannelList.length > 0) {
-                    wrapper.dataset.ytsvmChannelDataList = JSON.stringify(contextChannelList);
-                    wrapper.dataset.ytsvmChannelData = JSON.stringify(contextChannelList[0]);
-                }
+                contextChannelList = YouTubeDOM.extractAllChannelDataFromCard(contextCard) || [];
+            }
+
+            if ((!Array.isArray(contextChannelList) || contextChannelList.length === 0) && Array.isArray(AppState.lastContextChannelDataList)) {
+                contextChannelList = AppState.lastContextChannelDataList;
+            }
+
+            if (Array.isArray(contextChannelList) && contextChannelList.length > 0) {
+                wrapper.dataset.ytsvmChannelDataList = JSON.stringify(contextChannelList);
+                wrapper.dataset.ytsvmChannelData = JSON.stringify(contextChannelList[0]);
             }
 
             if (this.hasInjectedAction(wrapper)) {
@@ -3284,14 +3396,19 @@
 
             const list = this.getOpenMenuList(wrapper);
             if (!list) return false;
+            const hideItem = this.findHideItemNode(wrapper);
 
             const item = this.createMenuItem(wrapper);
-            const hideItem = this.findHideItemNode(wrapper);
 
             if (hideItem && hideItem.parentNode) {
                 hideItem.parentNode.insertBefore(item, hideItem);
             } else {
-                list.appendChild(item);
+                const firstMenuItem = Utils.safeQuery(list, 'yt-list-item-view-model');
+                if (firstMenuItem && firstMenuItem.parentNode) {
+                    firstMenuItem.parentNode.insertBefore(item, firstMenuItem);
+                } else {
+                    list.appendChild(item);
+                }
             }
 
             return true;
