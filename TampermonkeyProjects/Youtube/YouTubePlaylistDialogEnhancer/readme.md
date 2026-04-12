@@ -1,54 +1,49 @@
 
 ---
-
 # YouTube Playlist Dialog Enhancer
 
-Enhances the YouTube playlist dialog with search functionality and improved layout.
-
----
+Enhances the YouTube Save to playlist flow with dynamic search, reliable channel autofill, and safer menu targeting.
 
 ## Features
 
-### 🔍 Playlist Search
-- Instant playlist filtering as you type
-- Auto-populates with channel name
-- Clear search with one click
+### 🔍 Smart Playlist Search
+- Adds a live search field inside the Save to playlist dialog
+- Filters playlist items instantly while typing
+- Includes a one-click clear action for fast reset
 
-### 📱 Improved Dialog Interface
-- Centered dialog with fixed dimensions (700x500px)
-- Enhanced scrolling behavior
-- Cleaner visual organization
+### 🤖 Reliable Channel Autofill
+- Auto-fills the search field with the current channel name when available
+- Auto-fills the New playlist title with the detected channel name
+- Uses multiple fallbacks to resolve channel name across changing YouTube layouts
 
-### ⚡ Smart Playlist Creation
-- Auto-populates new playlist title with channel name
-- One-click title clearing
-- Streamlined playlist management
+### 🛡️ Context-Aware Injection
+- Injects only in the real Save to playlist UI
+- Avoids injecting into generic More actions context menus
+- Cleans up misplaced UI if YouTube reuses popup containers dynamically
 
----
-
-## How It Works
-
-- **Search Bar**: Filters your playlists as you type
-- **Dialog Positioning**: Centers the playlist dialog on screen for better visibility
-- **Auto-population**: Uses the current video's channel name to pre-fill fields
-
----
+### ⚙️ Dialog Stability
+- Keeps the playlist dialog centered and width-stable
+- Re-applies layout constraints while the popup is open
+- Resets stale search state when re-opening the dialog
 
 ## Version History
 
+### v0.0.3
+- Improved channel detection with modern YouTube selectors and runtime fallbacks
+- Added contextual safeguards to prevent search bar injection in non-playlist menus
+- Added stale UI cleanup for popup reuse scenarios
+- Improved open/reset behavior so previous searches do not persist unexpectedly
+
 ### v0.0.2
-- Styled search bar with hover/focus effects and a clear (✕) button
-- More resilient dialog detection and playlist item selectors
-- Improved scrolling/height handling for long playlist lists
-- Auto-fill and clear button added for the "New playlist" title field
-- Stability and UI polish updates
+- Styled search bar with hover and focus effects and clear button support
+- Improved playlist dialog detection and list scanning selectors
+- Improved scrolling and height behavior for long playlist lists
+- Added auto-fill support for New playlist title
 
 ### v0.0.1
-- Initial release with search functionality
-- Centered dialog implementation
-- Auto-population of channel names in search and new playlist dialogs
-
----
+- Initial release
+- Added playlist search field and filtering behavior
+- Added centered dialog behavior and channel autofill baseline
 
 ## Technical Details
 
@@ -60,5 +55,5 @@ Enhances the YouTube playlist dialog with search functionality and improved layo
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.0.2**
+**Current Version: 0.0.3**
 </div>
