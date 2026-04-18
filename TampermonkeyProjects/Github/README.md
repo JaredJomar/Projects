@@ -2,15 +2,15 @@
 ---
 # GitHub Nav Enhancements
 
-Quick access to Repositories and Stars buttons directly in the GitHub navigation breadcrumbs, eliminating the need to open the user menu popup.
+Quick access to Home, Explorer, Repositories, and Stars buttons directly in the GitHub navigation breadcrumbs, eliminating the need to open the user menu popup.
 
 ## Features
 
 ### 🎯 Quick Navigation Buttons
-- Repositories button with repo icon directly in navigation
-- Stars button with star icon directly in navigation
-- One-click access to your repositories and starred repos
-- No more opening popup menus
+- Home button with house icon for instant profile access
+- Explorer button with external-link icon for discovery browsing
+- Repositories and Stars buttons with native-style icons
+- One-click access to common destinations without popup menus
 
 ### ⚡ Smart Integration
 - Intelligent username detection with priority system (header → meta tag fallback)
@@ -27,6 +27,11 @@ Quick access to Repositories and Stars buttons directly in the GitHub navigation
 - Efficient DOM observation for dynamic content
 
 ## Version History
+
+### v0.0.2
+- Added Home button to open the logged-in user's profile page
+- Added Explorer button to open GitHub Explore
+- Updated breadcrumb navigation set to four quick-access destinations
 
 ### v0.0.1
 - Initial release
@@ -50,5 +55,5 @@ Quick access to Repositories and Stars buttons directly in the GitHub navigation
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=github.com" alt="GitHub Icon">
 
-**Current Version: 0.0.1**
+**Current Version: 0.0.2**
 </div>
