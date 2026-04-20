@@ -102,6 +102,9 @@
     }
 
     function captureChannelFromActionTrigger(trigger) {
+        // Reset stale context so previous videos/channels are not reused.
+        lastContextChannelName = null;
+
         if (!trigger || !trigger.closest) return;
 
         // Look around the clicked card/lockup where the 3-dots menu was opened.
@@ -346,6 +349,46 @@
         return true;
     }
 
+    function getPreferredPlaylistTitle() {
+        return getChannelName();
+    }
+
+    function refreshSearchInOpenPlaylistSheets() {
+        document.querySelectorAll('yt-contextual-sheet-layout').forEach(sheet => {
+            if (!isPlaylistSheet(sheet)) return;
+
+            const container = sheet.querySelector('.yt-playlist-search-container');
+            const input = container?.querySelector('.yt-playlist-search-input');
+            const clearBtn = container?.querySelector('.yt-playlist-search-clear');
+            if (!input || !clearBtn) return;
+
+            resetSearchState(sheet, input, clearBtn);
+            if (!fillSearchWithChannel(sheet, input, clearBtn)) {
+                setTimeout(() => fillSearchWithChannel(sheet, input, clearBtn), 350);
+            }
+        });
+    }
+
+    function refreshTitleInOpenCreatePlaylistDialogs() {
+        document.querySelectorAll('yt-create-playlist-dialog-form-view-model').forEach(dialog => {
+            fillNewPlaylistTitle(dialog);
+        });
+    }
+
+    function isNewPlaylistTrigger(target) {
+        const clickable = target.closest('button, .ytButtonOrAnchorButton, .ytListItemViewModelButtonOrAnchor');
+        if (!clickable) return false;
+
+        const text = (
+            clickable.textContent
+            || clickable.getAttribute('aria-label')
+            || clickable.getAttribute('title')
+            || ''
+        ).trim().toLowerCase();
+
+        return /(nueva lista|new playlist)/.test(text);
+    }
+
     // ─── SEARCH BAR ─────────────────────────────────────────────────────────────
 
     function addSearchBar(sheet) {
@@ -402,6 +445,12 @@
             filterPlaylists('', sheet);
         });
 
+        // Prevent clicks/pointerdowns inside the search bar from bubbling up
+        // to YouTube's overlay-close listener, which would dismiss the dialog.
+        ['mousedown', 'pointerdown', 'click'].forEach(evt =>
+            container.addEventListener(evt, e => e.stopPropagation())
+        );
+
         container.appendChild(input);
         container.appendChild(clearBtn);
         contentContainer.prepend(container);
@@ -430,23 +479,36 @@
     // ─── NEW PLAYLIST TITLE ──────────────────────────────────────────────────────
 
     function fillNewPlaylistTitle(dialog) {
-        const textarea = dialog.querySelector('textarea.ytStandardsTextareaShapeTextarea');
+        const textarea = dialog.querySelector('textarea.ytStandardsTextareaShapeTextarea, textarea.ytStandardsTextareaShapeTextarea[placeholder]');
         if (!textarea) return;
 
         // Remove old flag so we always re-fill on each open
         delete textarea.dataset.ytEnhancerFilled;
 
         function tryFill() {
-            const name = getChannelName();
+            const name = getPreferredPlaylistTitle();
             if (!name) return false;
+
             textarea.value = name;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
+
             const placeholder = dialog.querySelector('.ytStandardsTextareaShapePlaceholder');
             if (placeholder) placeholder.classList.remove('ytStandardsTextareaShapePlaceholderVisible');
+
             textarea.focus();
             return true;
         }
-        if (!tryFill()) setTimeout(tryFill, 500);
+
+        if (tryFill()) return;
+
+        // YouTube can render this dialog asynchronously; retry briefly.
+        const attempts = [120, 260, 420, 700, 1000, 1400];
+        attempts.forEach(delay => {
+            setTimeout(() => {
+                if (!textarea.value.trim()) tryFill();
+            }, delay);
+        });
     }
 
     // ─── OBSERVER ───────────────────────────────────────────────────────────────
@@ -502,7 +564,7 @@
             }
         }
 
-        // Final safety pass per mutation batch.
+         // Final safety pass per mutation batch.
         cleanupMisplacedSearchBars(document);
     });
 
@@ -516,9 +578,23 @@
             const actionTrigger = target.closest(
                 'button[aria-label*="Más acciones"], button[aria-label*="More actions"], button[aria-label*="acciones"], button[aria-label*="actions"]'
             );
-            if (!actionTrigger) return;
 
-            captureChannelFromActionTrigger(actionTrigger);
+            if (actionTrigger) {
+                captureChannelFromActionTrigger(actionTrigger);
+
+                // YouTube can reuse the same playlist sheet DOM between opens,
+                // so force a reset even when mutations are not emitted.
+                [120, 280, 520].forEach(delay => {
+                    setTimeout(refreshSearchInOpenPlaylistSheets, delay);
+                    setTimeout(refreshTitleInOpenCreatePlaylistDialogs, delay);
+                });
+            }
+
+            if (isNewPlaylistTrigger(target)) {
+                [80, 180, 320, 520, 820].forEach(delay => {
+                    setTimeout(refreshTitleInOpenCreatePlaylistDialogs, delay);
+                });
+            }
         }, true);
 
         observer.observe(document.body, { childList: true, subtree: true });
