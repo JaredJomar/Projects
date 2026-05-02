@@ -20,7 +20,7 @@ This repo contains my personal projects across various domains including utiliti
 ## Project Structure
 
 ```
-Projects/
+ProjectsHub/
 ├── apps/
 │   ├── NoteApp/
 │   ├── Pdf_Combiner/
