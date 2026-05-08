@@ -20,6 +20,7 @@ dist/
 # IDE and editor files
 .vscode/
 .idea/
+.sisyphus
 
 # OS files
 .DS_Store
