@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Disney Plus Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.6.2
+// @version      0.6.3
 // @description  Enhancements for Disney Plus video player: auto fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
@@ -22,13 +22,32 @@
   };
 
   const SELECTORS = {
-    skipIntroButton: 'button.skip__button:not([class*="overlay_upnextlite"])',
-    autoPlayButton: 'button, *[data-testid="up-next-play-button"]',
-    fullscreenButton: 'button.fullscreen-icon'
+    autoPlayButton: [
+      '*[data-testid="up-next-play-button"]',
+      'play-next',
+      'play-next button',
+      '[aria-label*="next episode" i]',
+      '[aria-label*="play next" i]',
+      '[aria-label*="siguiente episodio" i]',
+      '[aria-label*="ver siguiente" i]'
+    ],
+    fullscreenButton: [
+      'toggle-fullscreen',
+      'toggle-fullscreen button',
+      'button.fullscreen-icon',
+      '[aria-label*="fullscreen" i]',
+      '[aria-label*="full screen" i]',
+      '[aria-label*="pantalla completa" i]'
+    ]
+  };
+
+  const ACTIONS = {
+    SKIP_INTRO: 'skip-intro'
   };
 
   const CONSTANTS = {
-    CLICK_DELAY: 5000,
+    CLICK_DELAY: 1500,
+    ENHANCEMENTS_DEBOUNCE_MS: 120,
     BUTTON_TRACKING_TIMEOUT: 30000
     // Polling settings for dynamic appearance of up-next button
   };
@@ -41,6 +60,8 @@
   const clickedButtons = new Set();
   let autoPlayPollTimer = null;
   let autoPlayPollRetries = 0;
+  let enhancementsDebounceTimer = null;
+  let isSettingsDialogOpen = false;
 
   function createSettingsDialog() {
     const dialogHTML = `
@@ -201,26 +222,65 @@
     const dialog = document.getElementById('disneyPlusEnchantmentsDialog');
     if (dialog) {
       dialog.remove();
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
     }
+    isSettingsDialogOpen = false;
   }
 
   function isElementVisible(element) {
     if (!element) return false;
     const rect = element.getBoundingClientRect();
     return (
-      element.offsetParent !== null &&
       rect.width > 0 &&
       rect.height > 0 &&
-      rect.top >= 0 &&
-      rect.left >= 0
+      rect.right >= 0 &&
+      rect.bottom >= 0
     );
   }
 
+  function collectShadowMatches(root, selector, results = [], visited = new WeakSet()) {
+    if (!root || visited.has(root)) {
+      return results;
+    }
+
+    visited.add(root);
+    results.push(...root.querySelectorAll(selector));
+
+    for (const element of root.querySelectorAll('*')) {
+      if (element.shadowRoot) {
+        collectShadowMatches(element.shadowRoot, selector, results, visited);
+      }
+    }
+
+    return results;
+  }
+
+  function getButtonText(element) {
+    if (!element) return '';
+    return ((element.textContent || '') + ' ' + (element.getAttribute('aria-label') || '')).toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  function findSkipIntroButton() {
+    const candidates = collectShadowMatches(document, 'button, [role="button"]');
+
+    for (const candidate of candidates) {
+      const text = getButtonText(candidate);
+      const container = candidate.closest('.button-container');
+
+      if (container && text.includes('saltar') && text.includes('intro')) {
+        return candidate;
+      }
+
+      if (text.includes('skip intro') || text.includes('skip the intro') || text.includes('saltar intro')) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
   function findAutoPlayButton() {
-    const candidates = Array.from(document.querySelectorAll(SELECTORS.autoPlayButton));
+    const selector = SELECTORS.autoPlayButton.join(', ');
+    const candidates = collectShadowMatches(document, selector);
 
     // common class-name patterns observed on Disney+ up-next buttons (use regex to catch variants)
     const classPatterns = [
@@ -266,18 +326,33 @@
     return null;
   }
 
-  function clickButton(selector) {
-    if (selector === SELECTORS.autoPlayButton) {
+  function findVisibleElement(selectors) {
+    const list = Array.isArray(selectors) ? selectors : [selectors];
+    for (const selector of list) {
+      const element = document.querySelector(selector);
+      if (element && isElementVisible(element)) {
+        return element;
+      }
+    }
+    return null;
+  }
+
+  function clickButton(actionOrSelectors) {
+    if (actionOrSelectors === SELECTORS.autoPlayButton) {
       const button = findAutoPlayButton();
       if (button) button.click();
       return;
     }
 
-    const button = document.querySelector(selector);
-    if (button && isElementVisible(button)) {
-      if (selector === SELECTORS.skipIntroButton) {
-        handleSkipIntroButton(button);
-      }
+    if (actionOrSelectors === ACTIONS.SKIP_INTRO) {
+      const button = findSkipIntroButton();
+      if (button) handleSkipIntroButton(button);
+      return;
+    }
+
+    const button = findVisibleElement(actionOrSelectors);
+    if (button) {
+      button.click();
     }
   }
 
@@ -285,7 +360,7 @@
     const currentTime = Date.now();
     if (currentTime - lastSkipClickTime < CONSTANTS.CLICK_DELAY) return;
 
-    const buttonText = button.textContent.toLowerCase();
+    const buttonText = getButtonText(button);
     if (isValidSkipButton(buttonText) && !clickedButtons.has(buttonText)) {
       button.click();
       lastSkipClickTime = currentTime;
@@ -296,9 +371,10 @@
   }
 
   function isValidSkipButton(buttonText) {
-    return (buttonText.includes('skip') || buttonText.includes('saltar')) &&
+    return (buttonText.includes('skip') || buttonText.includes('saltar') || buttonText.includes('intro')) &&
       !buttonText.includes('next') &&
-      !buttonText.includes('próximo');
+      !buttonText.includes('próximo') &&
+      !buttonText.includes('siguiente');
   }
 
   function enterFullscreen() {
@@ -314,7 +390,7 @@
   }
 
   function maintainFullscreen() {
-    const fullscreenButton = document.querySelector(SELECTORS.fullscreenButton);
+    const fullscreenButton = findVisibleElement(SELECTORS.fullscreenButton);
     if (fullscreenButton && !document.fullscreenElement) {
       fullscreenButton.click();
     }
@@ -360,7 +436,7 @@
       }
 
       if (CONFIG.enableSkipIntro) {
-        clickButton(SELECTORS.skipIntroButton);
+        clickButton(ACTIONS.SKIP_INTRO);
       }
 
       // use attemptAutoPlay so we retry until the dynamic button appears
@@ -384,12 +460,13 @@
     window.addEventListener('popstate', handleEnhancements);
   })();
 
-  const observer = new MutationObserver(handleEnhancements);
+  const observer = new MutationObserver(() => {
+    clearTimeout(enhancementsDebounceTimer);
+    enhancementsDebounceTimer = setTimeout(handleEnhancements, CONSTANTS.ENHANCEMENTS_DEBOUNCE_MS);
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 
   GM_registerMenuCommand('Disney Plus Enchantments Settings', createSettingsDialog);
-
-  let isSettingsDialogOpen = false;
 
   function toggleSettingsDialog() {
     if (isSettingsDialogOpen) {
@@ -405,7 +482,6 @@
     if (event.key === 'F2') {
       toggleSettingsDialog();
     } else if (event.key === 'Escape') {
-      exitFullscreen();
       closeDialog();
     }
   });
