@@ -82,7 +82,18 @@ Hidden cards receive a `data-ytsvm-hidden-by` attribute in the DOM containing th
 
 ## Version History
 
+### v0.1.4
+- Added menu action item: **🙈 Hide channel in Subscriptions**
+- Fixed context menu injection runtime issue that could prevent the custom action from appearing
+- Improved compatibility with dynamic YouTube menu structures and lockup layouts
+- Improved insertion priority so the action appears in the visible portion of the menu
+- Added storage migration support from `ytsvm_data_v013` to `ytsvm_data_v014`
+
 ### v0.1.3
+- Added context menu action label: **Hide channel in Subscriptions**
+- Improved context-menu injection for dynamic YouTube menu layouts
+- Added safeguards to avoid injecting the action into Save to playlist dialogs
+- Improved insertion priority so the custom action appears in the visible action list
 - Fixed collaboration video re-enable bug: toggling any channel on a collab card now re-evaluates all channels on that card before showing it
 - Fixed page scan to use the same multi-channel cache as the filter engine so collab cards are handled correctly from the first scan pass
 - Fixed import to sanitize channel entries missing the key field and prevent silent duplicates
@@ -182,5 +193,5 @@ Hidden cards receive a `data-ytsvm-hidden-by` attribute in the DOM containing th
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon" width="64">
 
-**Current Version: 0.1.3**
+**Current Version: 0.1.4**
 </div>
