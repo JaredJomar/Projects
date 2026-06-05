@@ -1,0 +1,21 @@
+Task 2 Jest baseline verification
+
+Command:
+  npm test
+
+Result:
+  PASS
+
+Observed output summary:
+  PASS tests/smoke.test.js
+  Test Suites: 1 passed, 1 total
+  Tests: 1 passed, 1 total
+
+Additional syntax checks:
+  node --check src/background.js
+  node --check src/panel.js
+  node --check src/browserApi.js
+  node --check src/constants.js
+
+Syntax check result:
+  PASS

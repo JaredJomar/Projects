@@ -1,0 +1,18 @@
+Task 4 direct-mode return-to-list verification
+
+Command:
+  npm test -- --runTestsByPath tests/navigationStrategy.test.js
+
+Result:
+  PASS
+
+Verified behavior:
+  - resetPanelToList() sets side panel path to src/panel.html.
+  - resetPanelToList() opens the side panel for the active window.
+  - Background extension action listener invokes the same reset behavior.
+
+Standalone driver:
+  node -e "..."
+
+Driver result:
+  {"fallback":{"status":"extension-panel-fallback","ok":true,"path":"src/panel.html"},"tab":{"status":"open-in-tab","ok":true,"url":"https://example.com/path"},"lastSet":{"path":"src/panel.html","enabled":true},"lastOpen":{"windowId":7},"lastTab":{"url":"https://example.com/path"}}

@@ -1,0 +1,9 @@
+{
+  "task": "2. MV3 project scaffold and Jest baseline",
+  "manifest_version": 3,
+  "permissions": ["sidePanel", "storage", "tabs"],
+  "host_permissions": [],
+  "contains_all_urls": false,
+  "contains_webview": false,
+  "result": "PASS"
+}

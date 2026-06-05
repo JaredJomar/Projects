@@ -1,0 +1,20 @@
+Task 3 valid storage verification
+
+Command:
+  npm test -- --runTestsByPath tests/urlValidator.test.js tests/siteStore.test.js
+
+Result:
+  PASS
+
+Observed output summary:
+  PASS tests/siteStore.test.js
+  PASS tests/urlValidator.test.js
+  Test Suites: 2 passed, 2 total
+  Tests: 11 passed, 11 total
+
+Verified behavior:
+  - Empty storage returns []
+  - example.com normalizes to https://example.com
+  - https://example.com persists exactly one site record
+  - Stored site record includes id, url, title, createdAt, updatedAt
+  - Removing a site updates persisted storage

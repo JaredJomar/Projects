@@ -1,0 +1,23 @@
+Task 3 invalid storage verification
+
+Command:
+  npm test -- --runTestsByPath tests/urlValidator.test.js tests/siteStore.test.js
+
+Result:
+  PASS
+
+Observed output summary:
+  PASS tests/siteStore.test.js
+  PASS tests/urlValidator.test.js
+  Test Suites: 2 passed, 2 total
+  Tests: 11 passed, 11 total
+
+Verified behavior:
+  - Empty string rejects
+  - javascript:alert(1) rejects
+  - file:///tmp/test rejects
+  - chrome://settings rejects
+  - chrome-extension://abc123/panel.html rejects
+  - data:text/plain,hello rejects
+  - malformed input rejects
+  - Duplicate normalized URLs reject without a storage write for the duplicate

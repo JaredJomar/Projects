@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "SideBar",
+  "version": "0.0.1",
+  "description": "An MV3 side panel scaffold for opening user-managed websites.",
+  "permissions": ["sidePanel", "storage", "tabs"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_title": "Open SideBar"
+  },
+  "side_panel": {
+    "default_path": "src/panel.html"
+  }
+}

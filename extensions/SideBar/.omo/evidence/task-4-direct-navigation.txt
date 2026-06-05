@@ -1,0 +1,16 @@
+Task 4 direct side-panel navigation verification
+
+Command:
+  npm test -- --runTestsByPath tests/navigationStrategy.test.js
+
+Result:
+  PASS
+
+Observed output summary:
+  PASS tests/navigationStrategy.test.js
+  Tests: 9 passed, 9 total
+
+Verified behavior:
+  - Direct-capable mode calls chrome.sidePanel.setOptions with the selected http/https URL.
+  - Direct mode opens the side panel for the active window.
+  - Unsafe URLs cannot reach side-panel or tabs APIs.

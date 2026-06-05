@@ -1,0 +1,13 @@
+{
+  "name": "sidebar-extension",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Vanilla MV3 SideBar extension scaffold with Jest/jsdom tests.",
+  "scripts": {
+    "test": "jest --config tests/jest.config.js"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^30.2.0"
+  }
+}

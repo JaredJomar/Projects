@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: #111;
+  background: #fff;
+}
+
+.panel {
+  padding: 16px;
+}
