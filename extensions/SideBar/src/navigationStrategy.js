@@ -1,17 +1,18 @@
-const constants = globalThis.SideBarConstants ?? require("./constants.js");
-const browserApi = globalThis.SideBarBrowserApi ?? require("./browserApi.js");
-const urlValidator = globalThis.SideBarUrlValidator ?? require("./urlValidator.js");
+((root) => {
+  const constants = root.SideBarConstants ?? require("./constants.js");
+  const browserApi = root.SideBarBrowserApi ?? require("./browserApi.js");
+  const urlValidator = root.SideBarUrlValidator ?? require("./urlValidator.js");
 
-const { PANEL_PATH, SIDE_PANEL_CAPABILITY } = constants;
-const { getRuntimeApi, getSidePanelApi, getTabsApi } = browserApi;
-const { normalizeSiteUrl } = urlValidator;
+  const { FALLBACK_URL_PARAM, FALLBACK_VIEW_MODE_PARAM, PANEL_PATH, SIDE_PANEL_CAPABILITY, VIEW_MODES } = constants;
+  const { callChromeMethod, getActiveTab, getRuntimeApi, getSidePanelApi, getTabsApi } = browserApi;
+  const { normalizeSiteUrl } = urlValidator;
 
-const NAVIGATION_STATUS = Object.freeze({
-  direct: "direct-side-panel",
-  fallback: "extension-panel-fallback",
-  tab: "open-in-tab",
-  failure: "side-panel-failure"
-});
+  const NAVIGATION_STATUS = Object.freeze({
+    direct: "direct-side-panel",
+    fallback: "extension-panel-fallback",
+    tab: "open-in-tab",
+    failure: "side-panel-failure"
+  });
 
 function readUserAgentData(userAgentData = globalThis.navigator?.userAgentData) {
   const brands = Array.isArray(userAgentData?.brands) ? userAgentData.brands : [];
@@ -48,32 +49,9 @@ function getLastErrorMessage() {
   return lastError.message || String(lastError);
 }
 
-function callChromeCallbackApi(apiCall) {
-  return new Promise((resolve, reject) => {
-    apiCall(() => {
-      const runtime = getRuntimeApi();
-      const lastError = runtime?.lastError;
-
-      if (lastError) {
-        const message = lastError.message || String(lastError);
-        reject(new Error(message));
-        return;
-      }
-
-      resolve();
-    });
-  });
-}
-
 async function getActiveWindowId() {
-  const tabs = getTabsApi();
-
-  if (!tabs?.query) {
-    return undefined;
-  }
-
-  const activeTabs = await tabs.query({ active: true, currentWindow: true });
-  return activeTabs?.[0]?.windowId;
+  const activeTab = await getActiveTab().catch(() => null);
+  return activeTab?.windowId;
 }
 
 async function setSidePanelPath(path) {
@@ -83,7 +61,7 @@ async function setSidePanelPath(path) {
     throw new Error("Side panel API is unavailable.");
   }
 
-  await callChromeCallbackApi((callback) => sidePanel.setOptions({ path, enabled: true }, callback));
+  await callChromeMethod(sidePanel.setOptions, sidePanel, [{ path, enabled: true }]);
 }
 
 async function openSidePanel() {
@@ -96,7 +74,7 @@ async function openSidePanel() {
   const windowId = await getActiveWindowId();
   const options = typeof windowId === "number" ? { windowId } : {};
 
-  await callChromeCallbackApi((callback) => sidePanel.open(options, callback));
+  await callChromeMethod(sidePanel.open, sidePanel, [options]);
 }
 
 function toFailureState(error) {
@@ -110,21 +88,39 @@ function toFailureState(error) {
   };
 }
 
-function shouldUseDirectPanel(options = {}) {
-  const browser = options.browser ?? detectBrowser(options.navigator);
-  const directUrlEnabled = options.directUrlEnabled ?? SIDE_PANEL_CAPABILITY.directUrlEnabled;
+  function shouldUseDirectPanel(options = {}) {
+    const browser = options.browser ?? detectBrowser(options.navigator);
+    const directUrlEnabled = options.directUrlEnabled ?? SIDE_PANEL_CAPABILITY.directUrlByBrowser?.[browser] ?? SIDE_PANEL_CAPABILITY.directUrlEnabled;
 
-  return directUrlEnabled === true && (browser === "chrome" || browser === "edge");
+    return directUrlEnabled === true && (browser === "chrome" || browser === "edge");
+  }
+
+function normalizeViewMode(viewMode) {
+  if (Object.values(VIEW_MODES).includes(viewMode)) {
+    return viewMode;
+  }
+
+  return VIEW_MODES.mobile;
 }
 
-async function openExtensionPanelFallback() {
-  await setSidePanelPath(PANEL_PATH);
+function buildFallbackPanelPath(url, viewMode = VIEW_MODES.mobile) {
+  const normalizedViewMode = normalizeViewMode(viewMode);
+
+  return `${PANEL_PATH}?${FALLBACK_URL_PARAM}=${encodeURIComponent(url)}&${FALLBACK_VIEW_MODE_PARAM}=${encodeURIComponent(normalizedViewMode)}`;
+}
+
+async function openExtensionPanelFallback(url, viewMode = VIEW_MODES.mobile) {
+  const path = buildFallbackPanelPath(url, viewMode);
+
+  await setSidePanelPath(path);
   await openSidePanel();
 
   return {
     status: NAVIGATION_STATUS.fallback,
     ok: true,
-    path: PANEL_PATH
+    path,
+    url,
+    viewMode: normalizeViewMode(viewMode)
   };
 }
 
@@ -140,9 +136,10 @@ async function configureDefaultPanel() {
 
 async function navigateSidePanel(rawUrl, options = {}) {
   const url = normalizeSiteUrl(rawUrl);
+  const viewMode = normalizeViewMode(options.viewMode);
 
   if (!shouldUseDirectPanel(options)) {
-    return openExtensionPanelFallback();
+    return openExtensionPanelFallback(url, viewMode);
   }
 
   try {
@@ -152,7 +149,8 @@ async function navigateSidePanel(rawUrl, options = {}) {
     return {
       status: NAVIGATION_STATUS.direct,
       ok: true,
-      url
+      url,
+      viewMode
     };
   } catch (error) {
     return toFailureState(error);
@@ -167,7 +165,7 @@ async function openInTab(rawUrl) {
     throw new Error("Tabs API is unavailable.");
   }
 
-  await tabs.create({ url });
+  await callChromeMethod(tabs.create, tabs, [{ url }]);
 
   return {
     status: NAVIGATION_STATUS.tab,
@@ -189,16 +187,19 @@ async function resetPanelToList() {
 
 const navigationStrategy = Object.freeze({
   NAVIGATION_STATUS,
+  buildFallbackPanelPath,
   configureDefaultPanel,
   detectBrowser,
   navigateSidePanel,
+  normalizeViewMode,
   openInTab,
   resetPanelToList,
   shouldUseDirectPanel
 });
 
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = navigationStrategy;
-}
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = navigationStrategy;
+  }
 
-globalThis.SideBarNavigationStrategy = navigationStrategy;
+  root.SideBarNavigationStrategy = navigationStrategy;
+})(globalThis);

@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "External Side Panel URL Feasibility Spike",
+  "version": "0.0.1",
+  "description": "Throwaway spike to test direct HTTP/HTTPS URLs with chrome.sidePanel.setOptions.",
+  "permissions": ["sidePanel", "storage", "tabs"],
+  "host_permissions": ["https://example.com/*"],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "action": {
+    "default_title": "External side panel URL spike"
+  },
+  "side_panel": {
+    "default_path": "fallback.html"
+  }
+}

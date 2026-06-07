@@ -1,0 +1,203 @@
+{
+  "schema_version": 2,
+  "active_work_id": "sidebar-extension-e4ab216d",
+  "works": {
+    "sidebar-extension-e4ab216d": {
+      "work_id": "sidebar-extension-e4ab216d",
+      "active_plan": "B:\\Documents\\Github\\Personals-Projects\\ProjectsHub\\extensions\\SideBar\\.omo\\plans\\sidebar-extension.md",
+      "plan_name": "sidebar-extension",
+      "status": "completed",
+      "started_at": "2026-06-05T01:36:02.129Z",
+      "updated_at": "2026-06-06T18:08:33.757Z",
+      "session_ids": [
+        "opencode:ses_16abfff65ffeoHHHMh6KCvMMH4",
+        "opencode:ses_16a9120eeffel49w3cleL7rYSf",
+        "opencode:ses_16a911fe2ffe3WJCVyd3CiFYw1",
+        "opencode:ses_16a911f65ffeW74df7fRS17aOn"
+      ],
+      "session_origins": {
+        "opencode:ses_16abfff65ffeoHHHMh6KCvMMH4": "direct",
+        "opencode:ses_16a9120eeffel49w3cleL7rYSf": "appended",
+        "opencode:ses_16a911fe2ffe3WJCVyd3CiFYw1": "appended",
+        "opencode:ses_16a911f65ffeW74df7fRS17aOn": "appended"
+      },
+      "agent": "atlas",
+      "task_sessions": {
+        "todo:1": {
+          "task_key": "todo:1",
+          "task_label": "1",
+          "task_title": "Browser side-panel URL feasibility spike",
+          "session_id": "opencode:ses_16a9120eeffel49w3cleL7rYSf",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-low",
+          "updated_at": "2026-06-05T01:38:52.306Z"
+        },
+        "todo:2": {
+          "task_key": "todo:2",
+          "task_label": "2",
+          "task_title": "MV3 project scaffold and Jest baseline",
+          "session_id": "opencode:ses_16a7f9bebffe4i03qKZlRAaTt8",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-low",
+          "updated_at": "2026-06-05T02:06:12.729Z",
+          "started_at": "2026-06-05T02:06:12.729Z",
+          "status": "running"
+        },
+        "todo:3": {
+          "task_key": "todo:3",
+          "task_label": "3",
+          "task_title": "URL validation and site storage module",
+          "session_id": "opencode:ses_16a6f7a6bffeB2vasD4cFntJMi",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-low",
+          "updated_at": "2026-06-05T02:27:35.300Z",
+          "started_at": "2026-06-05T02:27:35.300Z",
+          "status": "running"
+        },
+        "todo:4": {
+          "task_key": "todo:4",
+          "task_label": "4",
+          "task_title": "Navigation strategy and side-panel capability adapter",
+          "session_id": "opencode:ses_16a5fc92dffeVDZ8llIU1cxHcb",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-05T02:47:38.910Z",
+          "started_at": "2026-06-05T02:47:38.910Z",
+          "status": "running"
+        },
+        "final-wave:f1": {
+          "task_key": "final-wave:f1",
+          "task_label": "F1",
+          "task_title": "Plan Compliance Audit — oracle",
+          "session_id": "opencode:ses_166646ea3ffeyig0G7KDiW2T2U",
+          "agent": "Sisyphus-Junior",
+          "category": "ultrabrain",
+          "started_at": "2026-06-05T21:08:50.673Z",
+          "status": "running",
+          "updated_at": "2026-06-06T17:44:50.929Z"
+        },
+        "final-wave:f2": {
+          "task_key": "final-wave:f2",
+          "task_label": "F2",
+          "task_title": "Code Quality Review — unspecified-high",
+          "session_id": "opencode:ses_161f5686dffe7xwaU1GJO3iQ4A",
+          "agent": "Sisyphus-Junior",
+          "category": "unspecified-high",
+          "updated_at": "2026-06-06T17:48:58.011Z",
+          "started_at": "2026-06-06T17:48:58.011Z",
+          "status": "running"
+        },
+        "final-wave:f4": {
+          "task_key": "final-wave:f4",
+          "task_label": "F4",
+          "task_title": "Scope Fidelity Check — deep",
+          "session_id": "opencode:ses_161f1c1e1ffeKOdXUZLSes53FH",
+          "agent": "Sisyphus-Junior",
+          "category": "",
+          "started_at": "2026-06-06T17:53:01.940Z",
+          "status": "running",
+          "updated_at": "2026-06-06T18:05:56.319Z"
+        }
+      },
+      "ended_at": "2026-06-06T18:08:33.756Z",
+      "elapsed_ms": 145951627
+    }
+  },
+  "active_plan": "B:\\Documents\\Github\\Personals-Projects\\ProjectsHub\\extensions\\SideBar\\.omo\\plans\\sidebar-extension.md",
+  "started_at": "2026-06-05T01:36:02.129Z",
+  "status": "completed",
+  "updated_at": "2026-06-06T18:08:33.757Z",
+  "session_ids": [
+    "opencode:ses_16abfff65ffeoHHHMh6KCvMMH4",
+    "opencode:ses_16a9120eeffel49w3cleL7rYSf",
+    "opencode:ses_16a911fe2ffe3WJCVyd3CiFYw1",
+    "opencode:ses_16a911f65ffeW74df7fRS17aOn"
+  ],
+  "session_origins": {
+    "opencode:ses_16abfff65ffeoHHHMh6KCvMMH4": "direct",
+    "opencode:ses_16a9120eeffel49w3cleL7rYSf": "appended",
+    "opencode:ses_16a911fe2ffe3WJCVyd3CiFYw1": "appended",
+    "opencode:ses_16a911f65ffeW74df7fRS17aOn": "appended"
+  },
+  "plan_name": "sidebar-extension",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Browser side-panel URL feasibility spike",
+      "session_id": "opencode:ses_16a9120eeffel49w3cleL7rYSf",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-low",
+      "updated_at": "2026-06-05T01:38:52.306Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "MV3 project scaffold and Jest baseline",
+      "session_id": "opencode:ses_16a7f9bebffe4i03qKZlRAaTt8",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-low",
+      "updated_at": "2026-06-05T02:06:12.729Z",
+      "started_at": "2026-06-05T02:06:12.729Z",
+      "status": "running"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "URL validation and site storage module",
+      "session_id": "opencode:ses_16a6f7a6bffeB2vasD4cFntJMi",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-low",
+      "updated_at": "2026-06-05T02:27:35.300Z",
+      "started_at": "2026-06-05T02:27:35.300Z",
+      "status": "running"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Navigation strategy and side-panel capability adapter",
+      "session_id": "opencode:ses_16a5fc92dffeVDZ8llIU1cxHcb",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-05T02:47:38.910Z",
+      "started_at": "2026-06-05T02:47:38.910Z",
+      "status": "running"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "opencode:ses_166646ea3ffeyig0G7KDiW2T2U",
+      "agent": "Sisyphus-Junior",
+      "category": "ultrabrain",
+      "started_at": "2026-06-05T21:08:50.673Z",
+      "status": "running",
+      "updated_at": "2026-06-06T17:44:50.929Z"
+    },
+    "final-wave:f2": {
+      "task_key": "final-wave:f2",
+      "task_label": "F2",
+      "task_title": "Code Quality Review — unspecified-high",
+      "session_id": "opencode:ses_161f5686dffe7xwaU1GJO3iQ4A",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-06-06T17:48:58.011Z",
+      "started_at": "2026-06-06T17:48:58.011Z",
+      "status": "running"
+    },
+    "final-wave:f4": {
+      "task_key": "final-wave:f4",
+      "task_label": "F4",
+      "task_title": "Scope Fidelity Check — deep",
+      "session_id": "opencode:ses_161f1c1e1ffeKOdXUZLSes53FH",
+      "agent": "Sisyphus-Junior",
+      "category": "",
+      "started_at": "2026-06-06T17:53:01.940Z",
+      "status": "running",
+      "updated_at": "2026-06-06T18:05:56.319Z"
+    }
+  },
+  "agent": "atlas",
+  "ended_at": "2026-06-06T18:08:33.756Z",
+  "elapsed_ms": 145951627
+}

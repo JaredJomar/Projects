@@ -1,0 +1,11 @@
+Commands:
+- findstr /i /c:"always works" /c:"guaranteed compatibility" /c:"Tampermonkey always runs" "README.md" "compatibility-matrix.md"
+- findstr /c:"| Chrome |" /c:"| Edge |" /c:"Best effort, not guaranteed" "compatibility-matrix.md"
+
+Result: PASS
+
+Passing checks:
+- Forbidden guarantee language was absent.
+- compatibility-matrix.md contains Chrome and Edge rows.
+- compatibility-matrix.md contains `Best effort, not guaranteed`.
+- Task 1 browser feasibility evidence is recorded: Chrome 148 fallback mode and Edge 149 direct mode.

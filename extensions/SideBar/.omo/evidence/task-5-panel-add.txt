@@ -1,0 +1,13 @@
+Command: node jsdom driver for panel add flow
+Result: PASS
+
+Observed JSON:
+{
+  "emptyHidden": true,
+  "itemCount": 1,
+  "url": "https://example.com",
+  "status": "Site added.",
+  "buttons": ["Add", "Open", "Remove"]
+}
+
+The empty-state text disappeared and one site row appeared with Open and Remove buttons.

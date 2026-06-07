@@ -3,16 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SideBar</title>
+    <title>Rail</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="panel">
-      <h1>SideBar</h1>
-      <p id="app-status">Ready to configure your site list.</p>
+    <main id="list-panel" class="panel">
+      <section id="panel-drawer" class="panel__drawer" aria-label="Site controls" hidden>
+        <button id="panel-resize-handle" class="panel__resize-handle" type="button" aria-label="Resize sidebar"></button>
+        <div class="panel__drawer-actions">
+          <button id="pin-sidebar" class="panel__icon-button" type="button" aria-pressed="false">Pin</button>
+          <button id="close-sidebar" class="panel__icon-button" type="button">Close</button>
+        </div>
+
+        <section class="settings-section" aria-labelledby="settings-title">
+          <h2 id="settings-title">Display preference</h2>
+          <label class="settings-section__label" for="global-view-mode">Default site view</label>
+          <select id="global-view-mode" class="settings-section__select">
+            <option value="mobile">Mobile</option>
+            <option value="desktop">Desktop</option>
+          </select>
+          <p class="settings-section__hint">Mobile is the default. Desktop requests a wider fallback frame when the site supports responsive layouts.</p>
+        </section>
+
+        <p id="panel-status" class="panel-status" role="status" aria-live="polite"></p>
+
+        <section class="site-section" aria-labelledby="site-details-title">
+          <h2 id="site-details-title">Selected site</h2>
+          <p id="empty-state" class="empty-state">No sites yet. Add a website to open it from the sidebar.</p>
+          <div id="selected-site-details" class="selected-site-details"></div>
+        </section>
+
+        <section id="website-view" class="website-view" aria-label="Selected website" hidden>
+          <iframe id="website-frame" class="website-view__frame" title="Selected website"></iframe>
+        </section>
+      </section>
+
+      <aside class="panel-rail" aria-label="Saved site rail">
+        <ul id="site-list" class="site-list" aria-label="Saved sites"></ul>
+        <button id="add-current-site" class="add-current-site" type="button" aria-label="Add current page">+</button>
+      </aside>
     </main>
+    <section id="fallback-panel" class="fallback-panel" aria-labelledby="fallback-title" hidden>
+      <div class="fallback-panel__header">
+        <h1 id="fallback-title">Fallback Mode</h1>
+        <p id="fallback-warning" class="fallback-panel__warning"></p>
+        <p id="fallback-message" class="fallback-panel__message"></p>
+        <button id="fallback-back-rail" class="site-form__button" type="button">Back to Rail</button>
+        <button id="fallback-open-tab" class="site-form__button" type="button">Open in Tab</button>
+      </div>
+      <iframe id="fallback-frame" class="fallback-panel__frame" title="Selected website fallback preview"></iframe>
+    </section>
     <script src="./constants.js"></script>
     <script src="./browserApi.js"></script>
+    <script src="./urlValidator.js"></script>
+    <script src="./siteStore.js"></script>
+    <script src="./navigationStrategy.js"></script>
+    <script src="./fallbackPanel.js"></script>
     <script src="./panel.js"></script>
   </body>
 </html>

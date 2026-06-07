@@ -1,0 +1,9 @@
+Command: npm test
+Result: PASS
+
+Summary:
+- Test Suites: 6 passed, 6 total
+- Tests: 51 passed, 51 total
+- Suites: smoke, urlValidator, siteStore, navigationStrategy, panel, fallbackPanel
+
+The full Jest/jsdom suite passed after fallback, unsafe-scheme hardening, per-browser direct-mode capability changes, service-worker redeclaration fixes, action-click side-panel behavior, rail-only UI, current-tab add, rail reorder, persisted drawer width, Alt+B return-to-rail command, and Back to Rail fallback control.

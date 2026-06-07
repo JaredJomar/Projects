@@ -1,0 +1,17 @@
+Command: npm test -- --runTestsByPath tests/fallbackPanel.test.js tests/navigationStrategy.test.js
+Result: PASS
+
+Relevant passing cases:
+- fallback panel renders the exact warning text:
+  Some browser extensions may not run in fallback mode. Use Open in Tab for full browser-extension behavior.
+- fallback panel assigns a validated iframe URL for https://example.com.
+- unsafe fallback URLs do not reach the iframe or Open in Tab.
+
+Manual jsdom driver observed:
+{
+  "warning": "Some browser extensions may not run in fallback mode. Use Open in Tab for full browser-extension behavior.",
+  "frameSrc": "https://example.com/",
+  "message": "If this site does not appear, it may block sidebar embedding. Use Open in Tab instead.",
+  "listHidden": true,
+  "fallbackHidden": false
+}

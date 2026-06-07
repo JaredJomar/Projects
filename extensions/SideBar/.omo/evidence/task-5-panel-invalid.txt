@@ -1,0 +1,11 @@
+Command: node jsdom driver for panel invalid URL flow
+Result: PASS
+
+Observed JSON:
+{
+  "itemCount": 0,
+  "status": "Unsupported URL scheme: javascript:",
+  "tone": "error"
+}
+
+The UI displayed a deterministic English validation error and no site row was created.

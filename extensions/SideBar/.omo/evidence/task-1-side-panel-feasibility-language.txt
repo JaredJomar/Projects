@@ -1,0 +1,6 @@
+Command: documentation and compatibility language review
+Result: PASS
+
+The current README and compatibility matrix use the required phrase `Best effort, not guaranteed` and avoid prohibited guarantee language.
+
+Chrome and Edge spike JSON results are recorded in `.omo/evidence/task-1-side-panel-feasibility.md`.

@@ -1,69 +1,73 @@
-const UNSAFE_SCHEMES = Object.freeze([
-  "javascript:",
-  "file:",
-  "chrome:",
-  "chrome-extension:",
-  "data:"
-]);
+((root) => {
+  function getExplicitProtocol(value) {
+    const match = /^([a-zA-Z][a-zA-Z\d+\-.]*):/.exec(value);
 
-function hasProtocol(value) {
-  return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
-}
+    if (!match) {
+      return "";
+    }
 
-function formatUrl(parsedUrl) {
-  const rootPath = parsedUrl.pathname === "/" && !parsedUrl.search && !parsedUrl.hash;
-  const pathname = rootPath ? "" : parsedUrl.pathname;
+    const protocolRemainder = value.slice(match[0].length);
 
-  return `${parsedUrl.origin}${pathname}${parsedUrl.search}${parsedUrl.hash}`;
-}
+    if (/^\d/.test(protocolRemainder)) {
+      return "";
+    }
 
-function normalizeSiteUrl(rawUrl) {
-  if (typeof rawUrl !== "string") {
-    throw new TypeError("Site URL must be a non-empty string.");
+    return `${match[1].toLowerCase()}:`;
   }
 
-  const trimmed = rawUrl.trim();
+  function formatUrl(parsedUrl) {
+    const rootPath = parsedUrl.pathname === "/" && !parsedUrl.search && !parsedUrl.hash;
+    const pathname = rootPath ? "" : parsedUrl.pathname;
 
-  if (!trimmed) {
-    throw new TypeError("Site URL must be a non-empty string.");
+    return `${parsedUrl.origin}${pathname}${parsedUrl.search}${parsedUrl.hash}`;
   }
 
-  const candidate = hasProtocol(trimmed) ? trimmed : `https://${trimmed}`;
-  let parsedUrl;
+  function normalizeSiteUrl(rawUrl) {
+    if (typeof rawUrl !== "string") {
+      throw new TypeError("Site URL must be a non-empty string.");
+    }
 
-  try {
-    parsedUrl = new URL(candidate);
-  } catch (error) {
-    throw new TypeError(`Invalid site URL: ${rawUrl}`);
+    const trimmed = rawUrl.trim();
+
+    if (!trimmed) {
+      throw new TypeError("Site URL must be a non-empty string.");
+    }
+
+    const explicitProtocol = getExplicitProtocol(trimmed);
+    const candidate = explicitProtocol ? trimmed : `https://${trimmed}`;
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(candidate);
+    } catch (error) {
+      throw new TypeError(`Invalid site URL: ${rawUrl}`);
+    }
+
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      throw new TypeError(`Unsupported URL scheme: ${parsedUrl.protocol}`);
+    }
+
+    return formatUrl(parsedUrl);
   }
 
-  if (!UNSAFE_SCHEMES.includes(`${parsedUrl.protocol}`.toLowerCase()) && parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new TypeError(`Unsupported URL scheme: ${parsedUrl.protocol}`);
+  function isValidSiteUrl(rawUrl) {
+    try {
+      normalizeSiteUrl(rawUrl);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
-  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-    throw new TypeError(`Unsupported URL scheme: ${parsedUrl.protocol}`);
+  const urlValidator = Object.freeze({
+    getExplicitProtocol,
+    normalizeSiteUrl,
+    isValidSiteUrl
+  });
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = urlValidator;
   }
 
-  return formatUrl(parsedUrl);
-}
-
-function isValidSiteUrl(rawUrl) {
-  try {
-    normalizeSiteUrl(rawUrl);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-const urlValidator = Object.freeze({
-  normalizeSiteUrl,
-  isValidSiteUrl
-});
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = urlValidator;
-}
-
-globalThis.SideBarUrlValidator = urlValidator;
+  root.SideBarUrlValidator = urlValidator;
+})(globalThis);

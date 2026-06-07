@@ -1,0 +1,12 @@
+Command: npm test -- --runTestsByPath tests/fallbackPanel.test.js tests/navigationStrategy.test.js
+Result: PASS
+
+Relevant passing cases:
+- Open in Tab validates and opens the fallback URL.
+- navigationStrategy.openInTab normalizes example.com to https://example.com and calls chrome.tabs.create.
+- unsafe schemes are rejected before side-panel, iframe, or tabs APIs can be called.
+
+Manual jsdom driver observed:
+{
+  "openInTabCalls": ["https://example.com"]
+}

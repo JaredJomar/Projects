@@ -133,3 +133,65 @@
 - Unknown browsers always fall back to the extension-hosted `src/panel.html`; Edge is detected from `Edg`, and Chrome/Chromium only when `Edg` is absent.
 - Direct side-panel `setOptions` failures return a deterministic English failure state with `nextAction: "open-in-tab"` instead of silently opening another surface.
 - Extension action clicks reset the side panel to `src/panel.html` and open it, preserving access to the editable list after direct-mode navigation.
+
+## 2026-06-05 Task 5 panel UI findings
+
+- `src/panel.html` now loads `urlValidator.js`, `siteStore.js`, and `navigationStrategy.js` before `panel.js` so the browser UI can use the storage and navigation contracts.
+- `src/panel.js` exposes `createPanelApp()` for Jest/jsdom and initializes automatically in the extension page when CommonJS is unavailable.
+- Panel tests use plain DOM events and the real `siteStore` with the in-memory Chrome mock; no Testing Library or UI framework was added.
+
+## 2026-06-05 Task 6 fallback UX findings
+
+- `src/navigationStrategy.js` now routes fallback navigation to `src/panel.html?fallbackUrl=...`, preserving the validated URL for the extension-hosted fallback view.
+- `src/fallbackPanel.js` owns fallback-mode rendering, iframe assignment, iframe failure messaging, and the Open in Tab escape hatch.
+- Fallback UI uses the exact required warning: `Some browser extensions may not run in fallback mode. Use Open in Tab for full browser-extension behavior.`
+- Invalid fallback query URLs are rejected before iframe assignment or tab opening.
+
+## 2026-06-05 Task 7 and 8 findings
+
+- `README.md` and `compatibility-matrix.md` were created in English with conservative pending Chrome/Edge direct-mode language because Task 1 manual feasibility evidence is still unavailable.
+- Documentation includes `Best effort, not guaranteed` and avoids prohibited guarantee language.
+- Hardening added regression coverage proving `javascript:`, `file:`, `data:`, `chrome:`, and `chrome-extension:` cannot reach side-panel, iframe, or tab APIs.
+- Full Jest/jsdom suite passes with 6 suites and 32 tests.
+
+## 2026-06-05 runner fix note
+
+- `spikes/external-side-panel-url/run-side-panel-url-spike.js` now collects Task 1 evidence directly from the extension service worker with `runSetOptionsSpike("cdp")` and `runPanelOpenSpike("cdp")`, so the runner no longer depends on `opener.html` or a page button click.
+
+## 2026-06-05 production service worker redeclaration fix
+
+- The production MV3 worker failed with `Identifier 'getRuntimeApi' has already been declared` because classic scripts loaded by `importScripts()` share one worker global lexical scope.
+- Production JavaScript files now wrap declarations in local IIFEs while preserving their CommonJS exports and `globalThis.SideBar...` browser globals.
+- A Node VM duplicate-load check executed the production worker script set twice in one global context and confirmed `SideBarBrowserApi` and `SideBarBackground` initialize without redeclaration.
+- Edge isolated-profile loading found the production `src/background.js` service worker registered after the scoping fix; Chrome CLI probing was noisy because local command-line loading exposed the nested spike extension target, but direct duplicate-load simulation covers the reported syntax error path.
+
+## 2026-06-05 Task 1 captured browser results
+
+- Chrome `Chrome/148.0.7778.218` spike result: `setOptionsResult: failure`, `lastError: TypeError: Cannot read properties of undefined (reading 'setOptions')`, `directModeDecision: FALLBACK`.
+- Edge `Edg/149.0.4022.52` spike result: `setOptionsResult: success`, `lastError: null`, `directModeDecision: DIRECT`.
+- `SIDE_PANEL_CAPABILITY.directUrlByBrowser` now records Chrome fallback mode and Edge direct mode.
+
+## 2026-06-05 Edge sidebar screenshot scope clarification
+
+- The screenshots show Edge's native browser-chrome right app rail plus a website panel; MV3 extensions can use `chrome.sidePanel` for the website panel surface but cannot create that browser-chrome rail.
+- `src/background.js` now calls `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` so the extension action behaves as closely as the API allows.
+
+## 2026-06-05 Chrome worker binding fix note
+
+- `spikes/external-side-panel-url/run-side-panel-url-spike.js` now waits for the worker probes to become available and invokes them through a self-contained CDP expression that falls back across `globalThis`, `self`, and the bare service-worker binding, which avoids the Chrome-only `globalThis.runSetOptionsSpike is not a function` failure.
+
+## 2026-06-05 current-tab capture and display preferences
+
+- The panel now has a bottom `+` button that saves the active tab URL, title, and browser-provided favicon through the existing `tabs` permission.
+- Saved site records include `iconUrl` and per-site `viewMode`; settings include `globalViewMode`, which defaults to `mobile`.
+- Per-site `default` view mode resolves through the global setting. A site override of `mobile` or `desktop` wins over the global setting.
+- Fallback navigation carries `viewMode` in the panel query string. Mobile constrains the fallback iframe width; Desktop uses the full panel width.
+- URL normalization now treats `localhost:3000/path` as a host:port input and normalizes it to `https://localhost:3000/path` instead of misclassifying `localhost:` as a URL scheme.
+
+## 2026-06-05 rail-only UI corrections
+
+- The rail UI no longer exposes a manual URL form; sites are added from the active tab with the bottom `+` button.
+- Saved rail icons can be reordered by drag/drop, and the persisted site list order is updated in `chrome.storage.local`.
+- Rail icon clicks select/open the drawer without navigating, so they do not reload the current website. The selected site's `Open` button is the navigation trigger.
+- The fallback website view now includes a Back to Rail button. `Alt+B` is registered as a return-to-rail command and is handled inside extension pages, but browser/page/iframe shortcut handling can take precedence.
+- The side panel's native width cannot be reduced by MV3 code. To avoid the white unused area next to the rail, `html`, `body`, and the panel root now paint the full side-panel viewport dark while the rail remains right-aligned.

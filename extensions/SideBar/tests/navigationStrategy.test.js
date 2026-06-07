@@ -2,6 +2,7 @@ const chromeMock = require("./__mocks__/chrome.js");
 const { PANEL_PATH } = require("../src/constants.js");
 const {
   NAVIGATION_STATUS,
+  buildFallbackPanelPath,
   detectBrowser,
   navigateSidePanel,
   openInTab,
@@ -12,9 +13,11 @@ function resetChromeMock() {
   chromeMock.runtime.lastError = undefined;
   chromeMock.sidePanel.setOptions.mockClear();
   chromeMock.sidePanel.open.mockClear();
+  chromeMock.sidePanel.setPanelBehavior.mockClear();
   chromeMock.tabs.query.mockClear();
   chromeMock.tabs.create.mockClear();
   chromeMock.action.onClicked.addListener.mockClear();
+  chromeMock.commands.onCommand.addListener.mockClear();
   chromeMock.runtime.onMessage.addListener.mockClear();
   chromeMock.tabs.query.mockResolvedValue([{ windowId: 1 }]);
 }
@@ -33,7 +36,8 @@ describe("navigationStrategy", () => {
     expect(result).toEqual({
       status: NAVIGATION_STATUS.direct,
       ok: true,
-      url: "http://example.com/path"
+      url: "http://example.com/path",
+      viewMode: "mobile"
     });
     expect(chromeMock.sidePanel.setOptions).toHaveBeenCalledWith(
       { path: "http://example.com/path", enabled: true },
@@ -51,10 +55,12 @@ describe("navigationStrategy", () => {
     expect(result).toEqual({
       status: NAVIGATION_STATUS.fallback,
       ok: true,
-      path: PANEL_PATH
+      path: buildFallbackPanelPath("https://example.com"),
+      url: "https://example.com",
+      viewMode: "mobile"
     });
     expect(chromeMock.sidePanel.setOptions).toHaveBeenCalledWith(
-      { path: PANEL_PATH, enabled: true },
+      { path: buildFallbackPanelPath("https://example.com"), enabled: true },
       expect.any(Function)
     );
   });
@@ -67,14 +73,32 @@ describe("navigationStrategy", () => {
       ok: true,
       url: "https://example.com/path"
     });
-    expect(chromeMock.tabs.create).toHaveBeenCalledWith({ url: "https://example.com/path" });
+    expect(chromeMock.tabs.create).toHaveBeenCalledWith({ url: "https://example.com/path" }, expect.any(Function));
+  });
+
+  test("host:port input normalizes to https without treating the host as a scheme", async () => {
+    const result = await openInTab("localhost:3000/path");
+
+    expect(result.url).toBe("https://localhost:3000/path");
+    expect(chromeMock.tabs.create).toHaveBeenCalledWith({ url: "https://localhost:3000/path" }, expect.any(Function));
   });
 
   test("unsafe URLs cannot reach side-panel or tabs APIs", async () => {
-    await expect(navigateSidePanel("javascript:alert(1)", { directUrlEnabled: true, browser: "chrome" })).rejects.toThrow(
-      /Unsupported URL scheme/
-    );
-    await expect(openInTab("chrome://settings")).rejects.toThrow(/Unsupported URL scheme/);
+    const unsafeUrls = [
+      "javascript:alert(1)",
+      "file:///tmp/test",
+      "data:text/plain,hello",
+      "chrome://settings",
+      "chrome-extension://abc123/panel.html"
+    ];
+
+    for (const unsafeUrl of unsafeUrls) {
+      await expect(navigateSidePanel(unsafeUrl, { directUrlEnabled: true, browser: "chrome" })).rejects.toThrow(
+        /Unsupported URL scheme/
+      );
+      await expect(openInTab(unsafeUrl)).rejects.toThrow(/Unsupported URL scheme/);
+    }
+
     expect(chromeMock.sidePanel.setOptions).not.toHaveBeenCalled();
     expect(chromeMock.tabs.create).not.toHaveBeenCalled();
   });
@@ -119,9 +143,43 @@ describe("navigationStrategy", () => {
 
     expect(result.status).toBe(NAVIGATION_STATUS.fallback);
     expect(chromeMock.sidePanel.setOptions).toHaveBeenCalledWith(
-      { path: PANEL_PATH, enabled: true },
+      { path: buildFallbackPanelPath("https://example.com"), enabled: true },
       expect.any(Function)
     );
+  });
+
+  test("default capability map enables Edge direct mode and keeps Chrome fallback mode", async () => {
+    const edgeResult = await navigateSidePanel("https://example.com", { browser: "edge" });
+
+    expect(edgeResult.status).toBe(NAVIGATION_STATUS.direct);
+    expect(chromeMock.sidePanel.setOptions).toHaveBeenLastCalledWith(
+      { path: "https://example.com", enabled: true },
+      expect.any(Function)
+    );
+
+    resetChromeMock();
+    const chromeResult = await navigateSidePanel("https://example.com", { browser: "chrome" });
+
+    expect(chromeResult.status).toBe(NAVIGATION_STATUS.fallback);
+    expect(chromeMock.sidePanel.setOptions).toHaveBeenLastCalledWith(
+      { path: buildFallbackPanelPath("https://example.com"), enabled: true },
+      expect.any(Function)
+    );
+  });
+
+  test("fallback navigation carries the selected desktop view mode", async () => {
+    const result = await navigateSidePanel("https://example.com", {
+      directUrlEnabled: false,
+      browser: "chrome",
+      viewMode: "desktop"
+    });
+
+    expect(result).toMatchObject({
+      status: NAVIGATION_STATUS.fallback,
+      ok: true,
+      viewMode: "desktop"
+    });
+    expect(result.path).toBe(buildFallbackPanelPath("https://example.com", "desktop"));
   });
 
   test("extension-action reset restores the list panel and opens it", async () => {
@@ -149,10 +207,23 @@ describe("navigationStrategy", () => {
     require("../src/background.js");
     await Promise.resolve();
 
+    expect(chromeMock.sidePanel.setPanelBehavior).toHaveBeenCalledWith({ openPanelOnActionClick: true });
+
     const onClicked = chromeMock.action.onClicked.addListener.mock.calls.at(-1)[0];
     chromeMock.sidePanel.setOptions.mockClear();
     chromeMock.sidePanel.open.mockClear();
     await onClicked();
+
+    expect(chromeMock.sidePanel.setOptions).toHaveBeenCalledWith(
+      { path: PANEL_PATH, enabled: true },
+      expect.any(Function)
+    );
+    expect(chromeMock.sidePanel.open).toHaveBeenCalledWith({ windowId: 1 }, expect.any(Function));
+
+    chromeMock.sidePanel.setOptions.mockClear();
+    chromeMock.sidePanel.open.mockClear();
+    const onCommand = chromeMock.commands.onCommand.addListener.mock.calls.at(-1)[0];
+    await onCommand("return-to-rail");
 
     expect(chromeMock.sidePanel.setOptions).toHaveBeenCalledWith(
       { path: PANEL_PATH, enabled: true },

