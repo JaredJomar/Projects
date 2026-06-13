@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Prime Video Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.2.2
+// @version      0.2.3
 // @description  Enhancements for Prime Video player: auto Fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.amazon.com/gp/video/*
@@ -24,7 +24,7 @@
     };
 
     const selectors = {
-        skipRecapButton: 'div.f16im4ho > div > button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
+        skipRecapButton: 'button[aria-label="Skip Recap"], div.f16im4ho > div > button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
         skipIntroButton: 'div.f16im4ho > div > button.fqye4e3.f1ly7q5u.fk9c3ap.fz9ydgy.f1xrlb00.f1hy0e6n.fgbpje3.f1uteees.f1h2a8xb.atvwebplayersdk-skipelement-button.fjgzbz9.fiqc9rt.fg426ew.f1ekwadg',
         fullscreenVideo: 'video',
     };
