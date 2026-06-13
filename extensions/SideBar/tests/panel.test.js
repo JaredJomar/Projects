@@ -21,6 +21,7 @@ function setPanelMarkup() {
         </section>
       </section>
       <aside class="panel-rail">
+        <button id="rail-settings" type="button">Settings</button>
         <ul id="site-list"></ul>
         <button id="add-current-site" type="button">+</button>
       </aside>
@@ -66,8 +67,20 @@ describe("panel UI", () => {
     await app.init();
 
     expect(document.getElementById("panel-drawer").hidden).toBe(true);
-    expect(document.querySelector("h1")?.textContent || "").not.toBe("Rail");
+    expect(document.getElementById("rail-settings")).not.toBeNull();
+    expect(document.querySelector("h1")?.textContent || "").not.toBe("SideDock");
     expect(document.getElementById("site-url")).toBeNull();
+  });
+
+  test("settings button opens the controls drawer", async () => {
+    const app = createPanelApp({ documentRef: document, siteStore, navigationStrategy });
+
+    await app.init();
+    document.getElementById("rail-settings").click();
+    await flushPromises();
+
+    expect(document.getElementById("panel-drawer").hidden).toBe(false);
+    expect(document.getElementById("panel-drawer").dataset.mode).toBe("controls");
   });
 
   test("renders a stored site as a reorderable rail icon with controls", async () => {
@@ -92,6 +105,7 @@ describe("panel UI", () => {
       "Close",
       "Open",
       "Remove",
+      "Settings",
       "E",
       "+"
     ]);
@@ -112,7 +126,7 @@ describe("panel UI", () => {
     expect(document.getElementById("empty-state").textContent).toBe(EMPTY_STATE_TEXT);
   });
 
-  test("clicking a rail icon opens the selected website in the left drawer", async () => {
+  test("clicking a rail icon opens the selected website through side-panel navigation", async () => {
     const app = createPanelApp({ documentRef: document, siteStore, navigationStrategy });
     await app.init();
 
@@ -122,11 +136,7 @@ describe("panel UI", () => {
     await flushPromises();
 
     expect(document.getElementById("panel-drawer").hidden).toBe(false);
-    expect(document.getElementById("panel-drawer").dataset.mode).toBe("website");
-    expect(document.getElementById("website-view").hidden).toBe(false);
-    expect(document.getElementById("website-frame").src).toBe("https://example.com/");
-    expect(document.getElementById("website-frame").dataset.viewMode).toBe("mobile");
-    expect(navigationStrategy.navigateSidePanel).not.toHaveBeenCalled();
+    expect(navigationStrategy.navigateSidePanel).toHaveBeenCalledWith("https://example.com", { viewMode: "mobile" });
     expect(document.querySelector(".site-list__rail-button").getAttribute("aria-current")).toBe("true");
     expect(await siteStore.readPanelUiSettings()).toMatchObject({ open: true });
   });
@@ -142,7 +152,6 @@ describe("panel UI", () => {
     await flushPromises();
 
     expect(navigationStrategy.navigateSidePanel).toHaveBeenCalledWith("https://example.com", {
-      directUrlEnabled: false,
       viewMode: "mobile"
     });
     expect(document.getElementById("panel-status").textContent).toBe("Opening site from the sidebar.");
@@ -164,7 +173,7 @@ describe("panel UI", () => {
     secondRailButton.click();
     await flushPromises();
 
-    expect(navigationStrategy.navigateSidePanel).not.toHaveBeenCalled();
+    expect(navigationStrategy.navigateSidePanel).toHaveBeenCalledTimes(2);
     expect(document.querySelectorAll(".site-list__rail-button")[1].getAttribute("aria-current")).toBe("true");
     expect(document.querySelector(".site-list__url").textContent).toBe("https://two.example");
   });
@@ -219,7 +228,7 @@ describe("panel UI", () => {
     await flushPromises();
 
     expect(document.querySelector(".site-list__title").textContent).toBe("Current Example");
-    expect(document.getElementById("panel-drawer").hidden).toBe(false);
+    expect(document.getElementById("panel-drawer").hidden).toBe(true);
     expect(document.querySelector(".site-list__url").textContent).toBe("https://example.com/current");
     expect(document.querySelector(".site-list__rail-button .site-list__icon-image").src).toBe("https://example.com/favicon.ico");
     expect(document.getElementById("panel-status").textContent).toBe("Current page added.");
@@ -257,7 +266,7 @@ describe("panel UI", () => {
     expect(await siteStore.readPanelUiSettings()).toEqual({ open: true, pinned: false, selectedSiteId: "", width: 400 });
   });
 
-  test("Ctrl+B inside the rail drawer does not close the drawer", async () => {
+  test("browser shortcuts inside the rail drawer do not close the drawer", async () => {
     const app = createPanelApp({ documentRef: document, siteStore, navigationStrategy });
     await app.init();
 
@@ -284,7 +293,6 @@ describe("panel UI", () => {
     await flushPromises();
 
     expect(navigationStrategy.navigateSidePanel).toHaveBeenLastCalledWith("https://example.com", {
-      directUrlEnabled: false,
       viewMode: "desktop"
     });
 
@@ -295,7 +303,6 @@ describe("panel UI", () => {
     await flushPromises();
 
     expect(navigationStrategy.navigateSidePanel).toHaveBeenLastCalledWith("https://example.com", {
-      directUrlEnabled: false,
       viewMode: "mobile"
     });
   });

@@ -14,7 +14,7 @@ function setFallbackMarkup() {
     <section id="fallback-panel" hidden>
       <p id="fallback-warning"></p>
       <p id="fallback-message"></p>
-      <button id="fallback-back-rail" type="button">Back to Rail</button>
+      <button id="fallback-back-rail" type="button">Back to SideDock</button>
       <button id="fallback-open-tab" type="button">Open in Tab</button>
       <iframe id="fallback-frame" title="Selected website fallback preview"></iframe>
     </section>
@@ -85,7 +85,7 @@ describe("fallback panel", () => {
     expect(navigationStrategy.openInTab).toHaveBeenCalledWith("https://example.com");
   });
 
-  test("Back to Rail button returns from fallback website view to the rail", async () => {
+  test("Back to SideDock button returns from fallback website view to the dock", async () => {
     const app = createFallbackPanelApp({
       documentRef: document,
       locationRef: { href: "chrome-extension://test/src/panel.html?fallbackUrl=https%3A%2F%2Fexample.com" },
@@ -99,7 +99,7 @@ describe("fallback panel", () => {
     expect(navigationStrategy.resetPanelToList).toHaveBeenCalledTimes(1);
   });
 
-  test("Ctrl+B returns from fallback website view to the rail", async () => {
+  test("keyboard shortcuts inside fallback view do not return to the rail", async () => {
     const app = createFallbackPanelApp({
       documentRef: document,
       locationRef: { href: "chrome-extension://test/src/panel.html?fallbackUrl=https%3A%2F%2Fexample.com" },
@@ -110,7 +110,7 @@ describe("fallback panel", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { ctrlKey: true, bubbles: true, key: "b" }));
     await Promise.resolve();
 
-    expect(navigationStrategy.resetPanelToList).toHaveBeenCalledTimes(1);
+    expect(navigationStrategy.resetPanelToList).not.toHaveBeenCalled();
   });
 
   test("unsafe fallback URLs do not reach Open in Tab or the iframe", () => {

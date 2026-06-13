@@ -46,6 +46,7 @@ function createPanelApp(options = {}) {
   const websiteView = documentRef.getElementById("website-view");
   const websiteFrame = documentRef.getElementById("website-frame");
   const addCurrentSiteButton = documentRef.getElementById("add-current-site");
+  const railSettingsButton = documentRef.getElementById("rail-settings");
   const closeSidebarButton = documentRef.getElementById("close-sidebar");
   const globalViewModeSelect = documentRef.getElementById("global-view-mode");
   const pinSidebarButton = documentRef.getElementById("pin-sidebar");
@@ -118,6 +119,7 @@ function createPanelApp(options = {}) {
   }
 
   async function openDrawer() {
+    showControlsMode();
     return updatePanelUi({ open: true });
   }
 
@@ -251,8 +253,8 @@ function createPanelApp(options = {}) {
       railButton.addEventListener("click", async () => {
         selectedSiteId = site.id;
         renderSites(sites);
-        showWebsiteMode(site);
         await updatePanelUi({ open: true, selectedSiteId: site.id });
+        await handleOpenSite(site);
       });
       item.appendChild(railButton);
       list.appendChild(item);
@@ -314,7 +316,7 @@ function createPanelApp(options = {}) {
 
   async function handleOpenSite(site) {
     const viewMode = siteStore.resolveSiteViewMode(site, currentSettings);
-    const result = await navigationStrategy.navigateSidePanel(site.url, { directUrlEnabled: false, viewMode });
+    const result = await navigationStrategy.navigateSidePanel(site.url, { viewMode });
 
     if (result?.ok === false) {
       setStatus(result.message || "Unable to open this site from the sidebar.", "error");
@@ -341,7 +343,7 @@ function createPanelApp(options = {}) {
       });
       selectedSiteId = site.id;
       setStatus("Current page added.", "success");
-      await updatePanelUi({ open: true, selectedSiteId: site.id });
+      await updatePanelUi({ open: false, selectedSiteId: site.id });
       await refreshSites();
     } catch (error) {
       setStatus(error.message || "Unable to add the current page.", "error");
@@ -442,8 +444,9 @@ function createPanelApp(options = {}) {
 
   async function init() {
     const panelUi = await siteStore.readPanelUiSettings();
-    applyPanelUi(panelUi);
+    applyPanelUi({ ...panelUi, open: false, pinned: false });
     addCurrentSiteButton?.addEventListener("click", handleAddCurrentSite);
+    railSettingsButton?.addEventListener("click", openDrawer);
     closeSidebarButton?.addEventListener("click", handleCloseSidebar);
     documentRef.addEventListener?.("keydown", handleKeyDown);
     globalViewModeSelect?.addEventListener("change", handleGlobalViewModeChange);

@@ -98,11 +98,6 @@ function createFallbackPanelApp(options = {}) {
   }
 
   function handleKeyDown(event) {
-    if (event?.ctrlKey === true && String(event.key).toLowerCase() === "b") {
-      event.preventDefault?.();
-      return handleReturnToRail();
-    }
-
     return undefined;
   }
 

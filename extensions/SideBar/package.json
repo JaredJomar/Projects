@@ -1,8 +1,8 @@
 {
-  "name": "sidebar-extension",
+  "name": "sidedock-extension",
   "version": "0.0.1",
   "private": true,
-  "description": "Vanilla MV3 SideBar extension scaffold with Jest/jsdom tests.",
+  "description": "Vanilla MV3 SideDock extension scaffold with Jest/jsdom tests.",
   "scripts": {
     "test": "jest --config tests/jest.config.js"
   },
