@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Disney Plus Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.6.3
+// @version      0.6.4
 // @description  Enhancements for Disney Plus video player: auto fullscreen, skip intro, skip credits, and more.
 // @author       JJJ
 // @match        https://www.disneyplus.com/*
@@ -18,18 +18,26 @@
   const CONFIG = {
     enableAutoFullscreen: GM_getValue('enableAutoFullscreen', true),
     enableSkipIntro: GM_getValue('enableSkipIntro', true),
-    enableAutoPlayNext: GM_getValue('enableAutoPlayNext', false)
+    enableAutoPlayNext: GM_getValue('enableAutoPlayNext', false),
+    autoPlayNextDelaySeconds: GM_getValue('autoPlayNextDelaySeconds', 0)
   };
 
   const SELECTORS = {
-    autoPlayButton: [
-      '*[data-testid="up-next-play-button"]',
-      'play-next',
-      'play-next button',
-      '[aria-label*="next episode" i]',
-      '[aria-label*="play next" i]',
-      '[aria-label*="siguiente episodio" i]',
-      '[aria-label*="ver siguiente" i]'
+    skipIntroButton: [
+      '.skip-overlay button',
+      '.skip-overlay [role="button"]',
+      '.skip-overlay skip-button',
+      'skip-overlay button',
+      'skip-overlay [role="button"]',
+      'skip-overlay skip-button',
+      '[data-testid="skip-overlay"] button',
+      '[data-testid="skip-overlay"] [role="button"]',
+      '[data-testid="skip-overlay"] skip-button',
+      '.skip__button',
+      '[aria-label*="skip intro" i]',
+      '[aria-label*="skip the intro" i]',
+      '[aria-label*="saltar intro" i]',
+      '[aria-label*="saltar la intro" i]'
     ],
     fullscreenButton: [
       'toggle-fullscreen',
@@ -46,30 +54,36 @@
   };
 
   const CONSTANTS = {
-    CLICK_DELAY: 1500,
+    CLICK_DELAY: 100,
     ENHANCEMENTS_DEBOUNCE_MS: 120,
-    BUTTON_TRACKING_TIMEOUT: 30000
-    // Polling settings for dynamic appearance of up-next button
-  };
-  const AUTOPLAY_POLL = {
-    INTERVAL_MS: 500,
-    MAX_RETRIES: 20
+    SKIP_RETRY_INTERVAL_MS: 100,
+    AUTOPLAY_RETRY_INTERVAL_MS: 500,
+    DEFAULT_AUTOPLAY_DELAY_SECONDS: 0,
+    MIN_AUTOPLAY_DELAY_SECONDS: 0,
+    MAX_AUTOPLAY_DELAY_SECONDS: 120,
+    AUTO_FULLSCREEN_COOLDOWN_MS: 10000
   };
 
   let lastSkipClickTime = 0;
-  const clickedButtons = new Set();
-  let autoPlayPollTimer = null;
-  let autoPlayPollRetries = 0;
+  let autoPlayOverlayFirstSeenTime = 0;
+  let lastAutoPlayClickTime = 0;
   let enhancementsDebounceTimer = null;
   let isSettingsDialogOpen = false;
+  let restoreFullscreenAfterSettings = false;
+  let lastFullscreenExitTime = 0;
+  let lastSkipDebugTime = 0;
+  let lastAutoPlayDebugTime = 0;
 
   function createSettingsDialog() {
+    closeDialog(false);
+
     const dialogHTML = `
           <div id="disneyPlusEnchantmentsDialog" class="dpe-dialog">
               <h3>Disney Plus Enchantments</h3>
               ${createToggle('enableAutoFullscreen', 'Auto Fullscreen', 'Automatically enter fullscreen mode')}
               ${createToggle('enableSkipIntro', 'Skip Intro', 'Automatically skip the intro of episodes')}
               ${createToggle('enableAutoPlayNext', 'Auto Play Next Episode', 'Automatically play the next episode')}
+              ${createNumberInput('autoPlayNextDelaySeconds', 'Play Next Delay', 'Seconds to wait before clicking the next episode button')}
               <div class="dpe-button-container">
                   <button id="saveSettingsButton" class="dpe-button dpe-button-save">Save</button>
                   <button id="cancelSettingsButton" class="dpe-button dpe-button-cancel">Cancel</button>
@@ -141,6 +155,21 @@
                   align-items: center;
                   margin-bottom: 15px;
               }
+              .dpe-number-container {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  gap: 12px;
+                  margin-bottom: 15px;
+              }
+              .dpe-number-container input {
+                  width: 72px;
+                  padding: 6px;
+                  border: 1px solid #666;
+                  border-radius: 4px;
+                  background: #111;
+                  color: white;
+              }
               .dpe-toggle-label {
                   flex-grow: 1;
               }
@@ -190,11 +219,13 @@
       `;
 
     const dialogWrapper = document.createElement('div');
+    dialogWrapper.id = 'disneyPlusEnchantmentsDialogWrapper';
     dialogWrapper.innerHTML = styleSheet + dialogHTML;
     document.body.appendChild(dialogWrapper);
 
     document.getElementById('saveSettingsButton').addEventListener('click', saveAndCloseDialog);
     document.getElementById('cancelSettingsButton').addEventListener('click', closeDialog);
+    isSettingsDialogOpen = true;
   }
 
   function createToggle(id, label, title) {
@@ -209,21 +240,43 @@
       `;
   }
 
+  function createNumberInput(id, label, title) {
+    return `
+          <div class="dpe-number-container" title="${title}">
+              <label for="${id}" class="dpe-toggle-label">${label}</label>
+              <input type="number" id="${id}" min="${CONSTANTS.MIN_AUTOPLAY_DELAY_SECONDS}" max="${CONSTANTS.MAX_AUTOPLAY_DELAY_SECONDS}" step="1" value="${getAutoPlayDelaySeconds()}">
+          </div>
+      `;
+  }
+
 
   function saveAndCloseDialog() {
-    Object.keys(CONFIG).forEach(key => {
-      CONFIG[key] = document.getElementById(key).checked;
-      GM_setValue(key, CONFIG[key]);
-    });
+    CONFIG.enableAutoFullscreen = document.getElementById('enableAutoFullscreen').checked;
+    CONFIG.enableSkipIntro = document.getElementById('enableSkipIntro').checked;
+    CONFIG.enableAutoPlayNext = document.getElementById('enableAutoPlayNext').checked;
+    CONFIG.autoPlayNextDelaySeconds = parseDelaySeconds(document.getElementById('autoPlayNextDelaySeconds').value);
+
+    Object.keys(CONFIG).forEach(key => GM_setValue(key, CONFIG[key]));
     closeDialog();
   }
 
-  function closeDialog() {
-    const dialog = document.getElementById('disneyPlusEnchantmentsDialog');
-    if (dialog) {
-      dialog.remove();
+  function closeDialog(restoreFullscreen = true) {
+    const dialogWrapper = document.getElementById('disneyPlusEnchantmentsDialogWrapper');
+    if (dialogWrapper) {
+      dialogWrapper.remove();
+    } else {
+      const dialog = document.getElementById('disneyPlusEnchantmentsDialog');
+      if (dialog) {
+        dialog.remove();
+      }
     }
     isSettingsDialogOpen = false;
+
+    if (restoreFullscreen && restoreFullscreenAfterSettings) {
+      restoreFullscreenAfterSettings = false;
+      lastFullscreenExitTime = 0;
+      enterFullscreen();
+    }
   }
 
   function isElementVisible(element) {
@@ -260,9 +313,20 @@
   }
 
   function findSkipIntroButton() {
-    const candidates = collectShadowMatches(document, 'button, [role="button"]');
+    const skipOverlayHosts = collectShadowMatches(document, '.skip-overlay:not([hidden]), skip-overlay:not([hidden]), [data-testid="skip-overlay"]:not([hidden])');
+    for (const skipOverlayHost of skipOverlayHosts) {
+      const hostButton = findSkipOverlayHostButton(skipOverlayHost);
+      if (hostButton) return hostButton;
+    }
+
+    const candidates = [
+      ...collectShadowMatches(document, SELECTORS.skipIntroButton.join(', ')),
+      ...collectShadowMatches(document, 'button, [role="button"]')
+    ];
 
     for (const candidate of candidates) {
+      if (!isElementVisible(candidate)) continue;
+
       const text = getButtonText(candidate);
       const container = candidate.closest('.button-container');
 
@@ -275,55 +339,182 @@
       }
     }
 
+    const textMatch = findSkipTextMatch();
+    if (textMatch) return textMatch;
+
     return null;
   }
 
+  function findSkipTextMatch() {
+    const labels = collectShadowMatches(document, 'span, div').filter(isElementVisible);
+    for (const label of labels) {
+      const text = getButtonText(label);
+      if (!isValidSkipButton(text)) continue;
+
+      const clickable = getClosestComposed(label, 'button, [role="button"], skip-button, skip-overlay, .skip-overlay, .skip__button');
+      if (clickable) return getClickableElement(clickable);
+    }
+
+    return null;
+  }
+
+  function findSkipOverlayHostButton(host) {
+    const roots = [host];
+    if (host.shadowRoot) roots.push(host.shadowRoot);
+
+    for (const root of roots) {
+      const button = collectShadowMatches(root, 'button, [role="button"]').find(candidate => {
+        return isElementVisible(candidate) && isValidSkipElement(candidate, getButtonText(candidate));
+      });
+      if (button) return getClickableElement(button);
+
+      const skipButton = collectShadowMatches(root, 'skip-button').find(candidate => {
+        return isElementVisible(getClickableElement(candidate));
+      });
+      if (skipButton) return getClickableElement(skipButton);
+    }
+
+    return getClickableElement(host);
+  }
+
   function findAutoPlayButton() {
-    const selector = SELECTORS.autoPlayButton.join(', ');
-    const candidates = collectShadowMatches(document, selector);
+    if (!isPlaybackRouteActive()) {
+      debugAutoPlay('playback route inactive', { path: window.location.pathname });
+      return null;
+    }
 
-    // common class-name patterns observed on Disney+ up-next buttons (use regex to catch variants)
-    const classPatterns = [
-      /r3t2ih[\w-]*/i,
-      /_14aj777[\w-]*/i,
-      /_8mbuv9[\w-]*/i,
-      /fl2b6o4/i,
-      /_1055dze3/i,
-      /overlay_upnextlite/i
-    ];
+    const directButton = collectShadowMatches(document, 'button[data-testid="up-next-play-button"], [data-testid="up-next-play-button"]').find(isElementVisible);
+    if (directButton) {
+      debugAutoPlay('found direct up-next button', directButton);
+      return getClickableElement(directButton);
+    }
 
-    for (const el of candidates) {
-      if (!isElementVisible(el)) continue;
+    const restartIcon = collectShadowMatches(document, '[data-testid="icon-restart"]').find(isElementVisible);
+    if (restartIcon && restartIcon.parentElement && isWithinUpNextOverlay(restartIcon)) {
+      debugAutoPlay('found restart icon up-next fallback', restartIcon.parentElement);
+      return getClickableElement(restartIcon.parentElement);
+    }
 
-      // prefer class-based detection on the element itself or its ancestors
-      let classMatch = false;
-      let node = el;
-      for (let depth = 0; node && depth < 4; depth++, node = node.parentElement) {
-        const className = (node.className || '').toString();
-        if (!className) continue;
-        if (classPatterns.some(rx => rx.test(className))) {
-          classMatch = true;
-          break;
-        }
-      }
-      if (classMatch) return el;
+    const upNextContainer = collectShadowMatches(document, '.overlay_upnextlite_button-container').find(isElementVisible);
+    if (upNextContainer && upNextContainer.firstElementChild) {
+      debugAutoPlay('found up-next container fallback', upNextContainer.firstElementChild);
+      return getClickableElement(upNextContainer.firstElementChild);
+    }
 
-      // fallback: use aria/text or data-testid if no class match
-      const aria = (el.getAttribute && (el.getAttribute('aria-label') || '')).toLowerCase();
-      const text = (el.textContent || '').toLowerCase();
-      if (
-        aria.includes('próximo') ||
-        aria.includes('proximo') ||
-        aria.includes('next') ||
-        text.includes('ver próximo') ||
-        text.includes('ver proximo') ||
-        text.includes('next') ||
-        (el.dataset && el.dataset.testid === 'up-next-play-button')
-      ) {
-        return el;
+    const upNextHosts = collectShadowMatches(document, 'up-next-lite-v1:not([hidden]), [data-gv2containerkey="playerUpNext"]:not([hidden])');
+    for (const upNextHost of upNextHosts) {
+      const hostButton = findUpNextHostButton(upNextHost);
+      if (hostButton) {
+        debugAutoPlay('found up-next host fallback', hostButton);
+        return hostButton;
       }
     }
+
+    debugAutoPlay('up-next overlay not found');
     return null;
+  }
+
+  function findUpNextHostButton(host) {
+    const roots = [host];
+    if (host.shadowRoot) roots.push(host.shadowRoot);
+
+    for (const root of roots) {
+      const button = collectShadowMatches(root, 'button, [role="button"], [data-testid="up-next-play-button"]').find(isElementVisible);
+      if (button) return getClickableElement(button);
+    }
+
+    return null;
+  }
+
+  function isPlaybackRouteActive() {
+    const path = window.location.pathname.toLowerCase();
+    const routeSegments = path.split('/').filter(Boolean);
+    const playbackSegmentIndex = routeSegments.findIndex(segment => segment === 'play' || segment === 'video');
+    return playbackSegmentIndex !== -1;
+  }
+
+  function getActiveVideo() {
+    return collectShadowMatches(document, 'video').find(video => {
+      return isElementVisible(video) && Number.isFinite(video.duration) && video.duration > 0;
+    });
+  }
+
+  function getVisibleVideo() {
+    return collectShadowMatches(document, 'video').find(isElementVisible);
+  }
+
+  function wakePlayerControls() {
+    const target = getVisibleVideo() || document.querySelector('main') || document.body;
+    if (!target) return;
+
+    const eventView = getEventView(target);
+    const rect = target.getBoundingClientRect();
+    const clientX = rect.width > 0 ? rect.left + rect.width / 2 : window.innerWidth / 2;
+    const clientY = rect.height > 0 ? rect.top + rect.height / 2 : window.innerHeight / 2;
+    const eventOptions = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: eventView,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      clientX,
+      clientY
+    };
+
+    if (typeof eventView.PointerEvent === 'function') {
+      target.dispatchEvent(new eventView.PointerEvent('pointermove', eventOptions));
+    }
+    if (typeof eventView.MouseEvent === 'function') {
+      target.dispatchEvent(new eventView.MouseEvent('mousemove', eventOptions));
+    }
+  }
+
+  function isWithinUpNextOverlay(element) {
+    return Boolean(getClosestComposed(element, 'up-next-lite-v1, play-next, .overlay_upnextlite, [data-testid="up-next-play-button"]'));
+  }
+
+  function getClickableElement(element) {
+    if (element.matches('button, [role="button"]')) return element;
+    if (element.shadowRoot) {
+      const shadowButton = collectShadowMatches(element.shadowRoot, 'button, [role="button"]').find(isElementVisible);
+      if (shadowButton) return shadowButton;
+    }
+
+    return element.querySelector('button, [role="button"]') || element;
+  }
+
+  function getClosestComposed(element, selector) {
+    for (let node = element; node; node = getComposedParent(node)) {
+      if (node.nodeType === Node.ELEMENT_NODE && node.matches(selector)) {
+        return node;
+      }
+    }
+
+    return null;
+  }
+
+  function getComposedParent(node) {
+    if (node.parentElement) return node.parentElement;
+
+    const root = node.getRootNode && node.getRootNode();
+    return root && root.host ? root.host : null;
+  }
+
+  function parseDelaySeconds(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) return CONSTANTS.DEFAULT_AUTOPLAY_DELAY_SECONDS;
+
+    return Math.min(
+      CONSTANTS.MAX_AUTOPLAY_DELAY_SECONDS,
+      Math.max(CONSTANTS.MIN_AUTOPLAY_DELAY_SECONDS, parsed)
+    );
+  }
+
+  function getAutoPlayDelaySeconds() {
+    CONFIG.autoPlayNextDelaySeconds = parseDelaySeconds(CONFIG.autoPlayNextDelaySeconds);
+    return CONFIG.autoPlayNextDelaySeconds;
   }
 
   function findVisibleElement(selectors) {
@@ -338,22 +529,102 @@
   }
 
   function clickButton(actionOrSelectors) {
-    if (actionOrSelectors === SELECTORS.autoPlayButton) {
-      const button = findAutoPlayButton();
-      if (button) button.click();
-      return;
-    }
-
     if (actionOrSelectors === ACTIONS.SKIP_INTRO) {
       const button = findSkipIntroButton();
       if (button) handleSkipIntroButton(button);
+      else debugSkipClick('skip button not found');
       return;
     }
 
     const button = findVisibleElement(actionOrSelectors);
     if (button) {
-      button.click();
+      clickElement(button);
     }
+  }
+
+  function clickElement(element) {
+    const clicked = new Set();
+
+    for (const target of getClickTargets(element)) {
+      if (!target || clicked.has(target)) continue;
+
+      dispatchClickSequence(target);
+      clicked.add(target);
+    }
+  }
+
+  function getClickTargets(element) {
+    const targets = [];
+    const addTarget = (target) => {
+      if (target && !targets.includes(target)) targets.push(target);
+    };
+
+    addTarget(getClickableElement(element));
+    addTarget(element);
+
+    if (element.shadowRoot) {
+      collectShadowMatches(element.shadowRoot, 'button, [role="button"]').forEach(addTarget);
+    }
+
+    if (element.querySelectorAll) {
+      element.querySelectorAll('button, [role="button"]').forEach(addTarget);
+    }
+
+    for (let node = element; node; node = getComposedParent(node)) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue;
+      if (node.matches('skip-button, skip-overlay, .skip-overlay, play-next, up-next-lite-v1')) {
+        addTarget(getClickableElement(node));
+        addTarget(node);
+      }
+    }
+
+    return targets;
+  }
+
+  function dispatchClickSequence(element) {
+    if (typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'center', inline: 'center' });
+    }
+    if (typeof element.focus === 'function') {
+      element.focus({ preventScroll: true });
+    }
+
+    const eventView = getEventView(element);
+    const rect = element.getBoundingClientRect();
+    const clientX = rect.width > 0 ? rect.left + rect.width / 2 : 0;
+    const clientY = rect.height > 0 ? rect.top + rect.height / 2 : 0;
+    const eventOptions = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view: eventView,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      clientX,
+      clientY
+    };
+
+    if (typeof eventView.PointerEvent === 'function') {
+      element.dispatchEvent(new eventView.PointerEvent('pointerdown', eventOptions));
+    }
+    if (typeof eventView.MouseEvent === 'function') {
+      element.dispatchEvent(new eventView.MouseEvent('mousedown', eventOptions));
+    }
+    if (typeof eventView.PointerEvent === 'function') {
+      element.dispatchEvent(new eventView.PointerEvent('pointerup', eventOptions));
+    }
+    if (typeof eventView.MouseEvent === 'function') {
+      element.dispatchEvent(new eventView.MouseEvent('mouseup', eventOptions));
+      element.dispatchEvent(new eventView.MouseEvent('click', eventOptions));
+    }
+    if (typeof element.click === 'function') {
+      element.click();
+    }
+  }
+
+  function getEventView(element) {
+    return (element.ownerDocument && element.ownerDocument.defaultView) || window;
   }
 
   function handleSkipIntroButton(button) {
@@ -361,13 +632,25 @@
     if (currentTime - lastSkipClickTime < CONSTANTS.CLICK_DELAY) return;
 
     const buttonText = getButtonText(button);
-    if (isValidSkipButton(buttonText) && !clickedButtons.has(buttonText)) {
-      button.click();
+    if (isValidSkipElement(button, buttonText)) {
+      debugSkipClick('clicking skip button', button);
+      clickElement(button);
       lastSkipClickTime = currentTime;
-      clickedButtons.add(buttonText);
-
-      setTimeout(() => clickedButtons.delete(buttonText), CONSTANTS.BUTTON_TRACKING_TIMEOUT);
     }
+  }
+
+  function debugSkipClick(message, element) {
+    if (localStorage.getItem('dpeDebugClicks') !== '1') return;
+
+    const currentTime = Date.now();
+    if (currentTime - lastSkipDebugTime < 1000) return;
+    lastSkipDebugTime = currentTime;
+
+    console.debug('Disney Plus Enchantments:', message, element || null);
+  }
+
+  function isValidSkipElement(button, buttonText) {
+    return isValidSkipButton(buttonText) || Boolean(getClosestComposed(button, '.skip-overlay, skip-overlay, [data-testid="skip-overlay"]'));
   }
 
   function isValidSkipButton(buttonText) {
@@ -377,69 +660,127 @@
       !buttonText.includes('siguiente');
   }
 
-  function enterFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+  function enterFullscreen(bypassActivationCheck) {
+    if (!document.fullscreenElement && document.fullscreenEnabled && (bypassActivationCheck || canRequestFullscreen())) {
+      document.documentElement.requestFullscreen().catch(error => {
+        console.error('Disney Plus Enchantments fullscreen error:', error);
+      });
     }
+  }
+
+  function canRequestFullscreen() {
+    return !navigator.userActivation || navigator.userActivation.isActive;
   }
 
   function exitFullscreen() {
     if (document.fullscreenElement) {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(error => {
+        console.error('Disney Plus Enchantments fullscreen error:', error);
+      });
     }
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      lastFullscreenExitTime = Date.now();
+      exitFullscreen();
+    } else {
+      enterFullscreen(true);
+    }
+  }
+
+  function openSettingsDialog() {
+    restoreFullscreenAfterSettings = Boolean(document.fullscreenElement);
+    if (document.fullscreenElement) {
+      lastFullscreenExitTime = Date.now();
+      exitFullscreen();
+    }
+    createSettingsDialog();
   }
 
   function maintainFullscreen() {
     const fullscreenButton = findVisibleElement(SELECTORS.fullscreenButton);
-    if (fullscreenButton && !document.fullscreenElement) {
+    if (fullscreenButton && !document.fullscreenElement && canRequestFullscreen()) {
       fullscreenButton.click();
     }
   }
 
   function attemptAutoPlay() {
-    // If disabled, abort
-    if (!CONFIG.enableAutoPlayNext) return;
-
-    // If a poll is already running, don't start another
-    if (autoPlayPollTimer) return;
-
-    const tryClick = () => {
-      const btn = findAutoPlayButton();
-      if (btn) {
-        btn.click();
-        clearInterval(autoPlayPollTimer);
-        autoPlayPollTimer = null;
-        autoPlayPollRetries = 0;
-        return;
-      }
-
-      autoPlayPollRetries++;
-      if (autoPlayPollRetries >= AUTOPLAY_POLL.MAX_RETRIES) {
-        clearInterval(autoPlayPollTimer);
-        autoPlayPollTimer = null;
-        autoPlayPollRetries = 0;
-      }
-    };
-
-    // Try immediate first, then schedule polling
-    tryClick();
-    if (!autoPlayPollTimer && !findAutoPlayButton()) {
-      autoPlayPollTimer = setInterval(tryClick, AUTOPLAY_POLL.INTERVAL_MS);
+    if (!CONFIG.enableAutoPlayNext) {
+      debugAutoPlay('disabled in settings');
+      return;
     }
+    if (!isPlaybackRouteActive()) {
+      debugAutoPlay('route/video gate blocked autoplay', { path: window.location.pathname });
+      resetAutoPlayClickState();
+      return;
+    }
+
+    const button = findAutoPlayButton();
+    if (!button) {
+      resetAutoPlayClickState();
+      return;
+    }
+
+    const currentTime = Date.now();
+    if (!autoPlayOverlayFirstSeenTime) {
+      autoPlayOverlayFirstSeenTime = currentTime;
+      debugAutoPlay('up-next overlay first seen', button);
+    }
+
+    const delayMs = getAutoPlayDelaySeconds() * 1000;
+    if (currentTime - autoPlayOverlayFirstSeenTime < delayMs) {
+      debugAutoPlay('waiting play-next delay', { delayMs, elapsedMs: currentTime - autoPlayOverlayFirstSeenTime });
+      return;
+    }
+    if (currentTime - lastAutoPlayClickTime < CONSTANTS.AUTOPLAY_RETRY_INTERVAL_MS) return;
+
+    debugAutoPlay('clicking next episode', button);
+    clickElement(button);
+    lastAutoPlayClickTime = currentTime;
+  }
+
+  function debugAutoPlay(message, details) {
+    if (localStorage.getItem('dpeDebugNext') !== '1') return;
+
+    const currentTime = Date.now();
+    if (currentTime - lastAutoPlayDebugTime < 1000) return;
+    lastAutoPlayDebugTime = currentTime;
+
+    console.log('Disney Plus Enchantments Next:', message, details || null);
+  }
+
+  function logAutoPlayDebugStartup() {
+    if (localStorage.getItem('dpeDebugNext') !== '1') return;
+
+    console.log('Disney Plus Enchantments Next: debug active', {
+      path: window.location.pathname,
+      enableAutoPlayNext: CONFIG.enableAutoPlayNext,
+      autoPlayNextDelaySeconds: getAutoPlayDelaySeconds()
+    });
+  }
+
+  function resetAutoPlayClickState() {
+    autoPlayOverlayFirstSeenTime = 0;
+    lastAutoPlayClickTime = 0;
   }
 
   function handleEnhancements() {
     try {
-      if (CONFIG.enableAutoFullscreen) {
-        enterFullscreen();
+      const playbackRouteActive = isPlaybackRouteActive();
+
+      if (playbackRouteActive && CONFIG.enableAutoFullscreen && !isSettingsDialogOpen) {
+        if (!document.fullscreenElement && canRequestFullscreen() && Date.now() - lastFullscreenExitTime >= CONSTANTS.AUTO_FULLSCREEN_COOLDOWN_MS) {
+          enterFullscreen();
+        }
         maintainFullscreen();
       }
 
       if (CONFIG.enableSkipIntro) {
+        wakePlayerControls();
         clickButton(ACTIONS.SKIP_INTRO);
       }
 
-      // use attemptAutoPlay so we retry until the dynamic button appears
       if (CONFIG.enableAutoPlayNext) {
         attemptAutoPlay();
       }
@@ -464,17 +805,32 @@
     clearTimeout(enhancementsDebounceTimer);
     enhancementsDebounceTimer = setTimeout(handleEnhancements, CONSTANTS.ENHANCEMENTS_DEBOUNCE_MS);
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  if (document.body) {
+    observer.observe(document.body, { childList: true, subtree: true });
+  } else {
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  logAutoPlayDebugStartup();
+
+  setInterval(() => {
+    if (CONFIG.enableSkipIntro) {
+      wakePlayerControls();
+      clickButton(ACTIONS.SKIP_INTRO);
+    }
+  }, CONSTANTS.SKIP_RETRY_INTERVAL_MS);
+
+  setInterval(() => {
+    attemptAutoPlay();
+  }, CONSTANTS.AUTOPLAY_RETRY_INTERVAL_MS);
 
   GM_registerMenuCommand('Disney Plus Enchantments Settings', createSettingsDialog);
 
   function toggleSettingsDialog() {
     if (isSettingsDialogOpen) {
       closeDialog();
-      isSettingsDialogOpen = false;
     } else {
-      createSettingsDialog();
-      isSettingsDialogOpen = true;
+      openSettingsDialog();
     }
   }
 
@@ -482,7 +838,7 @@
     if (event.key === 'F2') {
       toggleSettingsDialog();
     } else if (event.key === 'Escape') {
-      closeDialog();
+      toggleFullscreen();
     }
-  });
+  }, true);
 })();

@@ -29,17 +29,28 @@ Enhance your Disney Plus experience with automatic intro skipping, next episode 
 | Key | Function |
 |-----|----------|
 | F2 | Open/close settings |
-| Escape | Exit fullscreen |
+| Escape | Toggle fullscreen |
 
 ## Settings
 
 Access the settings panel (F2) to customize:
 - Intro/recap skip behavior
 - Auto-play preferences
+- Auto-play delay (seconds to wait before clicking next episode)
 - Fullscreen options
-- Playback settings
 
 ## Version History
+
+### v0.6.4
+- Rewrote autoplay with overlay-gated polling instead of retry-limited timer
+- Added configurable "Play Next Delay" setting
+- Added debug logging for autoplay (gated by `localStorage.dpeDebugNext`)
+- Added route guard for autoplay (only triggers on `/play/` and `/video/` paths)
+- Added `wakePlayerControls()` mousemove simulation for reliable skip-intro detection
+- Replaced `suspendAutoFullscreen` with cooldown-based auto-fullscreen (10s)
+- Escape now toggles fullscreen (exit and re-enter)
+- Fixed `play-next` elements in the controls bar being mistaken for up-next overlays
+- Fixed MouseEvent and PointerEvent guards for Tampermonkey sandbox compatibility
 
 ### v0.6.3
 - Fixed skip intro detection in modern Disney+ player overlays
@@ -69,5 +80,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=disneyplus.com" alt="Disney Plus Icon">
 
-**Current Version: 0.6.3**
+**Current Version: 0.6.4**
 </div>
