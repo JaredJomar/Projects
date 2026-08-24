@@ -24,6 +24,7 @@ dist/
 .idea/
 .sisyphus
 .omo
+ideas.md
 
 # OS files
 .DS_Store
