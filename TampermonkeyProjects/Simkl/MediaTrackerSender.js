@@ -1,16 +1,16 @@
 // ==UserScript==
 // @name         Media Tracker Sender
 // @namespace    http://tampermonkey.net/
-// @version      0.0.5
-// @description  Adds TV Time, Simkl, and AniList buttons to Plex and Peliplus pages, TV Time and AniList buttons to Simkl pages, and automatically pastes titles in search fields.
+// @version      0.0.6
+// @description  Adds Simkl, AniList, TMDB, Peliplus, SoloLatino, and LaMovie buttons to Plex, Simkl, and streaming pages.
 // @author       JJJ
 // @match        https://simkl.com/*/*
-// @match        https://app.tvtime.com/*
 // @match        https://app.plex.tv/*
 // @match        http://127.0.0.1:32400/web/*
 // @match        https://anilist.co/*
 // @match        https://tioplus.app/*
 // @match        https://sololatino.net/*
+// @match        https://lamovie.org/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=simkl.com
 // @grant        none
 // @license      MIT
@@ -21,20 +21,13 @@
     // Configuration constants
 
     const CONFIG = {
-        // Base URLs
-        TV_TIME_BASE_URL: 'https://app.tvtime.com',
-        TV_TIME_SEARCH_URL: 'https://app.tvtime.com/explore/search/media',
-        TV_TIME_FAVICON: 'https://www.tvtime.com/favicon.ico',
         SIMKL_SEARCH_URL: 'https://simkl.com/search/',
         SIMKL_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=simkl.com',
         ANILIST_SEARCH_URL: 'https://anilist.co/search/anime',
         ANILIST_FAVICON: 'https://anilist.co/img/icons/favicon-32x32.png',
         TMDB_SEARCH_URL: 'https://www.themoviedb.org/search',
         TMDB_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=themoviedb.org',
-        // Observer settings
         OBSERVER_TIMEOUT: 1000,
-        // Button IDs and storage keys
-        BUTTON_ID: 'tvTimeButton',
         SIMKL_BUTTON_ID: 'simklButton',
         ANILIST_BUTTON_ID: 'anilistButton',
         TMDB_BUTTON_ID: 'tmdbButton',
@@ -45,61 +38,40 @@
         PELIPLUS_BASE_URL: 'https://tioplus.app',
         SOLOLATINO_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=sololatino.net',
         SOLOLATINO_BUTTON_ID: 'sololatinoButton',
-        SOLOLATINO_BASE_URL: 'https://sololatino.net'
+        SOLOLATINO_BASE_URL: 'https://sololatino.net',
+        LAMOVIE_FAVICON: 'https://www.google.com/s2/favicons?sz=64&domain=lamovie.org',
+        LAMOVIE_BUTTON_ID: 'lamovieButton',
+        LAMOVIE_BASE_URL: 'https://lamovie.org'
     };
 
     const SELECTORS = {
-        // General selectors
         IMDB_LINK: 'a[href*="imdb.com"]',
         MAL_LINK: 'a[href*="myanimelist.net"]',
         TITLE: 'h1[itemprop="name"]',
 
-        // Plex selectors
         PLEX_TITLE: '[data-testid="metadata-title"]',
         PLEX_BUTTON_CONTAINER: 'div._1h4p3k00._1v25wbq8._1v25wbq1o._1v25wbq1p._1v25wbqg._1v25wbq1g._1v25wbq1c._1v25wbqw._1v25wbq3g._1v25wbq2g',
 
-        // Anime page selectors
         ANIME_RATINGS_ROW: '.SimklTVAboutRatingsBlockTR',
         ANIME_REACTIONS_CELL: '.SimklTVRatingReactionsTd',
 
-        // Movie/Series page selectors
         RATING_TABLE: 'table[border="0"] tbody tr td[colspan="2"] table tbody tr',
         RATING_CELL_WIDTH: 'td[width="1"]',
 
-        // TV Time specific
-        TV_TIME_BUTTON: `#${CONFIG.BUTTON_ID}`,
         SIMKL_BUTTON: `#${CONFIG.SIMKL_BUTTON_ID}`,
         ANILIST_BUTTON: `#${CONFIG.ANILIST_BUTTON_ID}`,
         TMDB_BUTTON: `#${CONFIG.TMDB_BUTTON_ID}`,
         PELIPLUS_BUTTON: `#${CONFIG.PELIPLUS_BUTTON_ID}`,
         SOLOLATINO_BUTTON: `#${CONFIG.SOLOLATINO_BUTTON_ID}`,
-        TV_TIME_SEARCH_INPUT: 'input[type="text"]',
-
-        // TV Time search selectors
-        SEARCH_INPUT: 'input[type="text"]',
-        SEARCH_INTERFACES: [
-            '[role="search"]',
-            '.search-container',
-            '.search-wrapper',
-            '.search-bar',
-            '[data-testid*="search"]',
-            '[placeholder*="search"]:not([style*="-9999"])',
-            '[placeholder*="Search"]:not([style*="-9999"])',
-            'flt-semantics[role="textbox"]',
-            '[aria-label*="search"]:not(input)',
-            '[aria-label*="Search"]:not(input)'
-        ],
-        FLUTTER_INPUTS: 'flt-text-editing-host input, .flt-text-editing, input[placeholder*="search"], input[placeholder*="Search"]'
+        LAMOVIE_BUTTON: `#${CONFIG.LAMOVIE_BUTTON_ID}`
     };
 
     const CSS_CLASSES = {
         ANIME_BLOCK_TD: 'SimklTVAboutRatingsBlockTD',
         RATING_BORDER: 'SimklTVAboutRatingBorder SimklTVAboutRatingBorderClick',
         RATING_TEN: 'SimklTVRatingTen',
-        TV_TIME_BUTTON: 'tvtime-button',
         ANILIST_BUTTON: 'anilist-button',
         TMDB_BUTTON: 'tmdb-button',
-        PLEX_TV_TIME_BUTTON: 'plex-tvtime-button',
         PLEX_SIMKL_BUTTON: 'plex-simkl-button',
         PLEX_ANILIST_BUTTON: 'plex-anilist-button',
         PLEX_TMDB_BUTTON: 'plex-tmdb-button',
@@ -107,12 +79,12 @@
         PELIPLUS_BUTTON: 'peliplus-button',
         SOLOLATINO_PANEL: 'sololatino-panel',
         FLOAT_ICON_FALLBACK: 'float-icon-fallback',
-        PELIPLUS_FLOAT_TVTIME: 'peliplus-float-tvtime',
         PELIPLUS_FLOAT_SIMKL: 'peliplus-float-simkl',
         PELIPLUS_FLOAT_ANILIST: 'peliplus-float-anilist',
         PELIPLUS_FLOAT_TMDB: 'peliplus-float-tmdb',
         PELIPLUS_SIMKL_BUTTON: 'peliplus-simkl-button',
-        SOLOLATINO_SIMKL_BUTTON: 'sololatino-simkl-button'
+        SOLOLATINO_SIMKL_BUTTON: 'sololatino-simkl-button',
+        LAMOVIE_SIMKL_BUTTON: 'lamovie-simkl-button'
     };
 
     /**
@@ -211,20 +183,6 @@
     const StyleManager = {
         inject() {
             const style = Utils.createElement('style', {}, `
-                .${CSS_CLASSES.TV_TIME_BUTTON} {
-                    background: url('${CONFIG.TV_TIME_FAVICON}') center/24px no-repeat;
-                    width: 50px;
-                    height: 24px;
-                    display: inline-block;
-                    margin-top: 8px;
-                    cursor: pointer;
-                    transition: opacity 0.2s ease;
-                }
-
-                .${CSS_CLASSES.TV_TIME_BUTTON}:hover {
-                    opacity: 0.8;
-                }
-
                 .${CSS_CLASSES.ANILIST_BUTTON} {
                     background: url('${CONFIG.ANILIST_FAVICON}') center/24px no-repeat;
                     width: 50px;
@@ -237,43 +195,6 @@
 
                 .${CSS_CLASSES.ANILIST_BUTTON}:hover {
                     opacity: 0.8;
-                }
-
-                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON} {
-                    background: url('${CONFIG.TV_TIME_FAVICON}') center/20px no-repeat #1f1f1f;
-                    border: 1px solid #404040;
-                    border-radius: 8px;
-                    width: 48px;
-                    height: 48px;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    margin-right: 8px;
-                    position: relative;
-                }
-
-                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}:hover {
-                    background-color: #2a2a2a;
-                    border-color: #505050;
-                }
-
-                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}::after {
-                    content: 'TV Time';
-                    position: absolute;
-                    bottom: -20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    font-size: 10px;
-                    color: #fff;
-                    white-space: nowrap;
-                    opacity: 0;
-                    transition: opacity 0.2s ease;
-                }
-
-                .${CSS_CLASSES.PLEX_TV_TIME_BUTTON}:hover::after {
-                    opacity: 1;
                 }
 
                 .${CSS_CLASSES.PLEX_SIMKL_BUTTON} {
@@ -449,6 +370,40 @@
                 .${CSS_CLASSES.SOLOLATINO_SIMKL_BUTTON}:hover::after {
                     opacity: 1;
                 }
+
+                .${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON} {
+                    background: url('${CONFIG.LAMOVIE_FAVICON}') center/24px no-repeat;
+                    width: 50px;
+                    height: 24px;
+                    display: inline-block;
+                    margin-top: 8px;
+                    cursor: pointer;
+                    transition: opacity 0.2s ease;
+                    position: relative;
+                }
+
+                .${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON}:hover {
+                    opacity: 1;
+                    filter: brightness(1.15);
+                }
+
+                .${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON}::after {
+                    content: 'LaMovie';
+                    position: absolute;
+                    bottom: -18px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 10px;
+                    color: #fff;
+                    white-space: nowrap;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    pointer-events: none;
+                }
+
+                .${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON}:hover::after {
+                    opacity: 1;
+                }
             `);
             document.head.appendChild(style);
         },
@@ -530,10 +485,6 @@
                     display: inline-flex;
                 }
 
-                .${CSS_CLASSES.PELIPLUS_FLOAT_TVTIME} {
-                    background-image: url('${CONFIG.TV_TIME_FAVICON}');
-                }
-
                 .${CSS_CLASSES.PELIPLUS_FLOAT_SIMKL} {
                     background-image: url('${CONFIG.SIMKL_FAVICON}');
                 }
@@ -545,77 +496,19 @@
                 .${CSS_CLASSES.PELIPLUS_FLOAT_TMDB} {
                     background-image: url('${CONFIG.TMDB_FAVICON}');
                 }
+
+                .${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON} {
+                    background-image: url('${CONFIG.LAMOVIE_FAVICON}');
+                }
             `);
             document.head.appendChild(style);
         }
     };
 
     /**
-     * Button factory for creating TV Time buttons
+     * Button factory for creating media tracker buttons
      */
     const ButtonFactory = {
-        /**
-         * Creates a standard TV Time button element
-         * @returns {Element}
-         */
-        createButton() {
-            return Utils.createElement('td', { width: '1' }, `
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
-                    <tr>
-                        <td>
-                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                <tr>
-                                    <td height="40" align="center">
-                                        <a href="#" class="${CSS_CLASSES.TV_TIME_BUTTON}" id="${CONFIG.BUTTON_ID}"></a>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td align="center">
-                                        <span class="${CSS_CLASSES.RATING_TEN}">TV Time</span>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            `);
-        },
-
-        /**
-         * Creates an anime-specific TV Time button element
-         * @returns {Element}
-         */
-        createAnimeButton() {
-            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
-                    <tbody>
-                        <tr>
-                            <td>
-                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                    <tbody>
-                                        <tr>
-                                            <td height="40" align="center">
-                                                <a href="#" class="${CSS_CLASSES.TV_TIME_BUTTON}" id="${CONFIG.BUTTON_ID}"></a>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td align="center">
-                                                <span class="${CSS_CLASSES.RATING_TEN}">TV TIME</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            `);
-        },
-
-        /**
-         * Creates an AniList button element for Simkl pages
-         * @returns {Element}
-         */
         createAniListButton() {
             return Utils.createElement('td', { width: '1' }, `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
@@ -639,10 +532,6 @@
             `);
         },
 
-        /**
-         * Creates an anime-specific AniList button element
-         * @returns {Element}
-         */
         createAnimeAniListButton() {
             return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
@@ -670,25 +559,6 @@
             `);
         },
 
-        /**
-         * Creates a Plex-specific TV Time button element
-         * @returns {Element}
-         */
-        createPlexButton() {
-            return Utils.createElement('button', {
-                class: `${CSS_CLASSES.PLEX_TV_TIME_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
-                'data-testid': 'preplay-tvtime',
-                'aria-label': 'Send to TV Time',
-                role: 'button',
-                type: 'button',
-                id: CONFIG.BUTTON_ID
-            });
-        },
-
-        /**
-         * Creates a Plex-specific Simkl button element
-         * @returns {Element}
-         */
         createPlexSimklButton() {
             return Utils.createElement('button', {
                 class: `${CSS_CLASSES.PLEX_SIMKL_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
@@ -700,10 +570,6 @@
             });
         },
 
-        /**
-         * Creates a Plex-specific AniList button element
-         * @returns {Element}
-         */
         createPlexAniListButton() {
             return Utils.createElement('button', {
                 class: `${CSS_CLASSES.PLEX_ANILIST_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
@@ -715,10 +581,6 @@
             });
         },
 
-        /**
-         * Creates a TMDB button element
-         * @returns {Element}
-         */
         createTMDBButton() {
             return Utils.createElement('td', { width: '1' }, `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
@@ -742,10 +604,6 @@
             `);
         },
 
-        /**
-         * Creates an anime-specific TMDB button element
-         * @returns {Element}
-         */
         createAnimeTMDBButton() {
             return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
@@ -773,10 +631,6 @@
             `);
         },
 
-        /**
-         * Creates a Plex-specific TMDB button element
-         * @returns {Element}
-         */
         createPlexTMDBButton() {
             return Utils.createElement('button', {
                 class: `${CSS_CLASSES.PLEX_TMDB_BUTTON} _1v4h9jl0 _76v8d62 _76v8d61 _76v8d6a tvbry60 _76v8d6g _76v8d65 _1v25wbq1g _1v25wbq18`,
@@ -886,6 +740,56 @@
                     </tbody>
                 </table>
             `);
+        },
+
+        createLamovieButton() {
+            return Utils.createElement('td', { width: '1' }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td height="40" align="center">
+                                        <a href="#" class="${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON}" id="${CONFIG.LAMOVIE_BUTTON_ID}"></a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <span class="${CSS_CLASSES.RATING_TEN}">LaMovie</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            `);
+        },
+
+        createAnimeLamovieButton() {
+            return Utils.createElement('td', { class: CSS_CLASSES.ANIME_BLOCK_TD }, `
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" class="${CSS_CLASSES.RATING_BORDER}">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tbody>
+                                        <tr>
+                                            <td height="40" align="center">
+                                                <a href="#" class="${CSS_CLASSES.LAMOVIE_SIMKL_BUTTON}" id="${CONFIG.LAMOVIE_BUTTON_ID}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center">
+                                                <span class="${CSS_CLASSES.RATING_TEN}">LAMOVIE</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            `);
         }
     };
 
@@ -893,9 +797,6 @@
      * Button insertion strategies for different page types
      */
     const InsertionStrategies = {
-        /**
-         * Inserts button for movie/series pages with IMDB/MAL links
-         */
         insertForRatingCell() {
             const imdbLink = document.querySelector(SELECTORS.IMDB_LINK);
             const malLink = document.querySelector(SELECTORS.MAL_LINK);
@@ -907,33 +808,30 @@
             if (!ratingCell) return false;
 
             const spacerCell1 = Utils.createElement('td', {}, '&nbsp;');
-            const tvTimeCell = ButtonFactory.createButton();
-            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const aniListCell = ButtonFactory.createAniListButton();
-            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const tmdbCell = ButtonFactory.createTMDBButton();
-            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
             const peliplusCell = ButtonFactory.createPeliplusButton();
-            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
             const sololatinoCell = ButtonFactory.createSoloLatinoButton();
+            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const lamovieCell = ButtonFactory.createLamovieButton();
 
             ratingCell.parentNode.insertBefore(spacerCell1, ratingCell.nextSibling);
-            ratingCell.parentNode.insertBefore(tvTimeCell, spacerCell1.nextSibling);
-            ratingCell.parentNode.insertBefore(spacerCell2, tvTimeCell.nextSibling);
-            ratingCell.parentNode.insertBefore(aniListCell, spacerCell2.nextSibling);
-            ratingCell.parentNode.insertBefore(spacerCell3, aniListCell.nextSibling);
-            ratingCell.parentNode.insertBefore(tmdbCell, spacerCell3.nextSibling);
-            ratingCell.parentNode.insertBefore(spacerCell4, tmdbCell.nextSibling);
-            ratingCell.parentNode.insertBefore(peliplusCell, spacerCell4.nextSibling);
-            ratingCell.parentNode.insertBefore(spacerCell5, peliplusCell.nextSibling);
-            ratingCell.parentNode.insertBefore(sololatinoCell, spacerCell5.nextSibling);
+            ratingCell.parentNode.insertBefore(aniListCell, spacerCell1.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell2, aniListCell.nextSibling);
+            ratingCell.parentNode.insertBefore(tmdbCell, spacerCell2.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell3, tmdbCell.nextSibling);
+            ratingCell.parentNode.insertBefore(peliplusCell, spacerCell3.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell4, peliplusCell.nextSibling);
+            ratingCell.parentNode.insertBefore(sololatinoCell, spacerCell4.nextSibling);
+            ratingCell.parentNode.insertBefore(spacerCell5, sololatinoCell.nextSibling);
+            ratingCell.parentNode.insertBefore(lamovieCell, spacerCell5.nextSibling);
 
             return true;
         },
 
-        /**
-         * Inserts button for anime pages
-         */
         insertForAnimePage() {
             const animeRatingsRow = document.querySelector(SELECTORS.ANIME_RATINGS_ROW);
             if (!animeRatingsRow) return false;
@@ -941,24 +839,21 @@
             const reactionsCell = animeRatingsRow.querySelector(SELECTORS.ANIME_REACTIONS_CELL);
             if (!reactionsCell) return false;
 
-            const tvTimeCell = ButtonFactory.createAnimeButton();
             const aniListCell = ButtonFactory.createAnimeAniListButton();
             const tmdbCell = ButtonFactory.createAnimeTMDBButton();
             const peliplusCell = ButtonFactory.createAnimePeliplusButton();
             const sololatinoCell = ButtonFactory.createAnimeSoloLatinoButton();
+            const lamovieCell = ButtonFactory.createAnimeLamovieButton();
 
-            animeRatingsRow.insertBefore(tvTimeCell, reactionsCell);
             animeRatingsRow.insertBefore(aniListCell, reactionsCell);
             animeRatingsRow.insertBefore(tmdbCell, reactionsCell);
             animeRatingsRow.insertBefore(peliplusCell, reactionsCell);
             animeRatingsRow.insertBefore(sololatinoCell, reactionsCell);
+            animeRatingsRow.insertBefore(lamovieCell, reactionsCell);
 
             return true;
         },
 
-        /**
-         * Fallback insertion for general rating tables
-         */
         insertForRatingTable() {
             const ratingTable = document.querySelector(SELECTORS.RATING_TABLE);
             if (!ratingTable) return false;
@@ -967,43 +862,38 @@
             if (!lastCell) return false;
 
             const spacerCell1 = Utils.createElement('td', {}, '&nbsp;');
-            const tvTimeCell = ButtonFactory.createButton();
-            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const aniListCell = ButtonFactory.createAniListButton();
-            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell2 = Utils.createElement('td', {}, '&nbsp;');
             const tmdbCell = ButtonFactory.createTMDBButton();
-            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell3 = Utils.createElement('td', {}, '&nbsp;');
             const peliplusCell = ButtonFactory.createPeliplusButton();
-            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const spacerCell4 = Utils.createElement('td', {}, '&nbsp;');
             const sololatinoCell = ButtonFactory.createSoloLatinoButton();
+            const spacerCell5 = Utils.createElement('td', {}, '&nbsp;');
+            const lamovieCell = ButtonFactory.createLamovieButton();
 
             ratingTable.insertBefore(spacerCell1, lastCell.nextSibling);
-            ratingTable.insertBefore(tvTimeCell, spacerCell1.nextSibling);
-            ratingTable.insertBefore(spacerCell2, tvTimeCell.nextSibling);
-            ratingTable.insertBefore(aniListCell, spacerCell2.nextSibling);
-            ratingTable.insertBefore(spacerCell3, aniListCell.nextSibling);
-            ratingTable.insertBefore(tmdbCell, spacerCell3.nextSibling);
-            ratingTable.insertBefore(spacerCell4, tmdbCell.nextSibling);
-            ratingTable.insertBefore(peliplusCell, spacerCell4.nextSibling);
-            ratingTable.insertBefore(spacerCell5, peliplusCell.nextSibling);
-            ratingTable.insertBefore(sololatinoCell, spacerCell5.nextSibling);
+            ratingTable.insertBefore(aniListCell, spacerCell1.nextSibling);
+            ratingTable.insertBefore(spacerCell2, aniListCell.nextSibling);
+            ratingTable.insertBefore(tmdbCell, spacerCell2.nextSibling);
+            ratingTable.insertBefore(spacerCell3, tmdbCell.nextSibling);
+            ratingTable.insertBefore(peliplusCell, spacerCell3.nextSibling);
+            ratingTable.insertBefore(spacerCell4, peliplusCell.nextSibling);
+            ratingTable.insertBefore(sololatinoCell, spacerCell4.nextSibling);
+            ratingTable.insertBefore(spacerCell5, sololatinoCell.nextSibling);
+            ratingTable.insertBefore(lamovieCell, spacerCell5.nextSibling);
 
             return true;
         },
 
-        /**
-         * Inserts button for Plex pages
-         */
         insertForPlexPage() {
             const buttonContainer = document.querySelector(SELECTORS.PLEX_BUTTON_CONTAINER);
             if (!buttonContainer) return false;
 
-            const tvTimeButton = ButtonFactory.createPlexButton();
             const simklButton = ButtonFactory.createPlexSimklButton();
             const aniListButton = ButtonFactory.createPlexAniListButton();
             const tmdbButton = ButtonFactory.createPlexTMDBButton();
 
-            buttonContainer.appendChild(tvTimeButton);
             buttonContainer.appendChild(simklButton);
             buttonContainer.appendChild(aniListButton);
             buttonContainer.appendChild(tmdbButton);
@@ -1018,9 +908,6 @@
     const ButtonManager = {
         observer: null,
 
-        /**
-         * Initializes the button insertion observer
-         */
         init() {
             this.observer = new MutationObserver(
                 Utils.debounce(() => this.attemptButtonInsertion(), 100)
@@ -1031,25 +918,19 @@
                 subtree: true
             });
 
-            // Try immediate insertion
             this.attemptButtonInsertion();
         },
 
-        /**
-         * Attempts to insert the TV Time button using various strategies
-         */
         attemptButtonInsertion() {
-            // Skip if buttons already exist
-            if (document.querySelector(SELECTORS.TV_TIME_BUTTON) ||
-                document.querySelector(SELECTORS.SIMKL_BUTTON) ||
+            if (document.querySelector(SELECTORS.SIMKL_BUTTON) ||
                 document.querySelector(SELECTORS.ANILIST_BUTTON) ||
                 document.querySelector(SELECTORS.TMDB_BUTTON) ||
                 document.querySelector(SELECTORS.PELIPLUS_BUTTON) ||
-                document.querySelector(SELECTORS.SOLOLATINO_BUTTON)) {
+                document.querySelector(SELECTORS.SOLOLATINO_BUTTON) ||
+                document.querySelector(SELECTORS.LAMOVIE_BUTTON)) {
                 return;
             }
 
-            // Try different insertion strategies
             const strategies = [
                 InsertionStrategies.insertForPlexPage,
                 InsertionStrategies.insertForRatingCell,
@@ -1064,15 +945,11 @@
             }
         },
 
-        /**
-         * Handles button click events
-         */
         handleButtonClick(event) {
             event.preventDefault();
 
             let titleElement = document.querySelector(SELECTORS.TITLE);
 
-            // Check for Plex title if standard title not found
             if (!titleElement) {
                 titleElement = document.querySelector(SELECTORS.PLEX_TITLE);
             }
@@ -1085,316 +962,34 @@
             const title = titleElement.textContent.trim();
             const clickedButton = event.target.closest('button, a');
 
-            // Determine which button was clicked
             if (clickedButton && clickedButton.id === CONFIG.SIMKL_BUTTON_ID) {
-                // Simkl button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
             } else if (clickedButton && clickedButton.id === CONFIG.ANILIST_BUTTON_ID) {
-                // AniList button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(title)}`, '_blank');
             } else if (clickedButton && clickedButton.id === CONFIG.TMDB_BUTTON_ID) {
-                // TMDB button clicked
                 Utils.copyToClipboard(title);
                 window.open(`${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(title)}`, '_blank');
             } else if (clickedButton && clickedButton.id === CONFIG.PELIPLUS_BUTTON_ID) {
-                // Peliplus button clicked
                 Utils.copyToClipboard(title);
                 window.open(CONFIG.PELIPLUS_BASE_URL, '_blank');
             } else if (clickedButton && clickedButton.id === CONFIG.SOLOLATINO_BUTTON_ID) {
-                // SoloLatino button clicked
                 Utils.copyToClipboard(title);
                 window.open(CONFIG.SOLOLATINO_BASE_URL, '_blank');
-            } else {
-                // TV Time button clicked (default)
+            } else if (clickedButton && clickedButton.id === CONFIG.LAMOVIE_BUTTON_ID) {
                 Utils.copyToClipboard(title);
-                window.open(`${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(title)}`, '_blank');
+                window.open(CONFIG.LAMOVIE_BASE_URL, '_blank');
             }
         },
 
-        /**
-         * Destroys the observer
-         */
         destroy() {
             if (this.observer) {
                 this.observer.disconnect();
                 this.observer = null;
             }
         }
-    };    /**
-     * TV Time search page handler
-     */
-    const TVTimeHandler = {
-        searchQuery: null,
-        retryAttempts: 0,
-        maxRetries: 15,
-
-        /**
-         * Initializes auto-paste functionality on TV Time search page
-         */
-        init() {
-            this.searchQuery = this.getSearchQuery();
-
-            if (!this.searchQuery) {
-                console.warn('No search query found');
-                return;
-            }
-
-            console.log('Starting TV Time auto-search for:', this.searchQuery);
-            this.startSearchFieldMonitor();
-        },
-
-        /**
-         * Gets search query from URL parameters or sessionStorage
-         */
-        getSearchQuery() {
-            // Try URL parameter first
-            const urlParams = new URLSearchParams(window.location.search);
-            let query = urlParams.get('q') || urlParams.get('search');
-
-            if (!query) {
-                // Try sessionStorage
-                query = sessionStorage.getItem('simkl_tvtime_search');
-                if (query) {
-                    sessionStorage.removeItem('simkl_tvtime_search');
-                }
-            }
-
-            return query;
-        },
-
-        /**
-         * Starts monitoring for search field and automatically fills it
-         */
-        startSearchFieldMonitor() {
-            const attemptSearch = () => {
-                if (this.retryAttempts >= this.maxRetries) {
-                    console.warn('Maximum retry attempts reached for search field detection');
-                    return;
-                }
-
-                this.retryAttempts++;
-                console.log(`Search attempt ${this.retryAttempts}/${this.maxRetries}`);
-
-                if (this.findAndFillSearchField()) {
-                    console.log('Successfully filled search field');
-                    return;
-                }
-
-                // Retry after 1 second
-                setTimeout(attemptSearch, 1000);
-            };
-
-            attemptSearch();
-        },
-
-        /**
-         * Finds and fills the search field
-         */
-        findAndFillSearchField() {
-            // Try different search field detection strategies
-            let searchField = this.findSearchField();
-
-            if (searchField && this.fillSearchField(searchField)) {
-                return true;
-            }
-
-            return false;
-        },
-
-        /**
-         * Finds search field using multiple strategies
-         */
-        findSearchField() {
-            // Strategy 1: Direct input selectors
-            let field = document.querySelector(SELECTORS.SEARCH_INPUT);
-            if (field && this.isValidSearchField(field)) return field;
-
-            // Strategy 2: Search interfaces
-            for (const selector of SELECTORS.SEARCH_INTERFACES) {
-                const container = document.querySelector(selector);
-                if (container) {
-                    field = container.querySelector('input[type="text"], input:not([type]), textarea');
-                    if (field && this.isValidSearchField(field)) return field;
-                }
-            }
-
-            // Strategy 3: Flutter inputs
-            field = document.querySelector(SELECTORS.FLUTTER_INPUTS);
-            if (field && this.isValidSearchField(field)) return field;
-
-            // Strategy 4: All visible text inputs
-            const inputs = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), textarea'));
-            for (const input of inputs) {
-                if (this.isValidSearchField(input)) return input;
-            }
-
-            // Strategy 5: Flutter semantic elements
-            const flutterElements = Array.from(document.querySelectorAll('[aria-label*="search"], [aria-label*="Search"]'));
-            for (const element of flutterElements) {
-                if (this.isValidSearchField(element)) return element;
-            }
-
-            return null;
-        },
-
-        /**
-         * Validates if an element is a valid search field
-         */
-        isValidSearchField(element) {
-            if (!element) return false;
-
-            const style = window.getComputedStyle(element);
-            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-                return false;
-            }
-
-            const rect = element.getBoundingClientRect();
-            if (rect.width === 0 && rect.height === 0) return false;
-
-            if (element.disabled || element.readOnly) return false;
-
-            // Check for search-related attributes
-            const searchIndicators = [
-                element.placeholder?.toLowerCase().includes('search'),
-                element.name?.toLowerCase().includes('search'),
-                element.id?.toLowerCase().includes('search'),
-                element.className?.toLowerCase().includes('search'),
-                element.getAttribute('aria-label')?.toLowerCase().includes('search')
-            ];
-
-            return searchIndicators.some(indicator => indicator === true);
-        },
-
-        /**
-         * Fills the search field with the query
-         */
-        fillSearchField(field) {
-            try {
-                // Clear existing value
-                field.value = '';
-                field.textContent = '';
-
-                // Focus the field
-                field.focus();
-                field.click();
-
-                // Set the value using multiple methods
-                field.value = this.searchQuery;
-
-                if (field.setAttribute) {
-                    field.setAttribute('value', this.searchQuery);
-                }
-
-                if (field.textContent !== undefined) {
-                    field.textContent = this.searchQuery;
-                }
-
-                // Simulate typing character by character
-                this.simulateTyping(field, this.searchQuery);
-
-                // Dispatch comprehensive events
-                this.dispatchInputEvents(field);
-
-                return true;
-            } catch (error) {
-                console.error('Error filling search field:', error);
-                return false;
-            }
-        },
-
-        /**
-         * Simulates typing character by character
-         */
-        simulateTyping(element, text) {
-            element.focus();
-
-            for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-
-                // Key events
-                element.dispatchEvent(new KeyboardEvent('keydown', {
-                    key: char,
-                    char: char,
-                    charCode: char.charCodeAt(0),
-                    keyCode: char.charCodeAt(0),
-                    which: char.charCodeAt(0),
-                    bubbles: true
-                }));
-
-                element.dispatchEvent(new KeyboardEvent('keypress', {
-                    key: char,
-                    char: char,
-                    charCode: char.charCodeAt(0),
-                    keyCode: char.charCodeAt(0),
-                    which: char.charCodeAt(0),
-                    bubbles: true
-                }));
-
-                // Update value progressively
-                element.value = text.substring(0, i + 1);
-
-                // Input event for each character
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-
-                element.dispatchEvent(new KeyboardEvent('keyup', {
-                    key: char,
-                    char: char,
-                    charCode: char.charCodeAt(0),
-                    keyCode: char.charCodeAt(0),
-                    which: char.charCodeAt(0),
-                    bubbles: true
-                }));
-            }
-        },
-
-        /**
-         * Dispatches comprehensive input events
-         */
-        dispatchInputEvents(element) {
-            const events = [
-                new Event('input', { bubbles: true }),
-                new Event('change', { bubbles: true }),
-                new Event('blur', { bubbles: true }),
-                new Event('focus', { bubbles: true }),
-                new InputEvent('input', {
-                    bubbles: true,
-                    inputType: 'insertText',
-                    data: this.searchQuery
-                }),
-                new Event('search', { bubbles: true })
-            ];
-
-            events.forEach(event => {
-                try {
-                    element.dispatchEvent(event);
-                } catch (e) {
-                    console.warn('Failed to dispatch event:', e);
-                }
-            });
-
-            // For React/Vue components
-            if (element._valueTracker) {
-                element._valueTracker.setValue('');
-            }
-
-            // Trigger React's synthetic events
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype, 'value'
-            )?.set;
-
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(element, this.searchQuery);
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }
-    };
-
-    /**
-     * Peliplus (tioplus.app) page handler - injects a floating button panel
-     */
-    const PeliplusHandler = {
+    };    const PeliplusHandler = {
         observer: null,
 
         /**
@@ -1437,11 +1032,15 @@
                 container.classList.add(CSS_CLASSES.SOLOLATINO_PANEL);
             }
 
+            if (window.location.hostname === 'lamovie.org') {
+                container.classList.add(CSS_CLASSES.SOLOLATINO_PANEL);
+            }
+
             const buttons = [
-                { label: 'TV Time', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_TVTIME, short: 'T', getUrl: (t) => `${CONFIG.TV_TIME_SEARCH_URL}?q=${encodeURIComponent(t)}` },
                 { label: 'Simkl', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_SIMKL, short: 'S', getUrl: (t) => `${CONFIG.SIMKL_SEARCH_URL}?q=${encodeURIComponent(t)}` },
                 { label: 'AniList', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_ANILIST, short: 'A', getUrl: (t) => `${CONFIG.ANILIST_SEARCH_URL}?search=${encodeURIComponent(t)}` },
-                { label: 'TMDB', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_TMDB, short: 'M', getUrl: (t) => `${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(t)}` }
+                { label: 'TMDB', iconClass: CSS_CLASSES.PELIPLUS_FLOAT_TMDB, short: 'M', getUrl: (t) => `${CONFIG.TMDB_SEARCH_URL}?query=${encodeURIComponent(t)}` },
+                { label: 'LaMovie', iconClass: CSS_CLASSES.LAMOVIE_SIMKL_BUTTON, short: 'L', getUrl: () => CONFIG.LAMOVIE_BASE_URL }
             ];
 
             for (const btn of buttons) {
@@ -1528,49 +1127,34 @@
      * Main application controller
      */
     const App = {
-        /**
-         * Initializes the application based on current hostname
-         */
         init() {
-            if (window.location.hostname === 'app.tvtime.com') {
-                TVTimeHandler.init();
-                return;
-            }
-
             if (window.location.hostname === 'tioplus.app' ||
-                window.location.hostname === 'sololatino.net') {
+                window.location.hostname === 'sololatino.net' ||
+                window.location.hostname === 'lamovie.org') {
                 PeliplusHandler.init();
                 return;
             }
 
-            // Initialize for Simkl and Plex pages
             StyleManager.inject();
             this.setupEventListeners();
             this.startButtonManager();
         },
 
-        /**
-         * Sets up global event listeners
-         */
         setupEventListeners() {
-            // Use event delegation for button clicks
             document.addEventListener('click', (event) => {
-                const tvTimeButton = event.target.closest(SELECTORS.TV_TIME_BUTTON);
                 const simklButton = event.target.closest(SELECTORS.SIMKL_BUTTON);
                 const aniListButton = event.target.closest(SELECTORS.ANILIST_BUTTON);
                 const tmdbButton = event.target.closest(SELECTORS.TMDB_BUTTON);
                 const peliplusButton = event.target.closest(SELECTORS.PELIPLUS_BUTTON);
                 const sololatinoButton = event.target.closest(SELECTORS.SOLOLATINO_BUTTON);
+                const lamovieButton = event.target.closest(SELECTORS.LAMOVIE_BUTTON);
 
-                if (tvTimeButton || simklButton || aniListButton || tmdbButton || peliplusButton || sololatinoButton) {
+                if (simklButton || aniListButton || tmdbButton || peliplusButton || sololatinoButton || lamovieButton) {
                     ButtonManager.handleButtonClick(event);
                 }
             });
         },
 
-        /**
-         * Starts the button manager when DOM is ready
-         */
         startButtonManager() {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => ButtonManager.init());
