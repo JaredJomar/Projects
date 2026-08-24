@@ -23,6 +23,7 @@ dist/
 .vscode/
 .idea/
 .sisyphus
+.omo
 
 # OS files
 .DS_Store
