@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Netflix Enchantments
 // @namespace    http://tampermonkey.net/
-// @version      0.4.5
+// @version      0.4.6
 // @description  Enhancements for Netflix video player: skip intro, skip outro, and more.
 // @author       JJJ
 // @match        https://www.netflix.com/*
@@ -29,7 +29,8 @@
     skipIntroButton: '[data-uia="player-skip-intro"]',
     skipOutroButton: '.color-primary.hasLabel.hasIcon.ltr-1jtux27',
     fullscreenView: '.watch-video--player-view',
-    gamesSection: '.lolomoRow[data-list-context*="games"]'
+    gamesSection: '.lolomoRow[data-list-context*="games"]',
+    carouselRow: 'section[data-uia^="carousel-row-section-"]'
   };
 
   function createSettingsDialog() {
@@ -227,7 +228,12 @@
   }
 
   function hideGamesSection() {
-    const gamesSections = document.querySelectorAll(SELECTORS.gamesSection);
+    const gamesSections = [
+      ...document.querySelectorAll(SELECTORS.gamesSection),
+      ...Array.from(document.querySelectorAll(SELECTORS.carouselRow))
+        .filter(section => section.querySelector('h2')?.textContent.trim() === 'Games')
+    ];
+
     gamesSections.forEach(section => {
       if (section && CONFIG.hideGames) {
         section.style.display = 'none';

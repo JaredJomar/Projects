@@ -41,6 +41,10 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
+### v0.4.6
+- Added support for hiding Netflix's current Games carousel layout
+- Preserved compatibility with the legacy Games section selector
+
 ### v0.4.4
 - Updated recap skip button selector
 - Fixed compatibility with Netflix's latest UI update
@@ -61,5 +65,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=netflix.com" alt="Netflix Icon">
 
-**Current Version: 0.4.4**
+**Current Version: 0.4.6**
 </div>
