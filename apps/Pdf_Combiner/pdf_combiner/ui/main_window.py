@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QProgressDialog,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QStatusBar,
     QVBoxLayout,
@@ -29,7 +30,9 @@ from PyQt6.QtWidgets import (
 from pdf_combiner.services import pdf_ops
 from pdf_combiner.ui.widgets import FileListWidget
 from pdf_combiner.ui.preview import PreviewError, render_pdf_page
-from pdf_combiner.ui.workers import Worker
+from pdf_combiner.ui.operation_runner import OperationRunner
+from pdf_combiner.ui.styles import APP_STYLESHEET
+from pdf_combiner.ui.worker_errors import WorkerErrorInfo
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +42,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = QSettings("PdfCombiner", "PdfToolkit")
         self.thread_pool = QThreadPool.globalInstance()
+        self.operation_runner = OperationRunner(self.thread_pool, self)
 
         self.output_directory: str | None = None
         self.last_directory: str = self.settings.value("paths/last_directory", str(Path.home()))
@@ -84,53 +88,13 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Ready")
 
         self.preview_area.viewport().installEventFilter(self)
+        self.output_dir_label.installEventFilter(self)
 
     def _apply_palette(self) -> None:
         base_font = self.font()
         base_font.setPointSize(10)
         self.setFont(base_font)
-        self.setStyleSheet(
-            """
-            QMainWindow { background-color: #101423; color: #f5f6fb; }
-            QWidget { color: #f5f6fb; }
-            QGroupBox {
-                border: 1px solid #29324a;
-                border-radius: 8px;
-                margin-top: 12px;
-                padding: 12px;
-                font-weight: 600;
-            }
-            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 4px; }
-            QPushButton {
-                background-color: #2f6fed;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 14px;
-                color: #f5f6fb;
-                font-weight: 500;
-            }
-            QPushButton:hover { background-color: #245bd1; }
-            QPushButton:disabled { background-color: #1f2940; color: #9aa3c0; }
-            QListWidget {
-                background-color: #141a2d;
-                border: 1px solid #1f2940;
-                border-radius: 6px;
-            }
-            QLineEdit, QComboBox {
-                background-color: #141a2d;
-                border: 1px solid #1f2940;
-                border-radius: 6px;
-                padding: 6px;
-                min-height: 28px;
-            }
-            QStatusBar {
-                background-color: #141a2d;
-                border-top: 1px solid #1f2940;
-            }
-            QScrollArea { border: 1px solid #1f2940; border-radius: 6px; }
-            QLabel#PreviewPlaceholder { color: #9aa3c0; }
-            """
-        )
+        self.setStyleSheet(APP_STYLESHEET)
 
     def _build_left_panel(self) -> QWidget:
         panel = QWidget()
@@ -185,7 +149,9 @@ class MainWindow(QMainWindow):
         self.output_dir_button = QPushButton("Choose Output Folder…")
         self.output_dir_label = QLabel("No folder selected")
         self.output_dir_label.setObjectName("OutputDirLabel")
-        self.output_dir_label.setWordWrap(True)
+        self.output_dir_label.setWordWrap(False)
+        self.output_dir_label.setMinimumWidth(0)
+        self.output_dir_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.output_dir_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         output_row.addWidget(self.output_dir_button)
         output_row.addWidget(self.output_dir_label, 1)
@@ -334,7 +300,9 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ helpers
     def eventFilter(self, source, event):  # noqa: D401 - Qt override
-        if source is self.preview_area.viewport() and event.type() == QEvent.Type.Resize:
+        if source is self.output_dir_label and event.type() == QEvent.Type.Resize:
+            self._refresh_output_dir_label()
+        elif source is self.preview_area.viewport() and event.type() == QEvent.Type.Resize:
             if self.current_pdf_path:
                 QTimer.singleShot(50, self._update_preview)
         return super().eventFilter(source, event)
@@ -347,6 +315,54 @@ class MainWindow(QMainWindow):
             return f"~/" + text.replace("\\", "/")
         except ValueError:
             return str(path)
+
+    def _elide_dir_text(self, text: str) -> str:
+        """Shorten *text* with a centered ellipsis so it fits the label width.
+
+        Uses ``QFontMetrics.elidedText`` (``ElideMiddle``) so the cut follows
+        the real rendered font width rather than a character count. Text is
+        returned unchanged while the label has no usable width yet (window not
+        laid out); ``_refresh_output_dir_label`` recomputes it on the resize.
+        """
+        available = self.output_dir_label.width()
+        if available <= 0:
+            return text
+        return self.output_dir_label.fontMetrics().elidedText(
+            text, Qt.TextElideMode.ElideMiddle, available
+        )
+
+    def _refresh_output_dir_label(self) -> None:
+        """Keep the output-folder label on one line with a full-path tooltip.
+
+        Only the visible text is elided: ``self.output_directory`` (and thus
+        every operation argument) keeps the full path. The empty state stays
+        "No folder selected" with an empty tooltip so no stale path is shown.
+        While the label is hidden Qt reports a default width instead of the
+        laid-out one, so the text is deferred to the show/resize hooks - using
+        that placeholder width would inflate the window's minimum size.
+        """
+        label = getattr(self, "output_dir_label", None)
+        if label is None:
+            return
+        if not self.output_directory:
+            text: str | None = "No folder selected"
+            tooltip = ""
+        elif label.isVisible():
+            text = self._elide_dir_text(self._format_dir_label(self.output_directory))
+            tooltip = self.output_directory
+        else:
+            text = None
+            tooltip = self.output_directory
+        if text is not None and label.text() != text:
+            label.setText(text)
+        if label.toolTip() != tooltip:
+            label.setToolTip(tooltip)
+
+    def showEvent(self, event) -> None:  # noqa: D401 - Qt override
+        super().showEvent(event)
+        # The final geometry exists only after this event; refresh once the
+        # layout pass has run so a restored folder is elided to real width.
+        self._refresh_output_dir_label()
 
     def _add_files(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(
@@ -504,7 +520,7 @@ class MainWindow(QMainWindow):
 
     def _set_output_directory(self, directory: str) -> None:
         self.output_directory = str(Path(directory))
-        self.output_dir_label.setText(self._format_dir_label(self.output_directory))
+        self._refresh_output_dir_label()
         self.last_directory = self.output_directory
 
     def _contains_file(self, path: str) -> bool:
@@ -775,21 +791,18 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ async helpers
     def _run_background(self, label: str, function, on_success=None) -> None:
-        progress = QProgressDialog(f"{label}…", None, 0, 0, self)
-        progress.setWindowTitle("PDF Toolkit")
-        progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-        progress.setCancelButton(None)
-        progress.setMinimumDuration(0)
+        """Thin forwarder to OperationRunner preserving the exact 3-arg signature."""
+        def on_error_adapter(payload: WorkerErrorInfo) -> None:
+            # Runner already closed the dialog; pass None to skip redundant close
+            self._show_error(label, payload.message, None)
 
-        worker = Worker(function)
-
-        if on_success:
-            worker.signals.result.connect(on_success)
-        worker.signals.error.connect(lambda message: self._show_error(label, message, progress))
-        worker.signals.finished.connect(lambda: self._finish_progress(progress))
-
-        self.status_bar.showMessage(f"{label}…")
-        self.thread_pool.start(worker)
+        self.operation_runner.run(
+            label=label,
+            fn=function,
+            on_success=on_success,
+            on_error=on_error_adapter,
+            on_start=self.status_bar.showMessage,
+        )
 
     def _finish_progress(self, dialog: QProgressDialog) -> None:
         dialog.close()
