@@ -41,6 +41,10 @@ Access the settings panel (F2) to customize:
 
 ## Version History
 
+### v0.2.4
+- Added support for Prime Video's localized Spanish intro-skip button
+- Added Spanish recap button selectors for `Omitir resumen`, `Saltar resumen`, and `Resumen`
+
 ### v0.2.3
 - Updated recap skipping to detect Prime Video's new Skip Recap button markup
 
@@ -60,5 +64,5 @@ Access the settings panel (F2) to customize:
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=amazon.com" alt="Prime Video Icon">
 
-**Current Version: 0.2.3**
+**Current Version: 0.2.4**
 </div>
