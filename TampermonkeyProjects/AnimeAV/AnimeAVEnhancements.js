@@ -15,7 +15,7 @@
     const LANGUAGES = ['SUB', 'DUB'];
     const LANGUAGE_KEY = 'animeav_preferred_language';
     const SERVER_KEY = 'animeav_preferred_server';
-    const DEFAULTS = { language: 'DUB', server: 'HLS' };
+    const DEFAULTS = { language: 'SUB', server: 'HLS' };
     let currentPage = window.location.href;
 
     const readPreference = (key, allowed, fallback) => {
