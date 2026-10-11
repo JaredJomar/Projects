@@ -4,7 +4,7 @@
 // @version      0.0.1
 // @description  Automatically selects the preferred language and video server on AnimeAV
 // @author       JJJ
-// @match        https://animeav1.com/media/mairimashita-iruma-kun-4th-season/2
+// @match        https://animeav1.com/media/*/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=animeav1.com
 // @grant        none
 // ==/UserScript==
@@ -13,10 +13,10 @@
     'use strict';
 
     const LANGUAGES = ['SUB', 'DUB'];
-    const SERVERS = ['HLS', 'UPNShare', 'Voe', 'Byse', 'MP4Upload'];
     const LANGUAGE_KEY = 'animeav_preferred_language';
     const SERVER_KEY = 'animeav_preferred_server';
-    const DEFAULTS = { language: 'SUB', server: 'HLS' };
+    const DEFAULTS = { language: 'DUB', server: 'HLS' };
+    let currentPage = window.location.href;
 
     const readPreference = (key, allowed, fallback) => {
         const value = localStorage.getItem(key);
@@ -26,7 +26,7 @@
     function getPreferences() {
         return {
             language: readPreference(LANGUAGE_KEY, LANGUAGES, DEFAULTS.language),
-            server: readPreference(SERVER_KEY, SERVERS, DEFAULTS.server)
+            server: localStorage.getItem(SERVER_KEY) || DEFAULTS.server
         };
     }
 
@@ -34,6 +34,28 @@
         return [...document.querySelectorAll('div')].filter(row => {
             const label = [...row.children].find(child => child.tagName === 'SPAN');
             return label && LANGUAGES.includes(label.textContent.trim().toUpperCase());
+        });
+    }
+
+    function getAvailableServers() {
+        return [...new Set(getLanguageRows().flatMap(row =>
+            [...row.querySelectorAll('button')].map(button => button.textContent.trim())
+        ).filter(Boolean))];
+    }
+
+    function activateButton(button) {
+        ['mousedown', 'mouseup', 'click'].forEach(type => {
+            button.dispatchEvent(new MouseEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            }));
+        });
+    }
+
+    function clearEpisodeSelection() {
+        document.querySelectorAll('[data-animeav-selected="true"]').forEach(button => {
+            delete button.dataset.animeavSelected;
         });
     }
 
@@ -45,18 +67,61 @@
         });
 
         if (!row) return null;
-        return [...row.querySelectorAll('button')].find(button =>
+        const buttons = [...row.querySelectorAll('button')];
+        return buttons.find(button =>
             button.textContent.trim().toLowerCase() === preferences.server.toLowerCase()
-        );
+        ) || buttons[0] || null;
     }
 
     function selectPreferredOption() {
         const button = findPreferredButton();
-        if (!(button instanceof HTMLElement) || button.dataset.animeavSelected === 'true') return;
+        if (!(button instanceof HTMLElement)) return;
+        if (button.classList.contains('bg-main')) {
+            button.dataset.animeavSelected = 'true';
+            return;
+        }
 
         button.dataset.animeavSelected = 'true';
-        button.click();
+        activateButton(button);
+        requestAnimationFrame(() => {
+            if (button.isConnected && !button.classList.contains('bg-main')) {
+                delete button.dataset.animeavSelected;
+                activateButton(button);
+            }
+        });
         console.log(`[AnimeAV] Selected ${getPreferences().language} / ${getPreferences().server}.`);
+    }
+
+    function resetEpisodeSelection() {
+        currentPage = window.location.href;
+        clearEpisodeSelection();
+        selectPreferredOption();
+    }
+
+    function applyForCurrentPage() {
+        if (window.location.href !== currentPage) {
+            currentPage = window.location.href;
+            clearEpisodeSelection();
+        }
+        selectPreferredOption();
+    }
+
+    function observeNavigation() {
+        const notifyNavigation = () => resetEpisodeSelection();
+        const originalPushState = window.history.pushState;
+        const originalReplaceState = window.history.replaceState;
+
+        window.history.pushState = function (...args) {
+            const result = originalPushState.apply(this, args);
+            notifyNavigation();
+            return result;
+        };
+        window.history.replaceState = function (...args) {
+            const result = originalReplaceState.apply(this, args);
+            notifyNavigation();
+            return result;
+        };
+        window.addEventListener('popstate', notifyNavigation);
     }
 
     function buildSelect(id, values, selected) {
@@ -82,6 +147,10 @@
         }
 
         const preferences = getPreferences();
+        const availableServers = getAvailableServers();
+        const selectedServer = availableServers.includes(preferences.server)
+            ? preferences.server
+            : availableServers[0] || preferences.server;
         const modal = document.createElement('div');
         modal.id = 'animeav-settings';
         modal.style.cssText = 'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);color:white;font-family:Arial,sans-serif;';
@@ -101,7 +170,7 @@
 
         const serverLabel = document.createElement('label');
         serverLabel.textContent = 'Video server';
-        const server = buildSelect('animeav-server', SERVERS, preferences.server);
+        const server = buildSelect('animeav-server', availableServers, selectedServer);
 
         const save = document.createElement('button');
         save.type = 'button';
@@ -114,7 +183,7 @@
         cancel.style.cssText = 'width:100%;padding:10px;background:#333;border:0;border-radius:6px;color:white;margin-top:10px;cursor:pointer;';
 
         save.addEventListener('click', () => {
-            if (!LANGUAGES.includes(language.value) || !SERVERS.includes(server.value)) return;
+            if (!LANGUAGES.includes(language.value) || !availableServers.includes(server.value)) return;
             localStorage.setItem(LANGUAGE_KEY, language.value);
             localStorage.setItem(SERVER_KEY, server.value);
             modal.remove();
@@ -142,8 +211,9 @@
         });
 
         selectPreferredOption();
-        const observer = new MutationObserver(selectPreferredOption);
+        const observer = new MutationObserver(applyForCurrentPage);
         observer.observe(document.body, { childList: true, subtree: true });
+        observeNavigation();
     }
 
     if (document.body) initialize();
