@@ -28,6 +28,12 @@ Enhances the YouTube Save to playlist flow with dynamic search, reliable channel
 
 ## Version History
 
+### v0.0.4
+- Kept search and clear-control interactions inside the playlist dialog so they do not trigger dialog dismissal
+- Preserved user-edited playlist search text when delayed channel autofill retries run
+- Reapplied the active search filter to playlist rows loaded after the dialog opens
+- Prevented stale channel context and protected non-empty New playlist titles from autofill
+
 ### v0.0.3
 - Improved channel detection with modern YouTube selectors and runtime fallbacks
 - Added contextual safeguards to prevent search bar injection in non-playlist menus
@@ -55,5 +61,5 @@ Enhances the YouTube Save to playlist flow with dynamic search, reliable channel
 <div align="center">
 <img src="https://www.google.com/s2/favicons?sz=64&domain=youtube.com" alt="YouTube Icon">
 
-**Current Version: 0.0.3**
+**Current Version: 0.0.4**
 </div>

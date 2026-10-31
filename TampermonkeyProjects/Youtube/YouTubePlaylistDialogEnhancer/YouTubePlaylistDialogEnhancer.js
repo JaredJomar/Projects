@@ -2,7 +2,7 @@
 // @name         YouTube Playlist Dialog Enhancer
 // @namespace    http://tampermonkey.net/
 // @author       JJJ
-// @version      0.0.3
+// @version      0.0.4
 // @description  Adds a search bar to the YouTube "Save to playlist" dialog and auto-fills the channel name
 // @match        https://www.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -103,6 +103,8 @@
 
     function captureChannelFromActionTrigger(trigger) {
         if (!trigger || !trigger.closest) return;
+
+        lastContextChannelName = null;
 
         // Look around the clicked card/lockup where the 3-dots menu was opened.
         const container = trigger.closest(
@@ -333,11 +335,14 @@
 
     function resetSearchState(sheet, input, clearBtn) {
         input.value = '';
+        delete input.dataset.ytEnhancerUserEdited;
         clearBtn.style.display = 'none';
         filterPlaylists('', sheet);
     }
 
     function fillSearchWithChannel(sheet, input, clearBtn) {
+        if (!sheet.isConnected || !input.isConnected || !isPlaylistSheet(sheet)
+            || input.value || input.dataset.ytEnhancerUserEdited) return false;
         const name = getChannelName();
         if (!name) return false;
         input.value = name;
@@ -359,6 +364,11 @@
         if (!contentContainer) {
             setTimeout(() => addSearchBar(sheet), 200);
             return;
+        }
+
+        const playlistListParent = sheet.querySelector('toggleable-list-item-view-model')?.closest('yt-list-view-model')?.parentElement;
+        if (playlistListParent) {
+            playlistListParent.style.setProperty('min-height', 'min(320px, 50vh)', 'important');
         }
 
         startPositionWatcher();
@@ -388,14 +398,29 @@
         input.spellcheck = false;
 
         const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
         clearBtn.className = 'yt-playlist-search-clear';
         clearBtn.textContent = '✕';
 
-        input.addEventListener('input', function () {
-            clearBtn.style.display = this.value ? 'block' : 'none';
-            filterPlaylists(this.value, sheet);
+        ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(type => {
+            container.addEventListener(type, event => event.stopPropagation());
+        });
+
+        const updateSearch = target => {
+            if (!target?.matches?.('input.yt-playlist-search-input')) return;
+            target.dataset.ytEnhancerUserEdited = 'true';
+            const currentClearBtn = container.querySelector('.yt-playlist-search-clear');
+            if (currentClearBtn) currentClearBtn.style.display = target.value ? 'block' : 'none';
+            filterPlaylists(target.value, sheet);
+        };
+
+        input.addEventListener('input', () => updateSearch(input));
+        container.addEventListener('input', event => {
+            const target = event.target;
+            if (target !== input) updateSearch(target);
         });
         clearBtn.addEventListener('click', () => {
+            input.dataset.ytEnhancerUserEdited = 'true';
             input.value = '';
             clearBtn.style.display = 'none';
             input.focus();
@@ -421,10 +446,26 @@
     }
 
     function filterPlaylists(term, sheet) {
-        const lower = term.toLowerCase();
+        const lower = normalizePlaylistSearchText(term);
         sheet.querySelectorAll('toggleable-list-item-view-model').forEach(item => {
-            item.style.display = item.textContent.toLowerCase().includes(lower) ? '' : 'none';
+            const searchText = [
+                item.textContent,
+                item.getAttribute('aria-label'),
+                item.getAttribute('title')
+            ].filter(Boolean).join(' ');
+            const matches = !lower || normalizePlaylistSearchText(searchText).includes(lower);
+            if (matches) {
+                item.removeAttribute('hidden');
+                item.style.removeProperty('display');
+            } else {
+                item.setAttribute('hidden', '');
+                item.style.setProperty('display', 'none', 'important');
+            }
         });
+    }
+
+    function normalizePlaylistSearchText(text) {
+        return text.trim().replace(/\s+/g, ' ').toLowerCase();
     }
 
     // ─── NEW PLAYLIST TITLE ──────────────────────────────────────────────────────
@@ -433,10 +474,16 @@
         const textarea = dialog.querySelector('textarea.ytStandardsTextareaShapeTextarea');
         if (!textarea) return;
 
-        // Remove old flag so we always re-fill on each open
-        delete textarea.dataset.ytEnhancerFilled;
+        if (!textarea.dataset.ytEnhancerOwnershipListener) {
+            textarea.addEventListener('input', function (event) {
+                if (event.isTrusted) this.dataset.ytEnhancerUserEdited = 'true';
+            });
+            textarea.dataset.ytEnhancerOwnershipListener = 'true';
+        }
 
         function tryFill() {
+            if (!dialog.isConnected || !textarea.isConnected || textarea.value
+                || textarea.dataset.ytEnhancerUserEdited) return false;
             const name = getChannelName();
             if (!name) return false;
             textarea.value = name;
@@ -477,6 +524,11 @@
                 const sheet = node.closest ? node.closest('yt-contextual-sheet-layout') : null;
                 if (sheet && !sheet.querySelector('.yt-playlist-search-container')) {
                     setTimeout(() => addSearchBar(sheet), 80);
+                } else if (sheet && isPlaylistSheet(sheet)) {
+                    const input = sheet.querySelector('.yt-playlist-search-input');
+                    if (input) {
+                        filterPlaylists(input.value, sheet);
+                    }
                 }
             }
 
