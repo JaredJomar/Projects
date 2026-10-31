@@ -13,19 +13,19 @@ function resetStorageState() {
 const chrome = {
   runtime: {
     lastError: undefined,
-    onInstalled: { addListener: jest.fn() },
-    onStartup: { addListener: jest.fn() },
-    onMessage: { addListener: jest.fn() }
+    onInstalled: { addListener: vi.fn() },
+    onStartup: { addListener: vi.fn() },
+    onMessage: { addListener: vi.fn() }
   },
   action: {
-    onClicked: { addListener: jest.fn() }
+    onClicked: { addListener: vi.fn() }
   },
   commands: {
-    onCommand: { addListener: jest.fn() }
+    onCommand: { addListener: vi.fn() }
   },
   storage: {
     local: {
-      get: jest.fn(async (keys) => {
+      get: vi.fn(async (keys) => {
         if (keys === undefined) {
           return cloneStorageState();
         }
@@ -50,11 +50,11 @@ const chrome = {
 
         return {};
       }),
-      set: jest.fn(async (items) => {
+      set: vi.fn(async (items) => {
         Object.assign(storageState, items);
         return undefined;
       }),
-      remove: jest.fn(async (keys) => {
+      remove: vi.fn(async (keys) => {
         const keyList = Array.isArray(keys) ? keys : [keys];
 
         for (const key of keyList) {
@@ -63,20 +63,20 @@ const chrome = {
 
         return undefined;
       }),
-      clear: jest.fn(async () => {
+      clear: vi.fn(async () => {
         resetStorageState();
         return undefined;
       })
     }
   },
   sidePanel: {
-    setPanelBehavior: jest.fn(async () => undefined),
-    setOptions: jest.fn((_options, callback) => callback?.()),
-    open: jest.fn((_options, callback) => callback?.())
+    setPanelBehavior: vi.fn(async () => undefined),
+    setOptions: vi.fn((_options, callback) => callback?.()),
+    open: vi.fn((_options, callback) => callback?.())
   },
   tabs: {
-    query: jest.fn(async () => [{ windowId: 1 }]),
-    create: jest.fn(async () => undefined)
+    query: vi.fn(async () => [{ windowId: 1 }]),
+    create: vi.fn(async () => undefined)
   },
   __storageState: storageState,
   __resetStorageState: resetStorageState

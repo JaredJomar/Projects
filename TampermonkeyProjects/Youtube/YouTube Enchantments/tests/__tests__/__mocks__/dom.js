@@ -93,7 +93,7 @@ export function setupYouTubeChannelPage(options = {}) {
   const { path = '/channel/UC123456/featured' } = options;
   
   // Update location
-  window.location.pathname = path;
+  window.history.replaceState({}, '', path);
   
   const container = document.createElement('div');
   container.id = 'page-manager';

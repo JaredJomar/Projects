@@ -47,7 +47,7 @@ describe("panel UI", () => {
     chromeMock.runtime.lastError = undefined;
     setPanelMarkup();
     navigationStrategy = {
-      navigateSidePanel: jest.fn(async () => ({ ok: true, status: "extension-panel-fallback" }))
+      navigateSidePanel: vi.fn(async () => ({ ok: true, status: "extension-panel-fallback" }))
     };
   });
 

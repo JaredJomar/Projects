@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 /**
  * YouTube Player API Mock Helpers
  * Provides utilities for testing YouTube IFrame Player API functionality
@@ -19,20 +21,20 @@ export function createMockYTPlayer(options = {}) {
   const mockPlayer = {
     elementId: 'player',
     videoId,
-    getCurrentTime: jest.fn(() => currentTime),
-    getDuration: jest.fn(() => duration),
-    getPlayerState: jest.fn(() => state),
-    playVideo: jest.fn(),
-    pauseVideo: jest.fn(),
-    stopVideo: jest.fn(),
-    seekTo: jest.fn(),
-    getVolume: jest.fn(() => 50),
-    setVolume: jest.fn(),
-    mute: jest.fn(),
-    unMute: jest.fn(),
-    isMuted: jest.fn(() => false),
-    destroy: jest.fn(),
-    getIframe: jest.fn(() => {
+    getCurrentTime: vi.fn(() => currentTime),
+    getDuration: vi.fn(() => duration),
+    getPlayerState: vi.fn(() => state),
+    playVideo: vi.fn(),
+    pauseVideo: vi.fn(),
+    stopVideo: vi.fn(),
+    seekTo: vi.fn(),
+    getVolume: vi.fn(() => 50),
+    setVolume: vi.fn(),
+    mute: vi.fn(),
+    unMute: vi.fn(),
+    isMuted: vi.fn(() => false),
+    destroy: vi.fn(),
+    getIframe: vi.fn(() => {
       const iframe = document.createElement('iframe');
       iframe.id = 'player-iframe';
       return iframe;
@@ -47,7 +49,7 @@ export function createMockYTPlayer(options = {}) {
  * @param {Object} mockPlayer - Mock player to return
  */
 export function mockYTPlayerConstructor(mockPlayer) {
-  global.YT.Player = jest.fn((elementId, config) => {
+  global.YT.Player = vi.fn(function(elementId, config) {
     mockPlayer.elementId = elementId;
     mockPlayer.config = config;
     

@@ -198,8 +198,18 @@ describe("navigationStrategy", () => {
   });
 
   test("background extension-action listener resets the side panel to the list", async () => {
-    globalThis.importScripts = jest.fn();
-    jest.resetModules();
+    globalThis.importScripts = vi.fn();
+
+    for (const modulePath of [
+      "../src/constants.js",
+      "../src/browserApi.js",
+      "../src/urlValidator.js",
+      "../src/navigationStrategy.js",
+      "../src/background.js"
+    ]) {
+      delete require.cache[require.resolve(modulePath)];
+    }
+
     require("../src/constants.js");
     require("../src/browserApi.js");
     require("../src/urlValidator.js");

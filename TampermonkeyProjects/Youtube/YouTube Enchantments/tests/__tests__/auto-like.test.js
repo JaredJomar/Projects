@@ -3,7 +3,7 @@
  * Tests likeVideo, checkAndLikeVideo, isSubscribed, watchThresholdReached, isLiveStream
  */
 
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import { vi } from 'vitest';
 import { setupYouTubeWatchPage, simulateClick } from './__mocks__/dom.js';
 import { createMockSettings, mockGMGetValue } from './__mocks__/tampermonkey.js';
 
@@ -86,7 +86,7 @@ describe('Auto-Like Functionality', () => {
     });
     
     it('should extract video ID from Shorts URL', () => {
-      window.location.pathname = '/shorts/abc123XYZ';
+      window.history.replaceState({}, '', '/shorts/abc123XYZ');
       
       const match = window.location.pathname.match(/^\/shorts\/([\w-]{5,})/);
       const videoId = match ? match[1] : null;
@@ -95,7 +95,7 @@ describe('Auto-Like Functionality', () => {
     });
     
     it('should extract video ID from URL query parameter', () => {
-      window.location.search = '?v=test123&list=playlist';
+      window.history.replaceState({}, '', '/watch?v=test123&list=playlist');
       
       const params = new URLSearchParams(window.location.search);
       const videoId = params.get('v');
@@ -104,8 +104,7 @@ describe('Auto-Like Functionality', () => {
     });
     
     it('should return null when no video ID is found', () => {
-      window.location.pathname = '/';
-      window.location.search = '';
+      window.history.replaceState({}, '', '/');
       
       const params = new URLSearchParams(window.location.search);
       const videoId = params.get('v');
@@ -114,7 +113,7 @@ describe('Auto-Like Functionality', () => {
     });
     
     it('should handle Shorts URLs with special characters', () => {
-      window.location.pathname = '/shorts/abc-123_XYZ';
+      window.history.replaceState({}, '', '/shorts/abc-123_XYZ');
       
       const match = window.location.pathname.match(/^\/shorts\/([\w-]{5,})/);
       const videoId = match ? match[1] : null;
@@ -123,7 +122,7 @@ describe('Auto-Like Functionality', () => {
     });
     
     it('should reject Shorts URLs that are too short', () => {
-      window.location.pathname = '/shorts/abc';
+      window.history.replaceState({}, '', '/shorts/abc');
       
       const match = window.location.pathname.match(/^\/shorts\/([\w-]{5,})/);
       
@@ -202,7 +201,7 @@ describe('Auto-Like Functionality', () => {
       
       // Mock getComputedStyle to return display: none
       const originalGetComputedStyle = window.getComputedStyle;
-      window.getComputedStyle = jest.fn(() => ({
+      window.getComputedStyle = vi.fn(() => ({
         display: 'none',
         visibility: 'visible'
       }));
@@ -228,7 +227,7 @@ describe('Auto-Like Functionality', () => {
       const liveBadge = document.querySelector('.ytp-live-badge');
       
       // Mock getComputedStyle to return visible
-      window.getComputedStyle = jest.fn(() => ({
+      window.getComputedStyle = vi.fn(() => ({
         display: 'block',
         visibility: 'visible'
       }));
@@ -338,11 +337,11 @@ describe('Auto-Like Functionality', () => {
     
     beforeEach(() => {
       autoLikedVideoIds = new Set();
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
     
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
     
     it('should click like button when video is not liked or disliked', () => {
@@ -351,7 +350,7 @@ describe('Auto-Like Functionality', () => {
         isDisliked: false
       });
       
-      const clickSpy = jest.spyOn(likeButton, 'click');
+      const clickSpy = vi.spyOn(likeButton, 'click');
       
       // Simulate likeVideo logic
       const likePressed = likeButton.getAttribute('aria-pressed') === 'true';
@@ -371,7 +370,7 @@ describe('Auto-Like Functionality', () => {
         isDisliked: false
       });
       
-      const clickSpy = jest.spyOn(likeButton, 'click');
+      const clickSpy = vi.spyOn(likeButton, 'click');
       
       const likePressed = likeButton.getAttribute('aria-pressed') === 'true';
       
@@ -388,7 +387,7 @@ describe('Auto-Like Functionality', () => {
         isDisliked: true
       });
       
-      const clickSpy = jest.spyOn(likeButton, 'click');
+      const clickSpy = vi.spyOn(likeButton, 'click');
       
       const dislikePressed = dislikeButton.getAttribute('aria-pressed') === 'true';
       
@@ -410,7 +409,7 @@ describe('Auto-Like Functionality', () => {
       const videoId = 'test123';
       autoLikedVideoIds.add(videoId);
       
-      const clickSpy = jest.spyOn(likeButton, 'click');
+      const clickSpy = vi.spyOn(likeButton, 'click');
       
       const alreadyAutoLiked = autoLikedVideoIds.has(videoId);
       
@@ -442,7 +441,7 @@ describe('Auto-Like Functionality', () => {
       likeButton.click();
       
       // Simulate verification after 500ms
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
       
       // Simulate button state change
       likeButton.setAttribute('aria-pressed', 'true');
@@ -466,8 +465,7 @@ describe('Auto-Like Functionality', () => {
     
     it('should handle missing video ID', () => {
       setupYouTubeWatchPage();
-      window.location.search = '';
-      window.location.pathname = '/';
+      window.history.replaceState({}, '', '/');
       
       document.body.innerHTML = '';
       

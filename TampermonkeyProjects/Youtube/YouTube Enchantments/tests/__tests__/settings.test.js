@@ -3,7 +3,7 @@
  * Tests loadSettings, saveSettings, and related settings functionality
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { vi } from 'vitest';
 import {
   createMockSettings,
   mockGMGetValue,
@@ -309,7 +309,7 @@ describe('Settings Management', () => {
     
     it('should handle save failure gracefully', () => {
       const originalImpl = global.GM_setValue;
-      global.GM_setValue = jest.fn(() => {
+      global.GM_setValue = vi.fn(() => {
         throw new Error('Storage quota exceeded');
       });
       

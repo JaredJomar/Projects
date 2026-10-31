@@ -27,8 +27,8 @@ describe("fallback panel", () => {
   beforeEach(() => {
     setFallbackMarkup();
     navigationStrategy = {
-      openInTab: jest.fn(async (url) => ({ ok: true, status: "open-in-tab", url })),
-      resetPanelToList: jest.fn(async () => ({ ok: true, status: "extension-panel-fallback", path: "src/panel.html" }))
+      openInTab: vi.fn(async (url) => ({ ok: true, status: "open-in-tab", url })),
+      resetPanelToList: vi.fn(async () => ({ ok: true, status: "extension-panel-fallback", path: "src/panel.html" }))
     };
   });
 

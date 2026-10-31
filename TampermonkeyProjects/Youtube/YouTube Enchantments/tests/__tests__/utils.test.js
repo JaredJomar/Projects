@@ -3,7 +3,7 @@
  * Tests urlUtils, throttle, and other helper functions
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { vi } from 'vitest';
 
 describe('Utility Functions', () => {
   
@@ -147,15 +147,15 @@ describe('Utility Functions', () => {
   describe('throttle()', () => {
     
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
     
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
     
     it('should call function immediately on first invocation', () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       let lastCall = 0;
       const wait = 1000;
       
@@ -173,7 +173,7 @@ describe('Utility Functions', () => {
     });
     
     it('should ignore rapid subsequent calls within wait time', () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       let lastCall = 0;
       const wait = 1000;
       
@@ -193,7 +193,7 @@ describe('Utility Functions', () => {
     });
     
     it('should allow call after wait time has passed', () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       let lastCall = 0;
       const wait = 1000;
       
@@ -208,14 +208,14 @@ describe('Utility Functions', () => {
       throttled();
       expect(mockFn).toHaveBeenCalledTimes(1);
       
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       throttled();
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
     
     it('should preserve function context', () => {
       const context = { value: 42 };
-      const mockFn = jest.fn(function() {
+      const mockFn = vi.fn(function() {
         return this.value;
       });
       
@@ -225,7 +225,7 @@ describe('Utility Functions', () => {
     });
     
     it('should pass arguments to throttled function', () => {
-      const mockFn = jest.fn((a, b) => a + b);
+      const mockFn = vi.fn((a, b) => a + b);
       
       const result = mockFn(5, 3);
       
@@ -246,9 +246,9 @@ describe('Utility Functions', () => {
   describe('Logger utility', () => {
     
     beforeEach(() => {
-      global.console.log = jest.fn();
-      global.console.warn = jest.fn();
-      global.console.error = jest.fn();
+      global.console.log = vi.fn();
+      global.console.warn = vi.fn();
+      global.console.error = vi.fn();
     });
     
     it('should log info messages when enabled', () => {

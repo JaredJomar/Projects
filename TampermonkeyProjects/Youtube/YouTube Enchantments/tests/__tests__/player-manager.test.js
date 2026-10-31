@@ -3,7 +3,7 @@
  * Tests injectYouTubeIframeAPI, createPlayerIframe, handleAdBlockError
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { vi } from 'vitest';
 import { setupYouTubeWatchPage } from './__mocks__/dom.js';
 import {
   createMockYTPlayer,
@@ -91,7 +91,7 @@ describe('Player Manager - AdBlock Bypass', () => {
     it('should handle exceptions during injection', () => {
       // Mock document.head to throw error
       const originalAppendChild = document.head.appendChild;
-      document.head.appendChild = jest.fn(() => {
+      document.head.appendChild = vi.fn(() => {
         throw new Error('Injection blocked by CSP');
       });
       
@@ -195,11 +195,11 @@ describe('Player Manager - AdBlock Bypass', () => {
     beforeEach(() => {
       settings = createMockSettings({ adBlockBypassEnabled: true });
       mockGMGetValue(settings);
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
     
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
     
     it('should do nothing if adBlockBypassEnabled is false', () => {
@@ -249,10 +249,10 @@ describe('Player Manager - AdBlock Bypass', () => {
       
       expect(tries).toBe(1);
       
-      jest.advanceTimersByTime(DELAY);
+      vi.advanceTimersByTime(DELAY);
       expect(tries).toBe(2);
       
-      jest.advanceTimersByTime(DELAY * 10);
+      vi.advanceTimersByTime(DELAY * 10);
       expect(tries).toBe(12);
     });
     
@@ -271,7 +271,7 @@ describe('Player Manager - AdBlock Bypass', () => {
       };
       
       checkError();
-      jest.advanceTimersByTime(100 * MAX_TRIES);
+      vi.advanceTimersByTime(100 * MAX_TRIES);
       
       expect(stopped).toBe(true);
       expect(tries).toBe(MAX_TRIES);
@@ -328,9 +328,9 @@ describe('Player Manager - AdBlock Bypass', () => {
     });
     
     it('should trigger onReady callback when player loads', () => {
-      jest.useRealTimers();
+      vi.useRealTimers();
       
-      const onReadyMock = jest.fn();
+      const onReadyMock = vi.fn();
       const config = {
         events: {
           onReady: onReadyMock
@@ -342,13 +342,13 @@ describe('Player Manager - AdBlock Bypass', () => {
       
       expect(onReadyMock).toHaveBeenCalledWith({ target: {} });
       
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
     
     it('should handle player errors with onError callback', () => {
-      jest.useRealTimers();
+      vi.useRealTimers();
       
-      const onErrorMock = jest.fn();
+      const onErrorMock = vi.fn();
       const config = {
         events: {
           onError: onErrorMock
@@ -360,7 +360,7 @@ describe('Player Manager - AdBlock Bypass', () => {
       
       expect(onErrorMock).toHaveBeenCalledWith({ data: 150 });
       
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
     
     it('should track player state changes', () => {
@@ -409,21 +409,21 @@ describe('Player Manager - AdBlock Bypass', () => {
     });
     
     it('should run cleanup periodically', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       
       let cleanupCount = 0;
       const cleanup = () => cleanupCount++;
       
       const interval = setInterval(cleanup, 7000);
       
-      jest.advanceTimersByTime(7000);
+      vi.advanceTimersByTime(7000);
       expect(cleanupCount).toBe(1);
       
-      jest.advanceTimersByTime(14000);
+      vi.advanceTimersByTime(14000);
       expect(cleanupCount).toBe(3);
       
       clearInterval(interval);
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
   

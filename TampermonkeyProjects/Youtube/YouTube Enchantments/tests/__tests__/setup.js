@@ -3,13 +3,14 @@
  * This file runs before all test files and sets up necessary mocks
  */
 
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
 
 // ==============================================
 // TAMPERMONKEY API MOCKS
 // ==============================================
 
-global.GM_getValue = jest.fn((key, defaultValue) => {
+global.GM_getValue = vi.fn((key, defaultValue) => {
   const mockStorage = {
     youtubeEnchantmentsSettings: JSON.stringify({
       autoLikeEnabled: true,
@@ -28,17 +29,17 @@ global.GM_getValue = jest.fn((key, defaultValue) => {
   return mockStorage[key] !== undefined ? mockStorage[key] : defaultValue;
 });
 
-global.GM_setValue = jest.fn((key, value) => {
+global.GM_setValue = vi.fn((key, value) => {
   // Mock implementation - just return success
   return Promise.resolve();
 });
 
-global.GM_registerMenuCommand = jest.fn((name, callback) => {
+global.GM_registerMenuCommand = vi.fn((name, callback) => {
   // Mock implementation
   return 'mock-menu-id';
 });
 
-global.GM_addStyle = jest.fn((css) => {
+global.GM_addStyle = vi.fn((css) => {
   // Mock implementation - could add to document.head if needed
   return true;
 });
@@ -47,36 +48,20 @@ global.GM_addStyle = jest.fn((css) => {
 // BROWSER API MOCKS
 // ==============================================
 
-// Mock window.location
-delete window.location;
-window.location = {
-  href: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  pathname: '/watch',
-  search: '?v=dQw4w9WgXcQ',
-  hash: '',
-  host: 'www.youtube.com',
-  hostname: 'www.youtube.com',
-  origin: 'https://www.youtube.com',
-  protocol: 'https:',
-  replace: jest.fn(),
-  assign: jest.fn(),
-  reload: jest.fn()
-};
-
 // Mock window methods
-window.scrollBy = jest.fn();
-window.scrollTo = jest.fn();
-window.getComputedStyle = jest.fn(() => ({
+window.scrollBy = vi.fn();
+window.scrollTo = vi.fn();
+window.getComputedStyle = vi.fn(() => ({
   display: 'block',
   visibility: 'visible',
   zIndex: '1000'
 }));
 
 // Mock MutationObserver
-global.MutationObserver = jest.fn(function(callback) {
-  this.observe = jest.fn();
-  this.disconnect = jest.fn();
-  this.takeRecords = jest.fn(() => []);
+global.MutationObserver = vi.fn(function(callback) {
+  this.observe = vi.fn();
+  this.disconnect = vi.fn();
+  this.takeRecords = vi.fn(() => []);
   this._callback = callback; // Store callback for manual triggering
   this._trigger = (mutations) => {
     if (this._callback) {
@@ -95,24 +80,24 @@ global.MutationObserver = jest.fn(function(callback) {
 // ==============================================
 
 global.YT = {
-  Player: jest.fn(function(elementId, config) {
+  Player: vi.fn(function(elementId, config) {
     this.elementId = elementId;
     this.config = config;
     this.videoId = config.videoId || 'test123';
     
     // Mock player methods
-    this.getCurrentTime = jest.fn(() => 30);
-    this.getDuration = jest.fn(() => 100);
-    this.playVideo = jest.fn();
-    this.pauseVideo = jest.fn();
-    this.stopVideo = jest.fn();
-    this.seekTo = jest.fn();
-    this.getPlayerState = jest.fn(() => YT.PlayerState.PLAYING);
-    this.getVolume = jest.fn(() => 50);
-    this.setVolume = jest.fn();
-    this.mute = jest.fn();
-    this.unMute = jest.fn();
-    this.isMuted = jest.fn(() => false);
+    this.getCurrentTime = vi.fn(() => 30);
+    this.getDuration = vi.fn(() => 100);
+    this.playVideo = vi.fn();
+    this.pauseVideo = vi.fn();
+    this.stopVideo = vi.fn();
+    this.seekTo = vi.fn();
+    this.getPlayerState = vi.fn(() => YT.PlayerState.PLAYING);
+    this.getVolume = vi.fn(() => 50);
+    this.setVolume = vi.fn();
+    this.mute = vi.fn();
+    this.unMute = vi.fn();
+    this.isMuted = vi.fn(() => false);
     
     // Store instance for test access
     if (!global._ytPlayers) {
@@ -136,14 +121,14 @@ global.YT = {
     AD_STARTED: 1081
   },
   
-  get: jest.fn(() => null)
+  get: vi.fn(() => null)
 };
 
 // Mock YT.Player.prototype methods
 if (global.YT && global.YT.Player) {
   Object.assign(global.YT.Player.prototype, {
-    destroy: jest.fn(),
-    getIframe: jest.fn(() => document.createElement('iframe'))
+    destroy: vi.fn(),
+    getIframe: vi.fn(() => document.createElement('iframe'))
   });
 }
 
@@ -261,10 +246,10 @@ global._originalConsole = {
 // (can be restored in individual tests if needed)
 global.console = {
   ...console,
-  log: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn()
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn()
 };
 
 // ==============================================
@@ -275,7 +260,7 @@ global.console = {
  * Resets all global mocks to their initial state
  */
 global.resetAllMocks = () => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   global._mutationObservers = [];
   global._ytPlayers = [];
   
@@ -289,7 +274,7 @@ global.resetAllMocks = () => {
  * @param {number} ms - Milliseconds to advance
  */
 global.advanceTime = async (ms) => {
-  jest.advanceTimersByTime(ms);
+  vi.advanceTimersByTime(ms);
   await Promise.resolve(); // Flush promises
 };
 
@@ -307,12 +292,15 @@ global.waitForNextTick = () => {
 // Reset mocks before each test
 beforeEach(() => {
   global.resetAllMocks();
-  jest.useFakeTimers();
+  window.history.replaceState({}, '', '/watch?v=dQw4w9WgXcQ');
+  vi.useFakeTimers();
 });
 
 // Cleanup after each test
 afterEach(() => {
-  jest.runOnlyPendingTimers();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  if (vi.isFakeTimers()) {
+    vi.runOnlyPendingTimers();
+  }
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });

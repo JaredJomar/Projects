@@ -2,12 +2,12 @@
   "name": "sidedock-extension",
   "version": "0.0.1",
   "private": true,
-  "description": "Vanilla MV3 SideDock extension scaffold with Jest/jsdom tests.",
+  "description": "Vanilla MV3 SideDock extension scaffold with jsdom tests.",
   "scripts": {
-    "test": "jest --config tests/jest.config.js"
+    "test": "vitest run --config tests/vitest.config.js"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^30.2.0"
+    "jsdom": "26.1.0",
+    "vitest": "5.0.5"
   }
 }
